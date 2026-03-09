@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <Title>NetCore</Title>
+    <Authors>SoG, DarkJune</Authors>
+    <Company>Shade of Singularity</Company>
+    <Description>
+      Very optimized networking system, introduced to support simultaneous usage of multiple
+      network transports (RawTCP, RawUDP, SteamNet(UDP), C# Pipes, etc.).
+      Standardized for easy expansion and plugin development.
+    </Description>
+    <LangVersion>12</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="UDP\" />
+    <Folder Include="TCP\" />
+  </ItemGroup>
+
+</Project>
