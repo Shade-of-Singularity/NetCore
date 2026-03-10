@@ -1,0 +1,2 @@
+﻿Pipes will be implemented in NetCore.Pipes as a standalone transport.
+Also, Pipes should use two connections instead of one Duplex connection, to be compatible with Mono C# (in Unity and similar systems).

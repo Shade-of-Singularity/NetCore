@@ -1,0 +1,1 @@
+﻿Message handling might be separated in another library, like `NetCore.Containers` and `NetCore.BitStream` (integrates ComputerysBitStream)

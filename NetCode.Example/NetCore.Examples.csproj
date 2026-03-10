@@ -1,19 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <Title>NetCore</Title>
+    <Title>NetCore Examples</Title>
     <Authors>SoG, DarkJune</Authors>
     <Company>Shade of Singularity</Company>
     <Description>
-      Very optimized networking system, introduced to support simultaneous usage of multiple
-      network transports (RawTCP, RawUDP, SteamNet(UDP), C# Pipes, etc.).
-      Standardized for easy expansion and plugin development.
+      Examples for NetCore.
     </Description>
     <LangVersion>12</LangVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetCore\NetCore.csproj" />
+  </ItemGroup>
 
 </Project>

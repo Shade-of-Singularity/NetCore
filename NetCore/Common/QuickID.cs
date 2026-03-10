@@ -10,7 +10,12 @@
         /// <summary>
         /// Cached index for an item in a current category.
         /// </summary>
-        public static readonly QuickIndex Index = QuickIDCategory<TCategory>.GetNext();
+        public static readonly QuickIndex Index = QuickIDCategory<TCategory>.GetNext(out Order);
+        /// <summary>
+        /// 0-based sorting order [0:12] within an array for this item.
+        /// Also represent order in which specific items were associated with a target category.
+        /// </summary>
+        public static int Order;
     }
 
     /// <summary>
@@ -26,5 +31,14 @@
         /// </summary>
         /// <returns></returns>
         public static QuickIndex GetNext() => QuickIndexing.GetNextIndex(ref inUse);
+
+        /// <summary>
+        /// Same as <see cref="GetNext()"/>, but provides a specific index at which item has to be stored as well.
+        /// </summary>
+        public static QuickIndex GetNext(out int order)
+        {
+            order = inUse;
+            return QuickIndexing.GetNextIndex(ref inUse);
+        }
     }
 }
