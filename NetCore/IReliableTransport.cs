@@ -15,24 +15,24 @@ namespace NetCore
         public void SendReliable(ReadOnlySpan<byte> datagram);
 
         /// <summary>
-        /// Reliably sends <paramref name="datagram"/> to all connections this <see cref="ITransport"/> manages, excluding <paramref name="CIDToExclude"/>.
+        /// Reliably sends <paramref name="datagram"/> to all connections this <see cref="ITransport"/> manages, excluding <paramref name="toExclude"/>.
         /// </summary>
         /// <param name="datagram">Datagram to send.</param>
-        /// <param name="CIDToExclude">Connection to avoid sending a <paramref name="datagram"/> to.</param>
-        public void SendReliableExclusive(ReadOnlySpan<byte> datagram, ulong CIDToExclude);
+        /// <param name="toExclude">Connection to avoid sending a <paramref name="datagram"/> to.</param>
+        public void SendReliableExcluding(ReadOnlySpan<byte> datagram, ConnectionID toExclude);
 
         /// <summary>
         /// Reliably sends <paramref name="datagram"/> to a target connection.
         /// </summary>
         /// <param name="datagram">Datagram to send.</param>
-        /// <param name="targetCID">Connection to send a <paramref name="datagram"/> to. Nothing should be sent if transport doesn't manage this connection.</param>
-        public void SendReliableTo(ReadOnlySpan<byte> datagram, ulong targetCID);
+        /// <param name="target">Connection to send a <paramref name="datagram"/> to. Nothing should be sent if transport doesn't manage this connection.</param>
+        public void SendReliableTo(ReadOnlySpan<byte> datagram, ConnectionID target);
 
         /// <summary>
         /// Handles raw <paramref name="datagram"/> of a reliable message.
         /// </summary>
         /// <param name="datagram">Datagram from a remote connection.</param>
-        /// <param name="sourceCID">Connection ID from which <paramref name="datagram"/> has arrived.</param>
-        public void HandleReliable(ReadOnlySpan<byte> datagram, ulong sourceCID);
+        /// <param name="source">Connection ID from which <paramref name="datagram"/> has arrived.</param>
+        public void HandleReliable(ReadOnlySpan<byte> datagram, ConnectionID source);
     }
 }

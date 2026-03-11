@@ -13,7 +13,7 @@ namespace NetCore.UDP
     public class UDPTransport : Transport, IUnreliableTransport
     {
         /// <inheritdoc/>
-        public override bool HasCID(ulong CID)
+        public override bool HasConnection(ConnectionID connection)
         {
             return true;
         }
@@ -25,22 +25,22 @@ namespace NetCore.UDP
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableExclusive(ReadOnlySpan<byte> datagram, ulong CIDToExclude)
+        public void SendUnreliableExcluding(ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
-            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableExclusive)}(exclude: ({CIDToExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, ulong targetCID)
+        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, ConnectionID target)
         {
-            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableTo)}(target: ({targetCID}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
         }
 
         /// <inheritdoc/>
-        public void HandleUnreliable(ReadOnlySpan<byte> datagram, ulong sourceCID)
+        public void HandleUnreliable(ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleUnreliable)}(source: ({sourceCID}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleUnreliable)}(source: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
             Console.ForegroundColor = ConsoleColor.White;
         }
     }

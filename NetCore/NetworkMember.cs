@@ -62,9 +62,9 @@ namespace NetCore
         public LoopbackTransport LoopbackTransport => m_LoopbackTransport;
 
         /// <summary>
-        /// Provider for all ConnectionIDs managed by this <see cref="NetworkMember"/> and its transports.
+        /// Provider for all <see cref="ConnectionID"/>s managed by this <see cref="NetworkMember"/> and its transports.
         /// </summary>
-        public CIDProvider CIDProvider => m_CIDProvider;
+        public ConnectionIDProvider CIDProvider => m_CIDProvider;
 
 
 
@@ -118,7 +118,7 @@ namespace NetCore
         /// <summary>
         /// Provider for Connection IDs.
         /// </summary>
-        private readonly CIDProvider m_CIDProvider = new();
+        private readonly ConnectionIDProvider m_CIDProvider = new();
 
 
 

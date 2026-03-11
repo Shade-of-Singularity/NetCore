@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Runtime.Serialization;
 
 namespace NetCore
 {
@@ -61,20 +62,33 @@ namespace NetCore
         }
 
         /// <summary>
+        /// Unreliably sends <paramref name="datagram"/> to the server using specified <typeparamref name="TTransport"/> (if it exist).
+        /// </summary>
+        /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
+        /// <param name="datagram">Datagram to send.</param>
+        public void SendUnreliable<TTransport>(ReadOnlySpan<byte> datagram) where TTransport : class, IUnreliableTransport
+        {
+            lock (_lock)
+            {
+                GetUnreliableTransport<TTransport>()?.SendUnreliable(datagram);
+            }
+        }
+
+        /// <summary>
         /// Unreliably sends <paramref name="datagram"/> to a all connections, excluding specific <paramref name="connection"/>.
         /// </summary>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to avoid sending a <paramref name="datagram"/> to.</param>
-        public void SendUnreliableExcluding(ReadOnlySpan<byte> datagram, uint connection)
+        public void SendUnreliableExcluding(ReadOnlySpan<byte> datagram, ConnectionID connection)
         {
             lock (_lock)
             {
                 foreach (var transport in UnreliableTransports)
                 {
-                    if (transport.HasCID(connection))
+                    if (transport.HasConnection(connection))
                     {
                         // Only run method with expensive checks if transport manages excluded connection.
-                        transport.SendUnreliableExclusive(datagram, CIDToExclude: connection);
+                        transport.SendUnreliableExcluding(datagram, toExclude: connection);
                     }
                     else
                     {
@@ -85,16 +99,45 @@ namespace NetCore
         }
 
         /// <summary>
+        /// Unreliably sends <paramref name="datagram"/> to a all connections, excluding specific <paramref name="connection"/>,
+        /// using specified <typeparamref name="TTransport"/> (if it exist).
+        /// </summary>
+        /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
+        /// <param name="datagram">Datagram to send.</param>
+        /// <param name="connection">Connection to avoid sending a <paramref name="datagram"/> to.</param>
+        public void SendUnreliableExcluding<TTransport>(ReadOnlySpan<byte> datagram, ConnectionID connection) where TTransport : class, IUnreliableTransport
+        {
+            lock (_lock)
+            {
+                GetUnreliableTransport<TTransport>()?.SendUnreliableExcluding(datagram, connection);
+            }
+        }
+
+        /// <summary>
         /// Unreliably sends <paramref name="datagram"/> to a specific connection.
         /// </summary>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to send a <paramref name="datagram"/> to.</param>
-        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, uint connection)
+        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, ConnectionID connection)
         {
             lock (_lock)
             {
                 foreach (var transport in UnreliableTransports)
                     transport.SendUnreliableTo(datagram, connection);
+            }
+        }
+
+        /// <summary>
+        /// Unreliably sends <paramref name="datagram"/> to a specific connection using specified <typeparamref name="TTransport"/> (if it exist).
+        /// </summary>
+        /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
+        /// <param name="datagram">Datagram to send.</param>
+        /// <param name="connection">Connection to send a <paramref name="datagram"/> to.</param>
+        public void SendUnreliableTo<TTransport>(ReadOnlySpan<byte> datagram, ConnectionID connection) where TTransport : class, IUnreliableTransport
+        {
+            lock (_lock)
+            {
+                GetUnreliableTransport<TTransport>()?.SendUnreliableTo(datagram, connection);
             }
         }
 
@@ -112,20 +155,33 @@ namespace NetCore
         }
 
         /// <summary>
+        /// Reliably sends <paramref name="datagram"/> to the server using specified <typeparamref name="TTransport"/> (if it exist).
+        /// </summary>
+        /// <typeparam name="TTransport"><see cref="IReliableTransport"/> to use for sending of a message.</typeparam>
+        /// <param name="datagram">Datagram to send.</param>
+        public void SendReliable<TTransport>(ReadOnlySpan<byte> datagram) where TTransport : class, IReliableTransport
+        {
+            lock (_lock)
+            {
+                GetReliableTransport<TTransport>()?.SendReliable(datagram);
+            }
+        }
+
+        /// <summary>
         /// Reliably sends <paramref name="datagram"/> to a all connections, excluding specific <paramref name="connection"/>.
         /// </summary>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to avoid sending a <paramref name="datagram"/> to.</param>
-        public void SendReliableExcluding(ReadOnlySpan<byte> datagram, uint connection)
+        public void SendReliableExcluding(ReadOnlySpan<byte> datagram, ConnectionID connection)
         {
             lock (_lock)
             {
                 foreach (var transport in ReliableTransports)
                 {
-                    if (transport.HasCID(connection))
+                    if (transport.HasConnection(connection))
                     {
                         // Only run method with expensive checks if transport manages excluded connection.
-                        transport.SendReliableExclusive(datagram, CIDToExclude: connection);
+                        transport.SendReliableExcluding(datagram, toExclude: connection);
                     }
                     else
                     {
@@ -136,16 +192,45 @@ namespace NetCore
         }
 
         /// <summary>
+        /// Reliably sends <paramref name="datagram"/> to a all connections, excluding specific <paramref name="connection"/>,
+        /// using specified <typeparamref name="TTransport"/> (if it exist).
+        /// </summary>
+        /// <typeparam name="TTransport"><see cref="IReliableTransport"/> to use for sending of a message.</typeparam>
+        /// <param name="datagram">Datagram to send.</param>
+        /// <param name="connection">Connection to avoid sending a <paramref name="datagram"/> to.</param>
+        public void SendReliableExcluding<TTransport>(ReadOnlySpan<byte> datagram, ConnectionID connection) where TTransport : class, IReliableTransport
+        {
+            lock (_lock)
+            {
+                GetReliableTransport<TTransport>()?.SendReliableExcluding(datagram, connection);
+            }
+        }
+
+        /// <summary>
         /// Reliably sends <paramref name="datagram"/> to a specific connection.
         /// </summary>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to send a <paramref name="datagram"/> to.</param>
-        public void SendReliableTo(ReadOnlySpan<byte> datagram, uint connection)
+        public void SendReliableTo(ReadOnlySpan<byte> datagram, ConnectionID connection)
         {
             lock (_lock)
             {
                 foreach (var transport in ReliableTransports)
                     transport.SendReliableTo(datagram, connection);
+            }
+        }
+
+        /// <summary>
+        /// Reliably sends <paramref name="datagram"/> to a specific connection using specified <typeparamref name="TTransport"/> (if it exist).
+        /// </summary>
+        /// <typeparam name="TTransport"><see cref="IReliableTransport"/> to use for sending of a message.</typeparam>
+        /// <param name="datagram">Datagram to send.</param>
+        /// <param name="connection">Connection to send a <paramref name="datagram"/> to.</param>
+        public void SendReliableTo<TTransport>(ReadOnlySpan<byte> datagram, ConnectionID connection) where TTransport : class, IReliableTransport
+        {
+            lock (_lock)
+            {
+                GetReliableTransport<TTransport>()?.SendReliableTo(datagram, connection);
             }
         }
         #endregion

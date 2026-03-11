@@ -11,7 +11,7 @@ namespace NetCore.Loopback
     /// </summary>
     public class LoopbackTransport : Transport, IReliableTransport, IUnreliableTransport
     {
-        private readonly record struct LoopbackEntry(LoopbackTransport Transport, ulong RemoteCID)
+        private readonly record struct LoopbackEntry(LoopbackTransport Transport, ConnectionID RemoteCID)
         {
             /// <inheritdoc/>
             public override int GetHashCode() => Transport.GetHashCode();
@@ -23,7 +23,7 @@ namespace NetCore.Loopback
         /// .                                               Private Fields
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        private readonly Dictionary<ulong, LoopbackEntry> m_Loopbacks = [];
+        private readonly Dictionary<ConnectionID, LoopbackEntry> m_Loopbacks = [];
 
 
 
@@ -52,10 +52,10 @@ namespace NetCore.Loopback
                 var remoteLoopbacks = server.LoopbackTransport;
                 lock (remoteLoopbacks.m_Loopbacks)
                 {
-                    ulong sourceCID = Holder!.CIDProvider.NextCID();
-                    ulong remoteCID = server.CIDProvider.NextCID();
-                    remoteLoopbacks.m_Loopbacks[remoteCID] = new(this, sourceCID);
-                    m_Loopbacks[sourceCID] = new(remoteLoopbacks, remoteCID);
+                    ConnectionID sourceID = Holder!.CIDProvider.NextCID();
+                    ConnectionID remoteID = server.CIDProvider.NextCID();
+                    remoteLoopbacks.m_Loopbacks[remoteID] = new(this, sourceID);
+                    m_Loopbacks[sourceID] = new(remoteLoopbacks, remoteID);
                 }
             }
         }
@@ -81,11 +81,11 @@ namespace NetCore.Loopback
         }
 
         /// <inheritdoc/>
-        public override bool HasCID(ulong CID)
+        public override bool HasConnection(ConnectionID connection)
         {
             lock (m_Loopbacks)
             {
-                return m_Loopbacks.ContainsKey(CID);
+                return m_Loopbacks.ContainsKey(connection);
             }
         }
 
@@ -103,14 +103,14 @@ namespace NetCore.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendReliableExclusive(ReadOnlySpan<byte> datagram, ulong CIDToExclude)
+        public void SendReliableExcluding(ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
-            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliableExclusive)}(exclude: ({CIDToExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
             lock (m_Loopbacks)
             {
                 foreach (var entry in m_Loopbacks)
                 {
-                    if (entry.Key != CIDToExclude)
+                    if (entry.Key != toExclude)
                     {
                         entry.Value.Transport.HandleReliable(datagram, entry.Value.RemoteCID);
                     }
@@ -119,23 +119,23 @@ namespace NetCore.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendReliableTo(ReadOnlySpan<byte> datagram, ulong targetCID)
+        public void SendReliableTo(ReadOnlySpan<byte> datagram, ConnectionID target)
         {
-            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliableTo)}(target: ({targetCID}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
             lock (m_Loopbacks)
             {
-                if (m_Loopbacks.TryGetValue(targetCID, out LoopbackEntry entry))
+                if (m_Loopbacks.TryGetValue(target, out LoopbackEntry entry))
                 {
-                    entry.Transport.HandleReliable(datagram, targetCID);
+                    entry.Transport.HandleReliable(datagram, target);
                 }
             }
         }
 
         /// <inheritdoc/>
-        public void HandleReliable(ReadOnlySpan<byte> datagram, ulong sourceCID)
+        public void HandleReliable(ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleReliable)}(source: ({sourceCID}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleReliable)}(sourceID: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
             Console.ForegroundColor = ConsoleColor.White;
         }
 
@@ -153,14 +153,14 @@ namespace NetCore.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableExclusive(ReadOnlySpan<byte> datagram, ulong CIDToExclude)
+        public void SendUnreliableExcluding(ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
-            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliableExclusive)}(exclude: ({CIDToExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
             lock (m_Loopbacks)
             {
                 foreach (var entry in m_Loopbacks)
                 {
-                    if (entry.Key != CIDToExclude)
+                    if (entry.Key != toExclude)
                     {
                         entry.Value.Transport.HandleUnreliable(datagram, entry.Value.RemoteCID);
                     }
@@ -169,23 +169,23 @@ namespace NetCore.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, ulong targetCID)
+        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, ConnectionID target)
         {
-            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliableTo)}(target: ({targetCID}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
             lock (m_Loopbacks)
             {
-                if (m_Loopbacks.TryGetValue(targetCID, out LoopbackEntry entry))
+                if (m_Loopbacks.TryGetValue(target, out LoopbackEntry entry))
                 {
-                    entry.Transport.HandleUnreliable(datagram, targetCID);
+                    entry.Transport.HandleUnreliable(datagram, target);
                 }
             }
         }
 
         /// <inheritdoc/>
-        public void HandleUnreliable(ReadOnlySpan<byte> datagram, ulong sourceCID)
+        public void HandleUnreliable(ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleUnreliable)}(source: ({sourceCID}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleUnreliable)}(sourceID: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
             Console.ForegroundColor = ConsoleColor.White;
         }
     }

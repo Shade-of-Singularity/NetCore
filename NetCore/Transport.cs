@@ -82,7 +82,7 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <inheritdoc/>
-        public abstract bool HasCID(ulong CID);
+        public abstract bool HasConnection(ConnectionID connection);
 
         /// <inheritdoc cref="ITransport.Initialize"/>
         /// <remarks>

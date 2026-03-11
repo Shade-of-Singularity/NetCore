@@ -29,10 +29,10 @@ namespace NetCore.Examples
             client.SendUnreliable(MemoryMarshal.AsBytes("data #2 (from client)".AsSpan()));
             server.SendUnreliable(MemoryMarshal.AsBytes("data #2 (from server)".AsSpan()));
             Console.WriteLine();
-            server.SendUnreliableTo(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), 32);
-            server.SendReliableTo(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), 32);
-            server.SendReliableExcluding(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), 32);
-            server.SendUnreliableExcluding(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), 32);
+            server.SendUnreliableTo(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
+            server.SendReliableTo(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
+            server.SendReliableExcluding(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
+            server.SendUnreliableExcluding(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
         }
 
         static void SendMessages()

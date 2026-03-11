@@ -303,12 +303,11 @@ namespace NetCore
         protected void Disconnect();
 
         /// <summary>
-        /// Checks if <see cref="ITransport"/> manages a specific <paramref name="CID"/> at the moment.
+        /// Checks if <see cref="ITransport"/> manages a specific <paramref name="connection"/> at the moment.
         /// </summary>
-        /// <param name="CID">Connection ID to check.</param>
+        /// <param name="connection">Connection ID to check for.</param>
         /// <returns><c>true</c> if this <see cref="ITransport"/> manages given connection. <c>false</c> otherwise.</returns>
-        /// Note: <see cref="ulong"/> to allow defining a crazy number of players in one session, and to allow aligning with 8 bytes in structs.
         /// Note: There is no guarantee that connection #0 client-side is a server/host connection.
-        public bool HasCID(ulong CID);
+        public bool HasConnection(ConnectionID connection);
     }
 }

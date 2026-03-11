@@ -13,7 +13,7 @@ namespace NetCore.Pipes
     public class PipeTransport : Transport, IUnreliableTransport, IReliableTransport
     {
         /// <inheritdoc/>
-        public override bool HasCID(ulong CID)
+        public override bool HasConnection(ConnectionID connection)
         {
             return true;
         }
@@ -25,22 +25,22 @@ namespace NetCore.Pipes
         }
 
         /// <inheritdoc/>
-        public void SendReliableExclusive(ReadOnlySpan<byte> datagram, ulong CIDToExclude)
+        public void SendReliableExcluding(ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
-            Console.WriteLine($"{nameof(PipeTransport)}.{nameof(SendReliableExclusive)}(exclude: ({CIDToExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(PipeTransport)}.{nameof(SendReliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
         }
 
         /// <inheritdoc/>
-        public void SendReliableTo(ReadOnlySpan<byte> datagram, ulong targetCID)
+        public void SendReliableTo(ReadOnlySpan<byte> datagram, ConnectionID target)
         {
-            Console.WriteLine($"{nameof(PipeTransport)}.{nameof(SendReliableTo)}(target: ({targetCID}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(PipeTransport)}.{nameof(SendReliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
         }
 
         /// <inheritdoc/>
-        public void HandleReliable(ReadOnlySpan<byte> datagram, ulong sourceCID)
+        public void HandleReliable(ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleReliable)}(source: ({sourceCID}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleReliable)}(source: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
             Console.ForegroundColor = ConsoleColor.White;
         }
 
@@ -51,22 +51,22 @@ namespace NetCore.Pipes
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableExclusive(ReadOnlySpan<byte> datagram, ulong CIDToExclude)
+        public void SendUnreliableExcluding(ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
-            Console.WriteLine($"{nameof(PipeTransport)}.{nameof(SendUnreliableExclusive)}(exclude: ({CIDToExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(PipeTransport)}.{nameof(SendUnreliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, ulong targetCID)
+        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, ConnectionID target)
         {
-            Console.WriteLine($"{nameof(PipeTransport)}.{nameof(SendUnreliableTo)}(target: ({targetCID}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(PipeTransport)}.{nameof(SendUnreliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
         }
 
         /// <inheritdoc/>
-        public void HandleUnreliable(ReadOnlySpan<byte> datagram, ulong sourceCID)
+        public void HandleUnreliable(ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleUnreliable)}(source: ({sourceCID}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleUnreliable)}(source: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
             Console.ForegroundColor = ConsoleColor.White;
         }
     }

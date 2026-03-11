@@ -4,9 +4,9 @@ using System.Collections.Generic;
 namespace NetCore
 {
     /// <summary>
-    /// Provides connection IDs for new connections.
+    /// Provides <see cref="ConnectionID"/>s for new connections.
     /// </summary>
-    public sealed class CIDProvider
+    public sealed class ConnectionIDProvider
     {
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
@@ -25,7 +25,7 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Resets internal state of <see cref="CIDProvider"/>: clears hash maps, and moves CID head back to '0'
+        /// Resets internal state of <see cref="ConnectionIDProvider"/>: clears hash maps, and moves CID head back to '0'
         /// </summary>
         public void Reset()
         {
@@ -38,14 +38,14 @@ namespace NetCore
         /// </summary>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public ulong NextCID()
+        public ConnectionID NextCID()
         {
             ulong i = 0;
             while (true)
             {
                 if (IDs.Add(nextCID))
                 {
-                    return nextCID++;
+                    return (ConnectionID)nextCID++;
                 }
 
                 nextCID++;
@@ -59,7 +59,7 @@ namespace NetCore
         /// <summary>
         /// Forgets a specific ID, making it reusable again.
         /// </summary>
-        /// <param name="CID">CID to forget.</param>
-        public void Forget(ulong CID) => IDs.Remove(CID);
+        /// <param name="connection">Connection to forget.</param>
+        public void Forget(ConnectionID connection) => IDs.Remove((ulong)connection);
     }
 }
