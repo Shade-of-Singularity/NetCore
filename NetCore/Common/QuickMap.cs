@@ -25,12 +25,13 @@ namespace NetCore.Common
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
         /// .                                               Private Fields
+        /// .                                           (Note: do not reorder)
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        private T?[] values; // Stores items themselves. Resized if you add new values. Limited to 15 in size.
-        private ulong lookup; // Encodes local index of all items in one lookup table.
-        private ushort flags; // Stores (true/false) states about whether a specific item is present in the array or not.
         private int stored; // Amount of items stored in the array. Array capacity might differ from this value.
+        private ushort flags; // Stores (true/false) states about whether a specific item is present in the array or not.
+        private ulong lookup; // Encodes local index of all items in one lookup table.
+        private T?[] values; // Stores items themselves. Resized if you add new values. Limited to 15 in size.
 
 
 
@@ -79,7 +80,7 @@ namespace NetCore.Common
 
             InsertAtUnchecked(ref values, ref stored, PopCount(flag - 1), item);
             flags |= flag;
-            lookup = UpdateLookup(flags);
+            UpdateLookup(flags, out lookup);
             return true;
         }
 
@@ -109,7 +110,7 @@ namespace NetCore.Common
 
             InsertAtUnchecked(ref values, ref stored, PopCount(flag - 1), item);
             flags |= flag;
-            lookup = UpdateLookup(flags);
+            UpdateLookup(flags, out lookup);
         }
 
         /// <summary>
@@ -151,7 +152,7 @@ namespace NetCore.Common
 
             RemoveAtUnchecked(ref values, ref stored, (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position));
             flags = (ushort)(flags & ~QuickID<TItem, T>.BitFlag);
-            lookup = UpdateLookup(flags);
+            UpdateLookup(flags, out lookup);
             return true;
         }
 
@@ -170,7 +171,7 @@ namespace NetCore.Common
 
             RemoveAtUnchecked(ref values, ref stored, (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position));
             flags = (ushort)(flags & ~QuickID<TItem, T>.BitFlag);
-            lookup = UpdateLookup(flags);
+            UpdateLookup(flags, out lookup);
             return true;
         }
 
@@ -193,7 +194,7 @@ namespace NetCore.Common
             removed = (TItem)values[localIndex]!;
             RemoveAtUnchecked(ref values, ref stored, localIndex);
             flags = (ushort)(flags & ~QuickID<TItem, T>.BitFlag);
-            lookup = UpdateLookup(flags);
+            UpdateLookup(flags, out lookup);
             return true;
         }
 
@@ -238,10 +239,11 @@ namespace NetCore.Common
         /// Note: There is no way invented to update a lookup table partially, so we update it in full instead.
         ///  The problem is to understand how many items were already added...
         /// <param name="flags"></param>
-        private static ulong UpdateLookup(uint flags)
+        /// <param name="lookup"></param>
+        private static void UpdateLookup(uint flags, out ulong lookup)
         {
             ulong stored = 0uL;
-            ulong lookup = 0uL;
+            lookup = 0uL;
 
             for (int order = 0; order < QuickIndex.Limit; order++)
             {
@@ -270,8 +272,6 @@ namespace NetCore.Common
                     stored++;
                 }
             }
-
-            return lookup;
         }
 
         private static void InsertAtUnchecked(ref T?[] values, ref int stored, int localIndex, T item)
@@ -313,9 +313,10 @@ namespace NetCore.Common
         /// </summary>
         private static int PopCount(int input)
         {
-            input = ((input & 0xAA) >> 1) + (input & 0x55);
-            input = (input & 0x33) + ((input >> 2) & 0x33);
-            return (input + (input >> 4)) & 0x0F;
+            int result = ((input & 0xAA) >> 1) + (input & 0x55);
+            result = (result & 0x33) + ((result >> 2) & 0x33);
+            result = (result + (result >> 4)) & 0x0F;
+            return result;
         }
     }
 }
