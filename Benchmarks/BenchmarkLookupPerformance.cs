@@ -67,16 +67,60 @@ namespace NetCore.Benchmarks
 
         */
 
+        private sealed class ATransport : Transport
+        {
+            public override bool HasConnection(ConnectionID connection) => throw new NotImplementedException();
+        }
+        private sealed class BTransport : Transport
+        {
+            public override bool HasConnection(ConnectionID connection) => throw new NotImplementedException();
+        }
+        private sealed class CTransport : Transport
+        {
+            public override bool HasConnection(ConnectionID connection) => throw new NotImplementedException();
+        }
+        private sealed class DTransport : Transport
+        {
+            public override bool HasConnection(ConnectionID connection) => throw new NotImplementedException();
+        }
+        private sealed class ETransport : Transport
+        {
+            public override bool HasConnection(ConnectionID connection) => throw new NotImplementedException();
+        }
+        private sealed class FTransport : Transport
+        {
+            public override bool HasConnection(ConnectionID connection) => throw new NotImplementedException();
+        }
+
         [GlobalSetup]
         public void Setup()
         {
             Native.Add(typeof(LoopbackTransport), new LoopbackTransport());
             Native.Add(typeof(TCPTransport), new TCPTransport());
             Native.Add(typeof(UDPTransport), new UDPTransport());
+            Native.Add(typeof(ATransport), new ATransport());
+            Native.Add(typeof(BTransport), new BTransport());
+            Native.Add(typeof(CTransport), new CTransport());
+            Native.Add(typeof(DTransport), new DTransport());
+            Native.Add(typeof(ETransport), new ETransport());
+            Native.Add(typeof(FTransport), new FTransport());
             Quick = new(3);
             Quick.Add(new LoopbackTransport());
             Quick.Add(new TCPTransport());
             Quick.Add(new UDPTransport());
+            Quick.Add(new ATransport());
+            Quick.Add(new BTransport());
+            Quick.Add(new CTransport());
+            Quick.Add(new DTransport());
+            Quick.Add(new ETransport());
+            Quick.Add(new FTransport());
+            //int r = 10;
+            //for (int i = 0; i < 1000000000; i++)
+            //{
+            //    r += i;
+            //}
+
+            //Console.WriteLine(r);
         }
 
         [GlobalCleanup]

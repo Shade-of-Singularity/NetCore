@@ -70,15 +70,18 @@ namespace NetCore.Common
             if (item is null) throw new ArgumentNullException(nameof(item));
 
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            ushort flag = QuickID<TItem, T>.BitFlag;
-            if ((flags & flag) != 0)
+            if ((flags & QuickID<TItem, T>.BitFlag) != 0)
             {
                 // Item is was already stored.
                 return false;
             }
 
-            InsertAtUnchecked(ref values, ref stored, LocalIndexOf(flag, flags), item);
-            FlagStored(ref flags, flag);
+            //int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
+            //int index = NumberOfSetBits(flags & (QuickID<TItem, T>.BitFlag - 1));
+            int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
+            InsertAtUnchecked(ref values, ref stored, GetPop(localIndex), item);
+            flags |= QuickID<TItem, T>.BitFlag;
+            //FlagStored(ref flags, QuickID<TItem, T>.BitFlag);
             UpdateLookup(flags, out lookup);
             return true;
         }
@@ -98,9 +101,8 @@ namespace NetCore.Common
             }
 
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            ushort bitFlag = QuickID<TItem, T>.BitFlag;
-            int localIndex = LocalIndexOf(bitFlag, flags);
-            if ((flags & bitFlag) != 0)
+            int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
+            if ((flags & QuickID<TItem, T>.BitFlag) != 0)
             {
                 // Item under a specific order already exist.
                 // Replacing it won't rebuild the lookup table and won't require an array resize.
@@ -109,7 +111,7 @@ namespace NetCore.Common
             }
 
             InsertAtUnchecked(ref values, ref stored, localIndex, item);
-            FlagStored(ref flags, bitFlag);
+            FlagStored(ref flags, QuickID<TItem, T>.BitFlag);
             UpdateLookup(flags, out lookup);
             return;
         }
@@ -285,11 +287,6 @@ namespace NetCore.Common
             }
         }
 
-        /// <summary>
-        /// Retrieves index of an item in a local array, where item's preferred position is described with <paramref name="bitFlag"/>.
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int LocalIndexOf(ushort bitFlag, ushort flags) => NumberOfSetBits(flags & (bitFlag - 1));
         private static void InsertAtUnchecked(ref T?[] values, ref int stored, int localIndex, T item)
         {
             int newStored = stored + 1;
@@ -324,11 +321,12 @@ namespace NetCore.Common
             values[--stored] = default;
         }
 
-        private static int NumberOfSetBits(int i)
+        private static int GetPop(int input)
         {
-            i -= (i >> 1) & 0x55555555;
-            i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
-            return (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+            int result = ((input & 0xAA) >> 1) + (input & 0x55);
+            result = (result & 0x33) + ((result >> 2) & 0x33);
+            result = (result + (result >> 4)) & 0x0F;
+            return result;
         }
     }
 }
