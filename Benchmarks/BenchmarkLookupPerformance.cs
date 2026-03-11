@@ -104,7 +104,7 @@ namespace NetCore.Benchmarks
             Native.Add(typeof(DTransport), new DTransport());
             Native.Add(typeof(ETransport), new ETransport());
             Native.Add(typeof(FTransport), new FTransport());
-            Quick = new(3);
+            Quick = new(9);
             Quick.Add(new LoopbackTransport());
             Quick.Add(new TCPTransport());
             Quick.Add(new UDPTransport());

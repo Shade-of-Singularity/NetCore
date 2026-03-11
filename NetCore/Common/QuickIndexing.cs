@@ -10,6 +10,40 @@ namespace NetCore.Common
     {
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
+        /// .                                               Static Fields
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <summary>
+        /// <see cref="QuickIndexPosition"/>s mapped with an array.
+        /// Array has length of <see cref="QuickIndex.Limit"/>, covering all possible states.
+        /// </summary>
+        public static readonly QuickIndexMask[] Masks =
+        [
+            QuickIndexMask.One, QuickIndexMask.Two, QuickIndexMask.Three,
+            QuickIndexMask.Four, QuickIndexMask.Five, QuickIndexMask.Six,
+            QuickIndexMask.Seven, QuickIndexMask.Eight, QuickIndexMask.Nine,
+            QuickIndexMask.Ten, QuickIndexMask.Eleven, QuickIndexMask.Twelve,
+            QuickIndexMask.Thirteen, QuickIndexMask.Fourteen, QuickIndexMask.Fifteen,
+        ];
+
+        /// <summary>
+        /// <see cref="QuickIndexPosition"/>s mapped with an array.
+        /// Array has length of <see cref="QuickIndex.Limit"/>, covering all possible states.
+        /// </summary>
+        public static readonly QuickIndexPosition[] Positions =
+        [
+            QuickIndexPosition.One, QuickIndexPosition.Two, QuickIndexPosition.Three,
+            QuickIndexPosition.Four, QuickIndexPosition.Five, QuickIndexPosition.Six,
+            QuickIndexPosition.Seven, QuickIndexPosition.Eight, QuickIndexPosition.Nine,
+            QuickIndexPosition.Ten, QuickIndexPosition.Eleven, QuickIndexPosition.Twelve,
+            QuickIndexPosition.Thirteen, QuickIndexPosition.Fourteen, QuickIndexPosition.Fifteen,
+        ];
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
         /// .                                               Static Methods
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>

@@ -18,7 +18,7 @@ namespace NetCore.Common
     ///  If we use ushort - the limit will be 16.
     ///  If we use uint - the limit will be 32.
     ///  If we use ulong - the limit will be 64.
-    /// But it will be come a bit slower, because we will need to calculate (once) the <see cref="NumberOfSetBits(int)"/> on each Get operation.
+    /// But it will be come a bit slower, because we will need to calculate (once) the <see cref="PopCount(int)"/> on each Get operation.
     /// We can introduce it if benchmarks of it will be successful.
     public struct QuickMap<T> where T : class
     {
@@ -27,10 +27,10 @@ namespace NetCore.Common
         /// .                                               Private Fields
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        private T?[] values; // Stores items themselves. Resized if you add new values. Limited to 15 in size.
         private ulong lookup; // Encodes local index of all items in one lookup table.
         private ushort flags; // Stores (true/false) states about whether a specific item is present in the array or not.
-        private T?[] values; // Stores items themselves. Resized if you add new values. Limited to 15 in size.
-        private int stored; // Amount of items stored in the array. Array capacity might differ from this value.
+        private ushort stored; // Amount of items stored in the array. Array capacity might differ from this value.
 
 
 
@@ -77,12 +77,10 @@ namespace NetCore.Common
                 return false;
             }
 
-            //int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
-            //int index = NumberOfSetBits(flags & (QuickID<TItem, T>.BitFlag - 1));
-            int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
-            InsertAtUnchecked(ref values, ref stored, GetPop(flag - 1), item);
+            ushort localIndex = (ushort)PopCount(flag - 1);
+            InsertAtUnchecked(ref values, ref stored, localIndex, item);
             FlagStored(ref flags, flag);
-            UpdateLookup(flags, out lookup);
+            UpdateLookup(ref lookup, flags, localIndex, stored);
             return true;
         }
 
@@ -101,18 +99,19 @@ namespace NetCore.Common
             }
 
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
-            if ((flags & QuickID<TItem, T>.BitFlag) != 0)
+            ushort flag = QuickID<TItem, T>.BitFlag;
+            if ((flags & flag) != 0)
             {
                 // Item under a specific order already exist.
                 // Replacing it won't rebuild the lookup table and won't require an array resize.
-                values[localIndex] = item;
+                values[(lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position] = item;
                 return;
             }
 
+            ushort localIndex = (ushort)PopCount(flag - 1);
             InsertAtUnchecked(ref values, ref stored, localIndex, item);
-            FlagStored(ref flags, QuickID<TItem, T>.BitFlag);
-            UpdateLookup(flags, out lookup);
+            FlagStored(ref flags, flag);
+            UpdateLookup(ref lookup, flags, localIndex, stored);
             return;
         }
 
@@ -153,10 +152,10 @@ namespace NetCore.Common
                 return false; // Item is was already removed.
             }
 
-            int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
+            ushort localIndex = (ushort)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
             RemoveAtUnchecked(ref values, ref stored, localIndex);
             FlagEmpty(ref flags, QuickID<TItem, T>.BitFlag);
-            UpdateLookup(flags, out lookup);
+            UpdateLookup(ref lookup, flags, localIndex, stored);
             return true;
         }
 
@@ -173,10 +172,10 @@ namespace NetCore.Common
                 return false;
             }
 
-            int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
+            ushort localIndex = (ushort)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
             RemoveAtUnchecked(ref values, ref stored, localIndex);
             FlagEmpty(ref flags, QuickID<TItem, T>.BitFlag);
-            UpdateLookup(flags, out lookup);
+            UpdateLookup(ref lookup, flags, localIndex, stored);
             return true;
         }
 
@@ -195,11 +194,11 @@ namespace NetCore.Common
                 return false;
             }
 
-            int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
+            ushort localIndex = (ushort)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
             removed = (TItem)values[localIndex]!;
             RemoveAtUnchecked(ref values, ref stored, localIndex);
             FlagEmpty(ref flags, QuickID<TItem, T>.BitFlag);
-            UpdateLookup(flags, out lookup);
+            UpdateLookup(ref lookup, flags, localIndex, stored);
             return true;
         }
 
@@ -248,48 +247,38 @@ namespace NetCore.Common
         /// Sets bit in <paramref name="flags"/> under given <paramref name="bitFlag"/> to '0'.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void FlagEmpty(ref ushort flags, ushort bitFlag) => flags &= (ushort)~bitFlag;
+        private static void FlagEmpty(ref ushort flags, ushort bitFlag) => flags = (ushort)(flags & ~bitFlag);
 
         /// <summary>
         /// Updates a <paramref name="lookup"/> table based on input <paramref name="flags"/>.
         /// </summary>
-        private static void UpdateLookup(ushort flags, out ulong lookup)
+        /// <param name="lookup"></param>
+        /// <param name="flags"></param>
+        /// <param name="from"></param>
+        /// <param name="to">(Exclusive)</param>
+        private static void UpdateLookup(ref ulong lookup, ushort flags, ushort from, ushort to)
         {
             ulong stored = 0;
-            lookup = 0uL;
-
-            for (int order = 0; order < QuickIndex.Limit; order++)
+            for (int order = 0; order < from; order++)
             {
-                if ((flags & (1u << order)) != 0)
+                if ((flags & (1 << order)) != 0)
                 {
-                    lookup |= stored << (int)(order switch
-                    {
-                        0 => QuickIndexPosition.One,
-                        1 => QuickIndexPosition.Two,
-                        2 => QuickIndexPosition.Three,
-                        3 => QuickIndexPosition.Four,
-                        4 => QuickIndexPosition.Five,
-                        5 => QuickIndexPosition.Six,
-                        6 => QuickIndexPosition.Seven,
-                        7 => QuickIndexPosition.Eight,
-                        8 => QuickIndexPosition.Nine,
-                        9 => QuickIndexPosition.Ten,
-                        10 => QuickIndexPosition.Eleven,
-                        11 => QuickIndexPosition.Twelve,
-                        12 => QuickIndexPosition.Thirteen,
-                        13 => QuickIndexPosition.Fourteen,
-                        14 => QuickIndexPosition.Fifteen,
-                        _ => throw new ArgumentOutOfRangeException(nameof(order)),
-                    });
-
                     stored++;
+                }
+            }
+
+            for (int order = from; order < to; order++)
+            {
+                if ((flags & (1 << order)) != 0)
+                {
+                    lookup |= stored++ << (int)QuickIndexing.Positions[order];
                 }
             }
         }
 
-        private static void InsertAtUnchecked(ref T?[] values, ref int stored, int localIndex, T item)
+        private static void InsertAtUnchecked(ref T?[] values, ref ushort stored, ushort localIndex, T item)
         {
-            int newStored = stored + 1;
+            ushort newStored = (ushort)(stored + 1);
             if (newStored >= values.Length)
             {
                 var array = new T?[newStored];
@@ -311,9 +300,9 @@ namespace NetCore.Common
             stored = newStored;
         }
 
-        private static void RemoveAtUnchecked(ref T?[] values, ref int stored, int localIndex)
+        private static void RemoveAtUnchecked(ref T?[] values, ref ushort stored, int localIndex)
         {
-            for (int i = localIndex + 1; i < stored; i++)
+            for (ushort i = (ushort)(localIndex + 1); i < stored; i++)
             {
                 values[i - 1] = values[i];
             }
@@ -321,12 +310,14 @@ namespace NetCore.Common
             values[--stored] = default;
         }
 
-        private static int GetPop(int input)
+        /// <summary>
+        /// Pop counter for ushort values.
+        /// </summary>
+        private static int PopCount(int input)
         {
-            int result = ((input & 0xAA) >> 1) + (input & 0x55);
-            result = (result & 0x33) + ((result >> 2) & 0x33);
-            result = (result + (result >> 4)) & 0x0F;
-            return result;
+            input = ((input & 0xAA) >> 1) + (input & 0x55);
+            input = (input & 0x33) + ((input >> 2) & 0x33);
+            return (input + (input >> 4)) & 0x0F;
         }
     }
 }
