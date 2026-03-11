@@ -76,10 +76,9 @@ namespace NetCore.Common
                 return false;
             }
 
-            int localIndex = LocalIndexOf(order, flags);
-            InsertAtUnchecked(ref values, ref stored, localIndex, item);
+            InsertAtUnchecked(ref values, ref stored, LocalIndexOf(order, flags), item);
             MarkStored(ref flags, order);
-            UpdateLookup(flags, out lookup, startFrom: localIndex);
+            UpdateLookup(flags, out lookup);
             return true;
         }
 
@@ -111,7 +110,7 @@ namespace NetCore.Common
 
             InsertAtUnchecked(ref values, ref stored, localIndex, item);
             MarkStored(ref flags, order);
-            UpdateLookup(flags, out lookup, startFrom: localIndex);
+            UpdateLookup(flags, out lookup);
             return;
         }
 
@@ -132,14 +131,13 @@ namespace NetCore.Common
         public readonly TItem? Get<TItem>() where TItem : class, T
         {
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            QuickIndex index = QuickID<TItem, T>.Index;
-            ulong mask = lookup & (ulong)index.mask;
-            if (mask == 0uL)
+            if ((flags & QuickID<TItem, T>.Order) == 0)
             {
-                return default;
+                return default; // There is no such item in a collection.
             }
 
-            return values[(int)(mask >> (int)index.position)] as TItem;
+            QuickIndex index = QuickID<TItem, T>.Index;
+            return values[(int)((lookup & (ulong)index.Mask) >> (int)index.position)] as TItem;
         }
 
         /// <summary>
@@ -165,10 +163,9 @@ namespace NetCore.Common
                 return false;
             }
 
-            int localIndex = LocalIndexOf(order, flags);
-            RemoveAtUnchecked(ref values, ref stored, localIndex);
+            RemoveAtUnchecked(ref values, ref stored, LocalIndexOf(order, flags));
             MarkEmpty(ref flags, order);
-            UpdateLookup(flags, out lookup, startFrom: localIndex);
+            UpdateLookup(flags, out lookup);
             return true;
         }
 
@@ -186,10 +183,9 @@ namespace NetCore.Common
                 return false;
             }
 
-            int localIndex = LocalIndexOf(order, flags);
-            RemoveAtUnchecked(ref values, ref stored, localIndex);
+            RemoveAtUnchecked(ref values, ref stored, LocalIndexOf(order, flags));
             MarkEmpty(ref flags, order);
-            UpdateLookup(flags, out lookup, startFrom: localIndex);
+            UpdateLookup(flags, out lookup);
             return true;
         }
 
@@ -213,7 +209,7 @@ namespace NetCore.Common
             removed = (TItem)values[localIndex]!;
             RemoveAtUnchecked(ref values, ref stored, localIndex);
             MarkEmpty(ref flags, order);
-            UpdateLookup(flags, out lookup, startFrom: localIndex);
+            UpdateLookup(flags, out lookup);
             return true;
         }
 
@@ -265,24 +261,34 @@ namespace NetCore.Common
         /// <summary>
         /// Updates a <paramref name="lookup"/> table based on input <paramref name="flags"/>.
         /// </summary>
-        private static void UpdateLookup(ushort flags, out ulong lookup, int startFrom = 0)
+        private static void UpdateLookup(ushort flags, out ulong lookup)
         {
             ulong stored = 0;
             lookup = 0uL;
 
-            for (int i = 0; i < startFrom; i++)
+            for (int i = 0; i < QuickIndex.Limit; i++)
             {
                 if ((flags & (1u << i)) != 0)
                 {
-                    stored++;
-                }
-            }
+                    lookup |= stored << (int)(i switch
+                    {
+                        0 => QuickIndexPosition.One,
+                        1 => QuickIndexPosition.Two,
+                        2 => QuickIndexPosition.Three,
+                        3 => QuickIndexPosition.Four,
+                        4 => QuickIndexPosition.Five,
+                        5 => QuickIndexPosition.Six,
+                        6 => QuickIndexPosition.Seven,
+                        7 => QuickIndexPosition.Eight,
+                        8 => QuickIndexPosition.Nine,
+                        9 => QuickIndexPosition.Ten,
+                        10 => QuickIndexPosition.Eleven,
+                        11 => QuickIndexPosition.Twelve,
+                        12 => QuickIndexPosition.Thirteen,
+                        13 => throw new NotSupportedException("14th position is not supported yet."),
+                        _ => default,
+                    });
 
-            for (int i = startFrom; i < QuickIndex.Limit; i++)
-            {
-                if ((flags & (1u << i)) != 0)
-                {
-                    lookup |= stored << (int)QuickIndexing.GetPosition(index: i);
                     stored++;
                 }
             }

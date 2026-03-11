@@ -69,14 +69,14 @@ namespace NetCore.Examples
             client.Connect(new IPEndPoint(IPAddress.Loopback, 25000));
 
             server.SendReliable(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
-            server.SendReliable(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
+            server.SendReliable<TCP.TCPTransport>(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
             server.SendUnreliable(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
-            server.SendUnreliable(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
+            server.SendUnreliable<UDP.UDPTransport>(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
 
             client.SendReliable(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
-            client.SendReliable(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
+            client.SendReliable<Loopback.LoopbackTransport>(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
             client.SendUnreliable(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
-            client.SendUnreliable(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
+            client.SendUnreliable<Loopback.LoopbackTransport>(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
 
             client.Disconnect();
             client.Stop();

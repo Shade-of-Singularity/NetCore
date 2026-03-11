@@ -73,26 +73,32 @@ namespace NetCore.TCP
         /// <inheritdoc/>
         public void SendReliable(ReadOnlySpan<byte> datagram)
         {
-            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendReliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+#if DEBUG
+            Console.WriteLine($"{nameof(TCPTransport)}.{nameof(SendReliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+#endif
         }
 
         /// <inheritdoc/>
         public void SendReliableExcluding(ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
-            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendReliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+#if DEBUG
+            Console.WriteLine($"{nameof(TCPTransport)}.{nameof(SendReliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+#endif
         }
 
         /// <inheritdoc/>
         public void SendReliableTo(ReadOnlySpan<byte> datagram, ConnectionID target)
         {
-            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendReliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+#if DEBUG
+            Console.WriteLine($"{nameof(TCPTransport)}.{nameof(SendReliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+#endif
         }
 
         /// <inheritdoc/>
         public void HandleReliable(ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleReliable)}(source: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(TCPTransport)}.{nameof(HandleReliable)}(source: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
             Console.ForegroundColor = ConsoleColor.White;
         }
     }

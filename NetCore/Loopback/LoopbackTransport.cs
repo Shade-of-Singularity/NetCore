@@ -92,7 +92,9 @@ namespace NetCore.Loopback
         /// <inheritdoc/>
         public void SendReliable(ReadOnlySpan<byte> datagram)
         {
+#if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+#endif
             lock (m_Loopbacks)
             {
                 foreach (var entry in m_Loopbacks)
@@ -105,7 +107,9 @@ namespace NetCore.Loopback
         /// <inheritdoc/>
         public void SendReliableExcluding(ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
+#if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+#endif
             lock (m_Loopbacks)
             {
                 foreach (var entry in m_Loopbacks)
@@ -121,7 +125,9 @@ namespace NetCore.Loopback
         /// <inheritdoc/>
         public void SendReliableTo(ReadOnlySpan<byte> datagram, ConnectionID target)
         {
+#if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+#endif
             lock (m_Loopbacks)
             {
                 if (m_Loopbacks.TryGetValue(target, out LoopbackEntry entry))
@@ -142,7 +148,9 @@ namespace NetCore.Loopback
         /// <inheritdoc/>
         public void SendUnreliable(ReadOnlySpan<byte> datagram)
         {
+#if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+#endif
             lock (m_Loopbacks)
             {
                 foreach (var entry in m_Loopbacks)
@@ -155,7 +163,9 @@ namespace NetCore.Loopback
         /// <inheritdoc/>
         public void SendUnreliableExcluding(ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
+#if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+#endif
             lock (m_Loopbacks)
             {
                 foreach (var entry in m_Loopbacks)
@@ -171,7 +181,9 @@ namespace NetCore.Loopback
         /// <inheritdoc/>
         public void SendUnreliableTo(ReadOnlySpan<byte> datagram, ConnectionID target)
         {
+#if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+#endif
             lock (m_Loopbacks)
             {
                 if (m_Loopbacks.TryGetValue(target, out LoopbackEntry entry))

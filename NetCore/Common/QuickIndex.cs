@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace NetCore.Common
@@ -19,11 +20,29 @@ namespace NetCore.Common
         /// <summary>
         /// Max amount of items (inclusive) which <see cref="QuickIndexing"/> supports.
         /// </summary>
+        /// TODO: Increase limit to 14 using 0th bit which always point to a 0th index.
         public const int Limit = 13;
         /// <summary>
         /// Encodes no index.
         /// </summary>
         public static readonly QuickIndex Invalid = default;
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                              Public Properties
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <summary>
+        /// Mask within <see cref="QuickIndexing.IndexMask"/>, without extra bits from <see cref="QuickIndexPosition"/>.
+        /// </summary>
+        public QuickIndexMask Mask
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => (QuickIndexMask)((ulong)RawMask & QuickIndexing.IndexMask);
+        }
 
 
 
@@ -36,9 +55,9 @@ namespace NetCore.Common
         /// <summary>
         /// Mask, encoding index in an internal array.
         /// </summary>
-        [FieldOffset(0)] public readonly QuickIndexMask mask = (QuickIndexMask)((ulong)mask & QuickIndexing.IndexMask); // [0-7 bytes]
+        [FieldOffset(0)] public readonly QuickIndexMask RawMask = mask; // [0-7 bytes]
         /// <summary>
-        /// Offset we need to apply to <see cref="mask"/> to get the index of an item in the array.
+        /// Offset we need to apply to a <see cref="Mask"/> to get the index of an item in the array.
         /// </summary>
         [FieldOffset(7)] public readonly QuickIndexPosition position = offset; // [8th byte]
 
@@ -59,7 +78,7 @@ namespace NetCore.Common
         {
             if (!TryGetFrom(index, out QuickIndex result))
             {
-                throw new ArgumentOutOfRangeException($"ID of an quickly indexed item should be in a range [0:{Limit}]. Provided: {index}");
+                throw new ArgumentOutOfRangeException($"ConnectionID of an quickly indexed item should be in a range [0:{Limit}]. Provided: {index}");
             }
 
             return result;

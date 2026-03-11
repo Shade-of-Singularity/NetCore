@@ -67,7 +67,7 @@ namespace NetCore.Common
         {
             if (!TryGetMask(index, out QuickIndexMask mask))
             {
-                throw new ArgumentOutOfRangeException($"ID of an quickly indexed item should be in a range [0:{QuickIndex.Limit}]. Provided: {index}");
+                throw new ArgumentOutOfRangeException($"ConnectionID of an quickly indexed item should be in a range [0:{QuickIndex.Limit}]. Provided: {index}");
             }
 
             return mask;
@@ -106,11 +106,11 @@ namespace NetCore.Common
         /// </summary>
         /// <param name="index">Index of an item in a collection.</param>
         /// <returns><see cref="QuickIndexPosition"/> encoding position in an array for a given <paramref name="index"/>.</returns>
-        public static QuickIndexMask GetPosition(int index)
+        public static QuickIndexPosition GetPosition(int index)
         {
-            if (!TryGetMask(index, out QuickIndexMask position))
+            if (!TryGetPosition(index, out QuickIndexPosition position))
             {
-                throw new ArgumentOutOfRangeException($"ID of an quickly indexed item should be in a range [0:{QuickIndex.Limit}]. Provided: {index}");
+                throw new ArgumentOutOfRangeException($"ConnectionID of an quickly indexed item should be in a range [0:{QuickIndex.Limit}]. Provided: {index}");
             }
 
             return position;

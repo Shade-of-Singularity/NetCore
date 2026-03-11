@@ -372,6 +372,17 @@ namespace NetCore
         }
 
         /// <summary>
+        /// Checks whether this <see cref="NetworkMember"/> manages a specific reliable transport.
+        /// </summary>
+        public bool HasReliableTransport<T>() where T : class, IReliableTransport
+        {
+            lock (_lock)
+            {
+                return ReliableTransports.Has<T>();
+            }
+        }
+
+        /// <summary>
         /// Tries to retrieve <see cref="IReliableTransport"/> under a given <typeparamref name="T"/> type.
         /// </summary>
         /// <typeparam name="T">Type of transport to look for.</typeparam>
@@ -480,6 +491,17 @@ namespace NetCore
                 }
 
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Checks whether this <see cref="NetworkMember"/> manages a specific reliable transport.
+        /// </summary>
+        public bool HasUnreliableTransport<T>() where T : class, IUnreliableTransport
+        {
+            lock (_lock)
+            {
+                return UnreliableTransports.Has<T>();
             }
         }
 

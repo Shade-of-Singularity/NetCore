@@ -56,8 +56,11 @@ namespace NetCore
         {
             lock (_lock)
             {
+                // TODO: Consider adding a check for 0 transports being present.
                 foreach (var transport in UnreliableTransports)
+                {
                     transport.SendUnreliable(datagram);
+                }
             }
         }
 
@@ -70,6 +73,7 @@ namespace NetCore
         {
             lock (_lock)
             {
+                // TODO: Consider adding a check for 0 transports being present.
                 GetUnreliableTransport<TTransport>()?.SendUnreliable(datagram);
             }
         }
@@ -83,6 +87,7 @@ namespace NetCore
         {
             lock (_lock)
             {
+                // TODO: Consider adding a check for 0 transports being present.
                 foreach (var transport in UnreliableTransports)
                 {
                     if (transport.HasConnection(connection))
@@ -109,6 +114,7 @@ namespace NetCore
         {
             lock (_lock)
             {
+                // TODO: Consider adding a check for 0 transports being present.
                 GetUnreliableTransport<TTransport>()?.SendUnreliableExcluding(datagram, connection);
             }
         }
@@ -122,8 +128,11 @@ namespace NetCore
         {
             lock (_lock)
             {
+                // TODO: Consider adding a check for 0 transports being present.
                 foreach (var transport in UnreliableTransports)
+                {
                     transport.SendUnreliableTo(datagram, connection);
+                }
             }
         }
 
@@ -137,6 +146,7 @@ namespace NetCore
         {
             lock (_lock)
             {
+                // TODO: Consider adding a check for 0 transports being present.
                 GetUnreliableTransport<TTransport>()?.SendUnreliableTo(datagram, connection);
             }
         }
@@ -149,8 +159,11 @@ namespace NetCore
         {
             lock (_lock)
             {
+                // TODO: Consider adding a check for 0 transports being present.
                 foreach (var transport in ReliableTransports)
+                {
                     transport.SendReliable(datagram);
+                }
             }
         }
 
@@ -163,6 +176,7 @@ namespace NetCore
         {
             lock (_lock)
             {
+                // TODO: Consider adding a check for 0 transports being present.
                 GetReliableTransport<TTransport>()?.SendReliable(datagram);
             }
         }
@@ -202,6 +216,7 @@ namespace NetCore
         {
             lock (_lock)
             {
+                // TODO: Consider adding a check for 0 transports being present.
                 GetReliableTransport<TTransport>()?.SendReliableExcluding(datagram, connection);
             }
         }
@@ -215,8 +230,11 @@ namespace NetCore
         {
             lock (_lock)
             {
+                // TODO: Consider adding a check for 0 transports being present.
                 foreach (var transport in ReliableTransports)
+                {
                     transport.SendReliableTo(datagram, connection);
+                }
             }
         }
 
@@ -230,6 +248,7 @@ namespace NetCore
         {
             lock (_lock)
             {
+                // TODO: Consider adding a check for 0 transports being present.
                 GetReliableTransport<TTransport>()?.SendReliableTo(datagram, connection);
             }
         }
