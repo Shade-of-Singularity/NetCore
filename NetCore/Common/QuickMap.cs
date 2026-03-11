@@ -285,7 +285,7 @@ namespace NetCore.Common
                         10 => QuickIndexPosition.Eleven,
                         11 => QuickIndexPosition.Twelve,
                         12 => QuickIndexPosition.Thirteen,
-                        13 => throw new NotSupportedException("14th position is not supported yet."),
+                        13 => QuickIndexPosition.Fourteen,
                         _ => default,
                     });
 

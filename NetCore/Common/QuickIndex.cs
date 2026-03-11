@@ -20,8 +20,7 @@ namespace NetCore.Common
         /// <summary>
         /// Max amount of items (inclusive) which <see cref="QuickIndexing"/> supports.
         /// </summary>
-        /// TODO: Increase limit to 14 using 0th bit which always point to a 0th index.
-        public const int Limit = 13;
+        public const int Limit = 14;
         /// <summary>
         /// Encodes no index.
         /// </summary>
@@ -106,6 +105,7 @@ namespace NetCore.Common
                 case 10: result = new QuickIndex(QuickIndexMask.Eleven, QuickIndexPosition.Eleven); return true;
                 case 11: result = new QuickIndex(QuickIndexMask.Twelve, QuickIndexPosition.Twelve); return true;
                 case 12: result = new QuickIndex(QuickIndexMask.Thirteen, QuickIndexPosition.Thirteen); return true;
+                case 13: result = new QuickIndex(QuickIndexMask.Fourteen, QuickIndexPosition.Fourteen); return true;
                 default: result = default; return false;
             }
         }

@@ -8,18 +8,19 @@
     /// </remarks>
     public enum QuickIndexPosition : byte
     {
-        One = 1,
-        Two = 2,
-        Three = 4,
-        Four = 6,
-        Five = 9,
-        Six = 12,
-        Seven = 16,
-        Eight = 20,
-        Nine = 25,
-        Ten = 30,
-        Eleven = 36,
-        Twelve = 42,
-        Thirteen = 49,
+        One = 0,
+        Two = 1,
+        Three = 2,
+        Four = 4,
+        Five = 6,
+        Six = 9,
+        Seven = 12,
+        Eight = 16,
+        Nine = 20,
+        Ten = 25,
+        Eleven = 30,
+        Twelve = 36,
+        Thirteen = 42,
+        Fourteen = 49,
     }
 }

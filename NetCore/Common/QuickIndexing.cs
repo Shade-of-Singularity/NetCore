@@ -46,11 +46,11 @@ namespace NetCore.Common
         /// <summary>
         /// Attempts to retrieve next available <see cref="QuickIndex"/>.
         /// </summary>
-        public static bool TryGetNextIndex(ref int occupied, out QuickIndex index)
+        public static bool TryGetNextIndex(ref int isUse, out QuickIndex index)
         {
-            if (occupied < QuickIndex.Limit)
+            if (isUse < QuickIndex.Limit)
             {
-                index = QuickIndex.GetFrom(occupied++);
+                index = QuickIndex.GetFrom(isUse++);
                 return true;
             }
 
@@ -95,6 +95,7 @@ namespace NetCore.Common
                 10 => QuickIndexMask.Eleven,
                 11 => QuickIndexMask.Twelve,
                 12 => QuickIndexMask.Thirteen,
+                13 => QuickIndexMask.Fourteen,
                 _ => QuickIndexMask.None,
             };
 
@@ -138,6 +139,7 @@ namespace NetCore.Common
                 case 10: position = QuickIndexPosition.Eleven; return true;
                 case 11: position = QuickIndexPosition.Twelve; return true;
                 case 12: position = QuickIndexPosition.Thirteen; return true;
+                case 13: position = QuickIndexPosition.Fourteen; return true;
                 default: position = default; return false;
             }
         }
