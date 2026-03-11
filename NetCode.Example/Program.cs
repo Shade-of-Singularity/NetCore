@@ -1,4 +1,8 @@
-﻿using System;
+﻿using NetCore.Common;
+using NetCore.Loopback;
+using NetCore.TCP;
+using NetCore.UDP;
+using System;
 using System.Net;
 using System.Runtime.InteropServices;
 

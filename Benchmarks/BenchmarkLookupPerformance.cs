@@ -1,5 +1,4 @@
 ﻿using BenchmarkDotNet.Attributes;
-using NetCore;
 using NetCore.Common;
 using NetCore.Loopback;
 using NetCore.TCP;
@@ -33,6 +32,39 @@ namespace NetCore.Benchmarks
         | RunLastNative  | 7.975 ns | 0.0575 ns | 0.0510 ns |         - |
         | RunLastQuick   | 3.045 ns | 0.0301 ns | 0.0251 ns |         - |
 
+        From the recent time:
+        | Method         | Mean     | Error     | StdDev    | Allocated |
+        |--------------- |---------:|----------:|----------:|----------:|
+        | RunFirstNative | 7.926 ns | 0.1484 ns | 0.1389 ns |         - |
+        | RunFirstQuick  | 6.042 ns | 0.1062 ns | 0.0993 ns |         - |
+        | RunLastNative  | 7.737 ns | 0.1634 ns | 0.1528 ns |         - |
+        | RunLastQuick   | 6.087 ns | 0.1469 ns | 0.2107 ns |         - |
+        So system is under rework.
+
+        Before introducing raw fields:
+        | Method        | Mean     | Error     | StdDev    |
+        |-------------- |---------:|----------:|----------:|
+        | RunLastNative | 8.646 ns | 0.1916 ns | 0.3783 ns |
+        | RunLastQuick  | 5.935 ns | 0.1369 ns | 0.1406 ns |
+
+        After introducing raw fields:
+        ...
+
+        Full:
+        | Method        | Mean     | Error     | StdDev    |
+        |-------------- |---------:|----------:|----------:|
+        | RunLastQuick  | 6.403 ns | 0.1503 ns | 0.1955 ns |
+        | RunLastNative | 7.975 ns | 0.1858 ns | 0.2139 ns |
+
+        First half:
+        | Method        | Mean     | Error     | StdDev    |
+        |-------------- |---------:|----------:|----------:|
+        | RunLastQuick  | 3.134 ns | 0.0874 ns | 0.0858 ns |
+        | RunLastNative | 8.082 ns | 0.1766 ns | 0.1652 ns |
+
+        Second half (+ struct creation):
+
+
         */
 
         [GlobalSetup]
@@ -57,39 +89,45 @@ namespace NetCore.Benchmarks
             UDPConsumer = null;
         }
 
-        [Benchmark]
-        public void RunFirstNative()
-        {
-            if (Native.TryGetValue(typeof(LoopbackTransport), out ITransport? transport))
-            {
-                NativeConsumer = transport;
-            }
-        }
+        //[Benchmark]
+        //public void RunFirstNative()
+        //{
+        //    if (Native.TryGetValue(typeof(LoopbackTransport), out ITransport? transport))
+        //    {
+        //        NativeConsumer = transport;
+        //    }
+        //}
 
-        [Benchmark]
-        public void RunFirstQuick()
-        {
-            if (Quick.TryGet(out LoopbackTransport? transport))
-            {
-                LoopbackConsumer = transport;
-            }
-        }
+        //[Benchmark]
+        //public void RunFirstQuick()
+        //{
+        //    if (Quick.TryGet(out LoopbackTransport? transport))
+        //    {
+        //        LoopbackConsumer = transport;
+        //    }
+        //}
 
-        [Benchmark]
-        public void RunLastNative()
-        {
-            if (Native.TryGetValue(typeof(UDPTransport), out ITransport? transport))
-            {
-                NativeConsumer = transport;
-            }
-        }
-
-        [Benchmark]
+        [Benchmark(OperationsPerInvoke = 100_000)]
         public void RunLastQuick()
         {
-            if (Quick.TryGet(out UDPTransport? transport))
+            for (int i = 0; i < 100_000; i++)
             {
-                UDPConsumer = transport;
+                if (Quick.TryGet(out UDPTransport? transport))
+                {
+                    UDPConsumer = transport;
+                }
+            }
+        }
+
+        [Benchmark(OperationsPerInvoke = 100_000)]
+        public void RunLastNative()
+        {
+            for (int i = 0; i < 100_000; i++)
+            {
+                if (Native.TryGetValue(typeof(UDPTransport), out ITransport? transport))
+                {
+                    NativeConsumer = transport;
+                }
             }
         }
     }

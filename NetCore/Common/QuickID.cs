@@ -10,12 +10,13 @@
         /// <summary>
         /// Cached index for an item in a current category.
         /// </summary>
-        public static readonly QuickIndex Index = QuickIDCategory<TCategory>.GetNext(out Order);
-        /// <summary>
-        /// 0-based sorting order [0:12] within an array for this item.
-        /// Also represent order in which specific items were associated with a target category.
-        /// </summary>
-        public static int Order;
+        public static readonly QuickIndex Index = QuickIDCategory<TCategory>.GetNext();
+        /// <inheritdoc cref="QuickIndex.Mask"/>
+        public static readonly QuickIndexMask Mask = Index.Mask;
+        /// <inheritdoc cref="QuickIndex.Position"/>
+        public static readonly QuickIndexPosition Position = Index.Position;
+        /// <inheritdoc cref="QuickIndex.BitFlag"/>
+        public static readonly ushort BitFlag = Index.BitFlag;
     }
 
     /// <summary>
@@ -24,21 +25,12 @@
     /// <typeparam name="TCategory">Base type for items in an collection.</typeparam>
     public static class QuickIDCategory<TCategory>
     {
-        static int inUse;
+        static ushort inUse;
 
         /// <summary>
         /// Retrieves next available <see cref="QuickIndex"/> for this category.
         /// </summary>
         /// <returns></returns>
         public static QuickIndex GetNext() => QuickIndexing.GetNextIndex(ref inUse);
-
-        /// <summary>
-        /// Same as <see cref="GetNext()"/>, but provides a specific index at which item has to be stored as well.
-        /// </summary>
-        public static QuickIndex GetNext(out int order)
-        {
-            order = inUse;
-            return QuickIndexing.GetNextIndex(ref inUse);
-        }
     }
 }

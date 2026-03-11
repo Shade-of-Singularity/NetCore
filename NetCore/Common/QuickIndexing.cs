@@ -10,30 +10,13 @@ namespace NetCore.Common
     {
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
-        /// .                                                Constructors
-        /// .
-        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        /// <summary>
-        /// Mask, covering all 7-ish bytes encoding <see cref="QuickIndexMask"/>.
-        /// </summary>
-        public const ulong IndexMask = 0b00000000_1111111_1111111_111111_111111_11111_11111_1111_1111_111_111_11_11_1_0uL;
-        /// <summary>
-        /// Mask, covering the last 8th byte, which encodes <see cref="QuickIndexPosition"/>.
-        /// </summary>
-        public const ulong PositionMask = 0b11111111_0000000_0000000_000000_000000_00000_00000_0000_0000_000_000_00_00_0_0uL;   
-
-
-
-
-        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
-        /// .
         /// .                                               Static Methods
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
         /// Retrieves next available <see cref="QuickIndex"/>.
         /// </summary>
-        public static QuickIndex GetNextIndex(ref int inUse)
+        public static QuickIndex GetNextIndex(ref ushort inUse)
         {
             if (!TryGetNextIndex(ref inUse, out QuickIndex index))
             {
@@ -46,7 +29,7 @@ namespace NetCore.Common
         /// <summary>
         /// Attempts to retrieve next available <see cref="QuickIndex"/>.
         /// </summary>
-        public static bool TryGetNextIndex(ref int isUse, out QuickIndex index)
+        public static bool TryGetNextIndex(ref ushort isUse, out QuickIndex index)
         {
             if (isUse < QuickIndex.Limit)
             {
@@ -63,7 +46,7 @@ namespace NetCore.Common
         /// </summary>
         /// <param name="index">Index of an item in a collection.</param>
         /// <returns><see cref="QuickIndexMask"/> encoding position under a given <paramref name="index"/>.</returns>
-        public static QuickIndexMask GetMask(int index)
+        public static QuickIndexMask GetMask(ushort index)
         {
             if (!TryGetMask(index, out QuickIndexMask mask))
             {
@@ -78,7 +61,7 @@ namespace NetCore.Common
         /// </summary>
         /// <param name="index">Index of an item in a collection.</param>
         /// <param name="position"><see cref="QuickIndexMask"/> encoding position under a given <paramref name="index"/>.</param>
-        public static bool TryGetMask(int index, out QuickIndexMask position)
+        public static bool TryGetMask(ushort index, out QuickIndexMask position)
         {
             position = index switch
             {
@@ -96,6 +79,7 @@ namespace NetCore.Common
                 11 => QuickIndexMask.Twelve,
                 12 => QuickIndexMask.Thirteen,
                 13 => QuickIndexMask.Fourteen,
+                14 => QuickIndexMask.Fifteen,
                 _ => QuickIndexMask.None,
             };
 
@@ -107,7 +91,7 @@ namespace NetCore.Common
         /// </summary>
         /// <param name="index">Index of an item in a collection.</param>
         /// <returns><see cref="QuickIndexPosition"/> encoding position in an array for a given <paramref name="index"/>.</returns>
-        public static QuickIndexPosition GetPosition(int index)
+        public static QuickIndexPosition GetPosition(ushort index)
         {
             if (!TryGetPosition(index, out QuickIndexPosition position))
             {
@@ -122,7 +106,7 @@ namespace NetCore.Common
         /// </summary>
         /// <param name="index">Index of an item in a collection.</param>
         /// <param name="position"><see cref="QuickIndexPosition"/> encoding position in an array for a given <paramref name="index"/>.</param>
-        public static bool TryGetPosition(int index, out QuickIndexPosition position)
+        public static bool TryGetPosition(ushort index, out QuickIndexPosition position)
         {
             switch (index)
             {
@@ -140,6 +124,7 @@ namespace NetCore.Common
                 case 11: position = QuickIndexPosition.Twelve; return true;
                 case 12: position = QuickIndexPosition.Thirteen; return true;
                 case 13: position = QuickIndexPosition.Fourteen; return true;
+                case 14: position = QuickIndexPosition.Fifteen; return true;
                 default: position = default; return false;
             }
         }

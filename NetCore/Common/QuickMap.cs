@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace NetCore.Common
 {
@@ -12,7 +13,7 @@ namespace NetCore.Common
     /// (2) Has a technical limit of items. See also: <see cref="QuickIndex.Limit"/>
     /// </remarks>
     /// <typeparam name="T">Item type to store.</typeparam>
-    /// Note: By avoiding using <see cref="QuickIndex"/> usage and by using only <see cref="QuickID{TItem, TCategory}.Order"/> instead
+    /// Note: By avoiding using <see cref="QuickIndex"/> usage and by using only <see cref="QuickID{TItem, TCategory}.BitFlag"/> instead
     ///  we can increase the amount of storable items to the amount of bits in a <see cref="flags"/> variable.
     ///  If we use ushort - the limit will be 16.
     ///  If we use uint - the limit will be 32.
@@ -28,7 +29,7 @@ namespace NetCore.Common
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         private ulong lookup; // Encodes local index of all items in one lookup table.
         private ushort flags; // Stores (true/false) states about whether a specific item is present in the array or not.
-        private T?[] values; // Stores items themselves. Resized if you add new values. Limited to 13 in size.
+        private T?[] values; // Stores items themselves. Resized if you add new values. Limited to 15 in size.
         private int stored; // Amount of items stored in the array. Array capacity might differ from this value.
 
 
@@ -69,15 +70,15 @@ namespace NetCore.Common
             if (item is null) throw new ArgumentNullException(nameof(item));
 
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            int order = QuickID<TItem, T>.Order;
-            if ((flags & (1u << order)) != 0u)
+            if ((flags & QuickID<TItem, T>.BitFlag) != 0)
             {
                 // Item is was already stored.
                 return false;
             }
 
-            InsertAtUnchecked(ref values, ref stored, LocalIndexOf(order, flags), item);
-            MarkStored(ref flags, order);
+            int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
+            InsertAtUnchecked(ref values, ref stored, localIndex, item);
+            FlagStored(ref flags, QuickID<TItem, T>.BitFlag);
             UpdateLookup(flags, out lookup);
             return true;
         }
@@ -97,10 +98,8 @@ namespace NetCore.Common
             }
 
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            int order = QuickID<TItem, T>.Order;
-            int localIndex = LocalIndexOf(order, flags);
-            uint flag = 1u << order;
-            if ((flags & flag) != 0u)
+            int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
+            if ((flags & QuickID<TItem, T>.BitFlag) != 0)
             {
                 // Item under a specific order already exist.
                 // Replacing it won't rebuild the lookup table and won't require an array resize.
@@ -109,7 +108,7 @@ namespace NetCore.Common
             }
 
             InsertAtUnchecked(ref values, ref stored, localIndex, item);
-            MarkStored(ref flags, order);
+            FlagStored(ref flags, QuickID<TItem, T>.BitFlag);
             UpdateLookup(flags, out lookup);
             return;
         }
@@ -118,33 +117,23 @@ namespace NetCore.Common
         /// Attempts to retrieve <typeparamref name="TItem"/> instance from the map.
         /// </summary>
         /// <returns><c>true</c> if found. <c>false</c> otherwise.</returns>
-        public readonly bool TryGet<TItem>([NotNullWhen(true)] out TItem? item) where TItem : class, T
-        {
-            item = Get<TItem>();
-            return item is not null;
-        }
+        public readonly bool TryGet<TItem>([NotNullWhen(true)] out TItem? item) where TItem : class, T => (item = Get<TItem>()) is not null;
 
         /// <summary>
         /// Retrieves <typeparamref name="TItem"/> instance from the map.
         /// </summary>
         /// <returns>Instance of <typeparamref name="TItem"/> from the map, or <c>null</c> if not found.</returns>
-        public readonly TItem? Get<TItem>() where TItem : class, T
+        public readonly TItem? Get<TItem>() where TItem : class, T => (flags & QuickID<TItem, T>.BitFlag) switch
         {
-            // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            if ((flags & QuickID<TItem, T>.Order) == 0)
-            {
-                return default; // There is no such item in a collection.
-            }
-
-            QuickIndex index = QuickID<TItem, T>.Index;
-            return values[(int)((lookup & (ulong)index.Mask) >> (int)index.position)] as TItem;
-        }
+            0 => null,
+            _ => (TItem)values[(lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position]!,
+        };
 
         /// <summary>
         /// Checks if item of a specific <typeparamref name="TItem"/> type exist exist in the internal map.
         /// </summary>
         /// <returns><c>true</c> if item exist. <c>false</c> otherwise.</returns>
-        public readonly bool Has<TItem>() where TItem : class, T => (flags & QuickID<TItem, T>.Order) != 0;
+        public readonly bool Has<TItem>() where TItem : class, T => (flags & QuickID<TItem, T>.BitFlag) != 0;
 
         /// <summary>
         /// Removes specific <paramref name="item"/> of a type <typeparamref name="TItem"/> from the map.
@@ -156,15 +145,14 @@ namespace NetCore.Common
             if (item is null) throw new ArgumentNullException(nameof(item));
 
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            int order = QuickID<TItem, T>.Order;
-            if ((flags & (1u << order)) == 0u)
+            if ((flags & QuickID<TItem, T>.BitFlag) == 0)
             {
-                // Item is was already removed.
-                return false;
+                return false; // Item is was already removed.
             }
 
-            RemoveAtUnchecked(ref values, ref stored, LocalIndexOf(order, flags));
-            MarkEmpty(ref flags, order);
+            int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
+            RemoveAtUnchecked(ref values, ref stored, localIndex);
+            FlagEmpty(ref flags, QuickID<TItem, T>.BitFlag);
             UpdateLookup(flags, out lookup);
             return true;
         }
@@ -176,15 +164,15 @@ namespace NetCore.Common
         public bool Remove<TItem>() where TItem : class, T
         {
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            int order = QuickID<TItem, T>.Order;
-            if ((flags & (1u << order)) == 0u)
+            if ((flags & QuickID<TItem, T>.BitFlag) == 0)
             {
                 // Item is was already removed.
                 return false;
             }
 
-            RemoveAtUnchecked(ref values, ref stored, LocalIndexOf(order, flags));
-            MarkEmpty(ref flags, order);
+            int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
+            RemoveAtUnchecked(ref values, ref stored, localIndex);
+            FlagEmpty(ref flags, QuickID<TItem, T>.BitFlag);
             UpdateLookup(flags, out lookup);
             return true;
         }
@@ -197,18 +185,17 @@ namespace NetCore.Common
         public bool Remove<TItem>([NotNullWhen(true)] out TItem? removed) where TItem : class, T
         {
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            int order = QuickID<TItem, T>.Order;
-            if ((flags & (1u << order)) == 0u)
+            if ((flags & QuickID<TItem, T>.BitFlag) == 0)
             {
                 // Item is was already removed.
                 removed = default;
                 return false;
             }
 
-            int localIndex = LocalIndexOf(order, flags);
+            int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
             removed = (TItem)values[localIndex]!;
             RemoveAtUnchecked(ref values, ref stored, localIndex);
-            MarkEmpty(ref flags, order);
+            FlagEmpty(ref flags, QuickID<TItem, T>.BitFlag);
             UpdateLookup(flags, out lookup);
             return true;
         }
@@ -249,14 +236,16 @@ namespace NetCore.Common
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Sets bit in <paramref name="flags"/> under given <paramref name="order"/> to '1'.
+        /// Sets bit in <paramref name="flags"/> under given <paramref name="bitFlag"/> to '1'.
         /// </summary>
-        private static void MarkStored(ref ushort flags, int order) => flags |= (ushort)(1u << order);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void FlagStored(ref ushort flags, ushort bitFlag) => flags |= bitFlag;
 
         /// <summary>
-        /// Sets bit in <paramref name="flags"/> under given <paramref name="order"/> to '0'.
+        /// Sets bit in <paramref name="flags"/> under given <paramref name="bitFlag"/> to '0'.
         /// </summary>
-        private static void MarkEmpty(ref ushort flags, int order) => flags &= (ushort)~(1u << order);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void FlagEmpty(ref ushort flags, ushort bitFlag) => flags &= (ushort)~bitFlag;
 
         /// <summary>
         /// Updates a <paramref name="lookup"/> table based on input <paramref name="flags"/>.
@@ -266,11 +255,11 @@ namespace NetCore.Common
             ulong stored = 0;
             lookup = 0uL;
 
-            for (int i = 0; i < QuickIndex.Limit; i++)
+            for (int order = 0; order < QuickIndex.Limit; order++)
             {
-                if ((flags & (1u << i)) != 0)
+                if ((flags & (1u << order)) != 0)
                 {
-                    lookup |= stored << (int)(i switch
+                    lookup |= stored << (int)(order switch
                     {
                         0 => QuickIndexPosition.One,
                         1 => QuickIndexPosition.Two,
@@ -286,7 +275,8 @@ namespace NetCore.Common
                         11 => QuickIndexPosition.Twelve,
                         12 => QuickIndexPosition.Thirteen,
                         13 => QuickIndexPosition.Fourteen,
-                        _ => default,
+                        14 => QuickIndexPosition.Fifteen,
+                        _ => throw new ArgumentOutOfRangeException(nameof(order)),
                     });
 
                     stored++;
@@ -294,10 +284,6 @@ namespace NetCore.Common
             }
         }
 
-        /// <summary>
-        /// Retrieves index of an item in a local array, where item's preferred position is described with <paramref name="order"/>.
-        /// </summary>
-        private static int LocalIndexOf(int order, ushort flags) => NumberOfSetBits(flags & (ushort)((1 << order) - 1));
         private static void InsertAtUnchecked(ref T?[] values, ref int stored, int localIndex, T item)
         {
             int newStored = stored + 1;
@@ -330,13 +316,6 @@ namespace NetCore.Common
             }
 
             values[--stored] = default;
-        }
-
-        private static int NumberOfSetBits(int i)
-        {
-            i -= (i >> 1) & 0x55555555;
-            i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
-            return (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
         }
     }
 }
