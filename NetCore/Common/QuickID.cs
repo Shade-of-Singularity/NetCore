@@ -16,7 +16,7 @@
         /// <inheritdoc cref="QuickIndex.Position"/>
         public static readonly QuickIndexPosition Position = Index.Position;
         /// <inheritdoc cref="QuickIndex.BitFlag"/>
-        public static readonly uint BitFlag = Index.BitFlag;
+        public static readonly ushort BitFlag = Index.BitFlag;
     }
 
     /// <summary>
