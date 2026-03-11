@@ -17,5 +17,21 @@
             member.RegisterReliableTransport(transport);
             member.RegisterUnreliableTransport(transport);
         }
+
+        /// <summary>
+        /// Registers both <see cref="TCP.TCPTransport"/> and <see cref="UDP.UDPTransport"/>, and configures them to work together:
+        /// <para><paramref name="udp"/> - sends only unreliable messages.</para>
+        /// <para><paramref name="tcp"/> - sends only reliable messages.</para>
+        /// </summary>
+        /// <param name="member">Member capable of working with <see cref="ITransport"/>s.</param>
+        /// <param name="tcp">TCP Transport.</param>
+        /// <param name="udp">UDP Transport.</param>
+        public static void RegisterTCPUDPPair(this NetworkMember member, TCP.TCPTransport tcp, UDP.UDPTransport udp)
+        {
+            udp.TCPTransport = tcp;
+            tcp.UDPTransport = udp;
+            member.RegisterReliableTransport(tcp);
+            member.RegisterUnreliableTransport(udp);
+        }
     }
 }

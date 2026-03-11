@@ -45,6 +45,7 @@ namespace NetCore
         /// End-point on which this transports is running.
         /// </summary>
         /// <remarks>
+        /// <para>DO NOT use this IPEndPoint as a key in dictionaries, as this value might mutate through-out the lifetime of the transport!</para>
         /// Might differ from the one provided in <see cref="ITransport.Start(IPEndPoint)"/> if this transport doesn't use default port.
         /// </remarks>
         public IPEndPoint? LocalEndPoint { get; protected set; }

@@ -44,7 +44,7 @@ namespace NetCore.Loopback
 
             if (!Servers.TryGet(remoteEndPoint, out var server))
             {
-                throw new KeyNotFoundException($"Client-side {nameof(LoopbackTransport)} cannot find an active server under a port ({remoteEndPoint.Port}).");
+                throw new KeyNotFoundException($"ClientData-side {nameof(LoopbackTransport)} cannot find an active server under a port ({remoteEndPoint.Port}).");
             }
 
             lock (m_Loopbacks)
