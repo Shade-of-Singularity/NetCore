@@ -70,7 +70,8 @@ namespace NetCore.Common
             if (item is null) throw new ArgumentNullException(nameof(item));
 
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            if ((flags & QuickID<TItem, T>.BitFlag) != 0)
+            ushort flag = QuickID<TItem, T>.BitFlag;
+            if ((flags & flag) != 0)
             {
                 // Item is was already stored.
                 return false;
@@ -79,9 +80,8 @@ namespace NetCore.Common
             //int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
             //int index = NumberOfSetBits(flags & (QuickID<TItem, T>.BitFlag - 1));
             int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
-            InsertAtUnchecked(ref values, ref stored, GetPop(localIndex), item);
-            flags |= QuickID<TItem, T>.BitFlag;
-            //FlagStored(ref flags, QuickID<TItem, T>.BitFlag);
+            InsertAtUnchecked(ref values, ref stored, GetPop(flag - 1), item);
+            FlagStored(ref flags, flag);
             UpdateLookup(flags, out lookup);
             return true;
         }
