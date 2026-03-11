@@ -81,7 +81,7 @@ namespace NetCore.Common
             InsertAtUnchecked(ref values, ref stored, localIndex, item);
             flags |= flag;
 
-            UpdateLookup(ref lookup, flags, (int)localIndex, (int)stored);
+            lookup = UpdateLookup(flags, (int)stored);
             return true;
         }
 
@@ -113,7 +113,7 @@ namespace NetCore.Common
             InsertAtUnchecked(ref values, ref stored, localIndex, item);
             flags |= flag;
 
-            UpdateLookup(ref lookup, flags, (int)localIndex, (int)stored);
+            lookup = UpdateLookup(flags, (int)stored);
         }
 
         /// <summary>
@@ -157,7 +157,7 @@ namespace NetCore.Common
             RemoveAtUnchecked(ref values, ref stored, localIndex);
             flags = (ushort)(flags & ~QuickID<TItem, T>.BitFlag);
 
-            UpdateLookup(ref lookup, flags, (int)localIndex, (int)stored);
+            lookup = UpdateLookup(flags, (int)stored);
             return true;
         }
 
@@ -178,7 +178,7 @@ namespace NetCore.Common
             RemoveAtUnchecked(ref values, ref stored, localIndex);
             flags = (ushort)(flags & ~QuickID<TItem, T>.BitFlag);
 
-            UpdateLookup(ref lookup, flags, (int)localIndex, (int)stored);
+            lookup = UpdateLookup(flags, (int)stored);
             return true;
         }
 
@@ -202,7 +202,7 @@ namespace NetCore.Common
             RemoveAtUnchecked(ref values, ref stored, localIndex);
             flags = (ushort)(flags & ~QuickID<TItem, T>.BitFlag);
 
-            UpdateLookup(ref lookup, flags, (int)localIndex, (int)stored);
+            lookup = UpdateLookup(flags, (int)stored);
             return true;
         }
 
@@ -242,25 +242,18 @@ namespace NetCore.Common
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Updates a <paramref name="lookup"/> table based on input <paramref name="flags"/>.
+        /// Recalculates a lookup table based on input <paramref name="flags"/>.
         /// </summary>
-        /// <param name="lookup"></param>
+        /// Note: There is no way invented to update a lookup table partially, so we update it in full instead.
+        ///  The problem is to understand how many items were already added...
         /// <param name="flags"></param>
-        /// <param name="from"></param>
-        /// <param name="to">(Exclusive)</param>
-        private static void UpdateLookup(ref ulong lookup, uint flags, int from, int to)
+        /// <param name="count">(Exclusive)</param>
+        private static ulong UpdateLookup(uint flags, int count = QuickIndex.Limit)
         {
-            ulong stored = 0;
-            int order = 0;
-            for (; order < from; order++)
-            {
-                if ((flags & (1u << order)) != 0)
-                {
-                    stored++;
-                }
-            }
+            ulong stored = 0uL;
+            ulong lookup = 0uL;
 
-            for (; order < to; order++)
+            for (int order = 0; order < count; order++)
             {
                 if ((flags & (1u << order)) != 0)
                 {
@@ -287,6 +280,8 @@ namespace NetCore.Common
                     stored++;
                 }
             }
+
+            return lookup;
         }
 
         private static void InsertAtUnchecked(ref T?[] values, ref uint stored, uint localIndex, T item)
