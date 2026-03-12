@@ -56,12 +56,6 @@ namespace NetCore
         public IPEndPoint? RemoteEndPoint { get; private set; }
 
         /// <summary>
-        /// Instance of <see cref="Loopback.LoopbackTransport"/> added by default
-        /// to both <see cref="ReliableTransports"/> and <see cref="UnreliableTransports"/>
-        /// </summary>
-        public LoopbackTransport LoopbackTransport => m_LoopbackTransport;
-
-        /// <summary>
         /// Provider for all <see cref="ConnectionID"/>s managed by this <see cref="NetworkMember"/> and its transports.
         /// </summary>
         public ConnectionIDProvider CIDProvider => m_CIDProvider;
@@ -112,10 +106,6 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Local reference to our own <see cref="Loopback.LoopbackTransport"/>
-        /// </summary>
-        private readonly LoopbackTransport m_LoopbackTransport;
-        /// <summary>
         /// Provider for Connection IDs.
         /// </summary>
         private readonly ConnectionIDProvider m_CIDProvider = new();
@@ -141,10 +131,6 @@ namespace NetCore
 
             ReliableTransports = new(capacity);
             UnreliableTransports = new(capacity);
-            m_LoopbackTransport = new();
-            ReliableTransports.Add(m_LoopbackTransport);
-            UnreliableTransports.Add(m_LoopbackTransport);
-            ((ITransport)m_LoopbackTransport).InvokeInitialize(this);
         }
 
 

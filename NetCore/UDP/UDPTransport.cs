@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -224,44 +225,53 @@ namespace NetCore.UDP
                 base.Start(localEndPoint);
                 Socket!.Bind(localEndPoint);
                 Source = new();
-                //SocketAsyncEventArgs args = new()
-                //{
-                //    RemoteEndPoint = RemoteAnyIPv4,
-                //};
-                //args.Completed += ReceiveRawData;
-                //args.SetBuffer(new byte[BufferSizeIncrement]);
-                //HandleNextPacket(new());
-            }
-        }
-
-        /// <summary>
-        /// Handles next UDP packet with a <see cref="Socket"/>.
-        /// </summary>
-        protected virtual void HandleNextPacket(SocketAsyncEventArgs args)
-        {
-            // Since we reuse the same buffer for writing and reading, we keep the lock active for the entire duration of a read operation.
-            lock (_lock)
-            {
-                if (!Socket!.ReceiveFromAsync(args))
+                SocketAsyncEventArgs args = new()
                 {
-                    ReceiveRawData(Socket, args);
-                }
+                    RemoteEndPoint = RemoteAnyIPv4
+                };
+                args.SetBuffer(new byte[BufferSizeIncrement]);
+                args.Completed += ReceiveRawData;
+                Socket.ReceiveFromAsync(args);
             }
         }
 
         /// <summary>
         /// Method for handling incoming UDP data.
         /// </summary>
-        protected virtual void ReceiveRawData(object sender, SocketAsyncEventArgs args)
+        protected virtual void ReceiveRawData(object socket, SocketAsyncEventArgs args)
         {
             lock (_lock)
             {
-                if (args.RemoteEndPoint is not IPEndPoint ip)
-                    throw new NotSupportedException($"Non-IP end-points are not supported. Provided type: {args.RemoteEndPoint}");
-
-                if (Clients.TryGetValue(new ClientID(ip), out ClientData client))
+                int stored = 0;
+                ClientData? sender = null;
+                do
                 {
-                    HandleUnreliable(args.Buffer.AsSpan(0, args.BytesTransferred), client.ConnectionID);
+                    if (args.RemoteEndPoint is not IPEndPoint ip)
+                        throw new NotSupportedException($"Non-IP end-points are not supported. Provided type: {args.RemoteEndPoint}");
+
+                    if (!Clients.TryGetValue(new ClientID(ip), out ClientData client))
+                        continue;
+
+                    if (sender is null || sender == client)
+                    {
+                        sender = client;
+                        int length = args.BytesTransferred;
+                        var span = args.Buffer.AsSpan(0, length);
+                        ResizeIfNeeded(ref Buffer, target: stored + length, BufferSizeIncrement);
+                        span.CopyTo(Buffer.AsSpan(stored, length));
+                        stored += length;
+                    }
+                    else // Sender changed between reads.
+                    {
+                        // Previously written data should be handled and reading should reset.
+                        HandleUnreliable(args.Buffer.AsSpan(0, stored), sender.ConnectionID);
+                        stored = 0;
+                    }
+                }
+                while (Socket is not null && !Socket.ReceiveFromAsync(args));
+                if (sender is not null)
+                {
+                    HandleUnreliable(Buffer.AsSpan(0, stored), sender.ConnectionID);
                 }
             }
         }

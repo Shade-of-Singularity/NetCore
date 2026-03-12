@@ -47,15 +47,19 @@ namespace NetCore.Loopback
                 throw new KeyNotFoundException($"ClientData-side {nameof(LoopbackTransport)} cannot find an active server under a port ({remoteEndPoint.Port}).");
             }
 
+            if (!server.TryGetReliableTransport(out LoopbackTransport? remote))
+            {
+                return;
+            }
+
             lock (m_Loopbacks)
             {
-                var remoteLoopbacks = server.LoopbackTransport;
-                lock (remoteLoopbacks.m_Loopbacks)
+                lock (remote.m_Loopbacks)
                 {
                     ConnectionID sourceID = Holder!.CIDProvider.NextCID();
                     ConnectionID remoteID = server.CIDProvider.NextCID();
-                    remoteLoopbacks.m_Loopbacks[remoteID] = new(this, sourceID);
-                    m_Loopbacks[sourceID] = new(remoteLoopbacks, remoteID);
+                    remote.m_Loopbacks[remoteID] = new(this, sourceID);
+                    m_Loopbacks[sourceID] = new(remote, remoteID);
                 }
             }
         }

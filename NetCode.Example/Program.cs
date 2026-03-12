@@ -1,7 +1,4 @@
-﻿using NetCore.Common;
-using NetCore.Loopback;
-using NetCore.TCP;
-using NetCore.UDP;
+﻿using NetCore.UDP;
 using System;
 using System.Net;
 using System.Runtime.InteropServices;
@@ -12,7 +9,19 @@ namespace NetCore.Examples
     {
         static void Main()
         {
-            SendMessagesFromTesting();
+            UDPTesting();
+        }
+
+        static void UDPTesting()
+        {
+            Server server = new();
+            server.RegisterUnreliableTransport(new UDPTransport());
+            Client client = new();
+            client.RegisterUnreliableTransport(new UDPTransport());
+            server.Start(25000);
+            client.Start(new IPEndPoint(IPAddress.Any, 0));
+            client.Connect(new IPEndPoint(IPAddress.Loopback, 25000));
+            client.SendUnreliable(MemoryMarshal.AsBytes("test".AsSpan()));
         }
 
         static void RegisterTransports()
