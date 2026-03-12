@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 
 namespace NetCore.Common
 {
@@ -104,7 +103,7 @@ namespace NetCore.Common
             {
                 // Item under a specific order already exist.
                 // Replacing it won't rebuild the lookup table and won't require an array resize.
-                values[(lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position] = item;
+                values[(lookup & (ulong)QuickID<TItem, T>.Mask) >> (int)QuickID<TItem, T>.Position] = item;
                 return;
             }
 
@@ -126,7 +125,7 @@ namespace NetCore.Common
         public readonly TItem? Get<TItem>() where TItem : class, T => (flags & QuickID<TItem, T>.BitFlag) switch
         {
             0 => null,
-            _ => (TItem)values[(lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position]!,
+            _ => (TItem)values[(lookup & (ulong)QuickID<TItem, T>.Mask) >> (int)QuickID<TItem, T>.Position]!
         };
 
         /// <summary>
@@ -150,7 +149,7 @@ namespace NetCore.Common
                 return false; // Item is was already removed.
             }
 
-            RemoveAtUnchecked(ref values, ref stored, (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position));
+            RemoveAtUnchecked(ref values, ref stored, (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (int)QuickID<TItem, T>.Position));
             flags = (ushort)(flags & ~QuickID<TItem, T>.BitFlag);
             UpdateLookup(flags, out lookup);
             return true;
@@ -169,7 +168,7 @@ namespace NetCore.Common
                 return false;
             }
 
-            RemoveAtUnchecked(ref values, ref stored, (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position));
+            RemoveAtUnchecked(ref values, ref stored, (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (int)QuickID<TItem, T>.Position));
             flags = (ushort)(flags & ~QuickID<TItem, T>.BitFlag);
             UpdateLookup(flags, out lookup);
             return true;
@@ -190,7 +189,7 @@ namespace NetCore.Common
                 return false;
             }
 
-            int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (byte)QuickID<TItem, T>.Position);
+            int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (int)QuickID<TItem, T>.Position);
             removed = (TItem)values[localIndex]!;
             RemoveAtUnchecked(ref values, ref stored, localIndex);
             flags = (ushort)(flags & ~QuickID<TItem, T>.BitFlag);
