@@ -1,4 +1,6 @@
-﻿namespace NetCore
+﻿using System;
+
+namespace NetCore
 {
     /// <summary>
     /// Type of a message which is being sent.
@@ -29,6 +31,19 @@
         /// Unordered reliable message type.
         /// </summary>
         UnorderedUnreliable = 4,
+    }
+
+    /// <summary>
+    /// Additional flags describing how to treat any given message.
+    /// Combined together with <see cref="MessageType"/>, so make sure bits do not overlap.
+    /// </summary>
+    [Flags]
+    public enum MessageFlags : byte
+    {
+        /// <summary>
+        /// No flags are defined.
+        /// </summary>
+        None = 0,
         /// <summary>
         /// Indicates whether message has a custom header.
         /// </summary>

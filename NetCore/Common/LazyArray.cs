@@ -8,7 +8,7 @@ namespace NetCore.Common
     /// Resizable array, which are only initialized when you actually use ToArray() method.
     /// </summary>
     /// <typeparam name="T">Item internal array and list contain.</typeparam>
-    public sealed class LazyArray<T> : IList<T>
+    public struct LazyArray<T>() : IList<T>
     {
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
@@ -16,17 +16,17 @@ namespace NetCore.Common
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <inheritdoc/>
-        public T this[int index]
+        public readonly T this[int index]
         {
             get => list[index];
             set => list[index] = value;
         }
 
         /// <inheritdoc/>
-        public int Count => list.Count;
+        public readonly int Count => list.Count;
 
         /// <inheritdoc/>
-        public bool IsReadOnly => false;
+        public readonly bool IsReadOnly => false;
 
 
 
@@ -72,16 +72,17 @@ namespace NetCore.Common
         }
 
         /// <inheritdoc/>
-        public bool Contains(T item) => list.Contains(item);
+        public readonly bool Contains(T item) => list.Contains(item);
 
         /// <inheritdoc/>
-        public void CopyTo(T[] array, int arrayIndex) => list.CopyTo(array, arrayIndex);
+        public readonly void CopyTo(T[] array, int arrayIndex) => list.CopyTo(array, arrayIndex);
 
         /// <inheritdoc/>
-        public IEnumerator<T> GetEnumerator() => list.GetEnumerator();
+        public readonly IEnumerator<T> GetEnumerator() => list.GetEnumerator();
+        readonly IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         /// <inheritdoc/>
-        public int IndexOf(T item) => list.IndexOf(item);
+        public readonly int IndexOf(T item) => list.IndexOf(item);
 
         /// <inheritdoc/>
         public void Insert(int index, T item)
@@ -108,7 +109,5 @@ namespace NetCore.Common
             list.RemoveAt(index);
             array = null;
         }
-
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

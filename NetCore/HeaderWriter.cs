@@ -99,7 +99,7 @@ namespace NetCore
         /// </summary>
         /// <typeparam name="T">Type of the header.</typeparam>
         /// <returns>Whether header is defined or not.</returns>
-        public readonly bool Has<T>() where T : CustomHeader<T>, new() => (flags[CustomHeader<T>.TargetByte] & CustomHeader<T>.ByteFlag) != 0;
+        public readonly bool Has<T>() where T : CustomHeader<T>, new() => (flags[CustomHeader<T>.TargetRegion] & CustomHeader<T>.RegionFlag) != 0;
 
         /// <summary>
         /// Sets bit data in a region, allocated to the custom header.

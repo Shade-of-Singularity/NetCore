@@ -6,35 +6,31 @@ namespace NetCore
     /// <summary>
     /// Message header with custom data.
     /// </summary>
-    /// <param name="type">Type of the message this header describes.</param>
+    /// <remarks>
+    /// Use <see cref="Header.Read"/> to get an instance of it.
+    /// </remarks>
     /// TODO: Add a way to parse a beginning of the message into a valid header without using <see cref="NetworkMember"/> as a base.
     ///  This will be useful if people would want to create custom relays which does not rely on <see cref="ITransport"/>s.
-    public ref struct HeaderReader
+    public readonly ref struct HeaderReader
     {
-        /// <summary>
-        /// Provided to remove size checks in a non-initialized header.
-        /// </summary>
-        private static readonly byte[] ZeroByte = [0];
-        /// <summary>
-        /// Amount of bits stored in a custom header data.
-        /// </summary>
-        //public readonly int Bits => bits;
-        /// <summary>
-        /// Amount of bytes stored in a custom header data.
-        /// </summary>
-        //public readonly int Bytes => (bits + 7) >> 3; // Division by 8 with rounding up.
         /// <summary>
         /// Type of the message this header describes.
         /// </summary>
-        public readonly MessageType type = type;
+        public readonly MessageType type;
         /// <summary>
-        /// 
+        /// Flags of the message this header describes.
         /// </summary>
-        private readonly ReadOnlySpan<byte> flags;
+        public readonly MessageFlags flags;
         /// <summary>
-        /// Amount of bits written to the header.
+        /// Regions, encoding presence of the headers.
         /// </summary>
-        //private int bits;
+        private readonly ReadOnlySpan<byte> regions;
+        /// <summary>
+        /// The rest of the datagram, storing custom header data and message content itself.
+        /// Not sliced to avoid counting bits at the initial setup.
+        /// </summary>
+        /// Note: We can probably encode amount of bits used using zigzag writing/reading.
+        private readonly ReadOnlySpan<byte> content;
 
 
 
@@ -51,46 +47,27 @@ namespace NetCore
                 return;
             }
 
-            type = (MessageType)datagram[0];
-            var sizes = CustomHeaders.GetSizeMap(type);
-            int regions = sizes.Length >> 3;
-
-        }
-
-
-
-
-        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
-        /// .
-        /// .                                              Static Properties
-        /// .
-        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        /// <summary>
-        /// Reads header from a datagram.
-        /// </summary>
-        /// <returns>
-        /// <c>true</c> - if reading was successful and <paramref name="header"/> was provided.
-        /// <c>false</c> - if <paramref name="datagram"/> is empty, and <paramref name="header"/> is set to default value.
-        /// </returns>
-        public static bool TryRead(ReadOnlySpan<byte> datagram, out HeaderReader header)
-        {
-            if (datagram.IsEmpty)
+            Header.Unpack(datagram, out type, out flags);
+            if ((flags & MessageFlags.HasCustomHeader) == MessageFlags.HasCustomHeader)
             {
-                header = default;
-                return false;
+                int amount = CustomHeaders.Amount;
+                regions = datagram.Slice(1, (amount + 7) >> 3);
+
+                int offset = 0;
+                var bitMap = CustomHeaders.BitMap;
+                // TODO: Rent array from a storage defined in CustomHeaders.
+                // Note: Since array aligns with CustomHeader{T}.HeaderOrder - array will contain default values over unset headers.
+                int[] offsets = new int[amount];
+                for (int i = 0; i < amount; i++)
+                {
+                    byte region = regions[i >> 3]; // TODO: Optimize by accessing the array only on each 8th bit.
+                    if ((region & (i & 0b111)) != 0)
+                    {
+                        offsets[i] = offset;
+                        offset += bitMap[i];
+                    }
+                }
             }
-
-            MessageType type = (MessageType)datagram[0];
-            int[] sizes = CustomHeaders.GetSizeMap(type);
-            if (sizes.Length == 0)
-            {
-                header = new(type);
-                return true;
-            }
-
-            // Calculates amount of regions used for a header flag declarations.
-            int regions = (sizes.Length + 6) / 7;
-
         }
 
 
@@ -106,7 +83,44 @@ namespace NetCore
         /// </summary>
         /// <typeparam name="T">Type of the header.</typeparam>
         /// <returns>Whether header is defined or not.</returns>
-        public readonly bool Has<T>() where T : CustomHeader<T>, new() => (flags[CustomHeader<T>.TargetByte] & CustomHeader<T>.ByteFlag) != 0;
+        public readonly bool Has<T>() where T : CustomHeader<T>, new()
+        {
+            return !regions.IsEmpty && (regions[CustomHeader<T>.TargetRegion] & CustomHeader<T>.RegionFlag) != 0;
+        }
+
+        /// <summary>
+        /// Reads all data associated with this custom header into provided <paramref name="buffer"/>.
+        /// </summary>
+        public void Read<T>(ref Span<byte> buffer, out int bits) where T : CustomHeader<T>, new()
+        {
+            if (!Has<T>())
+            {
+                bits = 0;
+                return;
+            }
+
+            // TODO: Simplify lookup if possible. Maybe use advanced bit-packing like with QuickMap after all?
+            int position = 0;
+            var sizes = CustomHeaders.SizeMap;
+            int order = CustomHeader<T>.HeaderOrder;
+            int limit = order >> 3;
+
+            int index = 0;
+            for (int i = 0; i < limit; i++)
+            {
+                int region = regions[i];
+                for (int f = 1; 0b1_0000_0000 > f; f <<= 1)
+                {
+                    if ((region & f) != 0)
+                        position += sizes[index];
+                    index++;
+                }
+            }
+
+
+            bits = CustomHeader<T>.SizeInBits;
+            CustomHeader<T>.
+        }
 
         /// <summary>
         /// Sets bit data in a region, allocated to the custom header.
@@ -167,8 +181,8 @@ namespace NetCore
         /// </summary>
         public readonly void Dispose()
         {
-            if (storage is not null)
-                ArrayPool<byte>.Shared.Return(storage);
+            if (packed is not null)
+                ArrayPool<byte>.Shared.Return(packed);
         }
     }
 }
