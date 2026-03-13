@@ -28,7 +28,7 @@ namespace NetCore.Common
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         private int stored; // Amount of items stored in the array. Array capacity might differ from this value.
-        private ushort flags; // Stores (true/false) states about whether a specific item is present in the array or not.
+        private uint flags; // Stores (true/false) states about whether a specific item is present in the array or not.
         private ulong lookup; // Encodes local index of all items in one lookup table.
         private T?[] values; // Stores items themselves. Resized if you add new values. Limited to 15 in size.
 
@@ -70,7 +70,7 @@ namespace NetCore.Common
             if (item is null) throw new ArgumentNullException(nameof(item));
 
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            ushort flag = QuickID<TItem, T>.BitFlag;
+            uint flag = QuickID<TItem, T>.BitFlag;
             if ((flags & flag) != 0)
             {
                 // Item is was already stored.
@@ -98,7 +98,7 @@ namespace NetCore.Common
             }
 
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            ushort flag = QuickID<TItem, T>.BitFlag;
+            uint flag = QuickID<TItem, T>.BitFlag;
             if ((flags & flag) != 0)
             {
                 // Item under a specific order already exist.
@@ -144,13 +144,14 @@ namespace NetCore.Common
             if (item is null) throw new ArgumentNullException(nameof(item));
 
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            if ((flags & QuickID<TItem, T>.BitFlag) == 0)
+            uint flag = QuickID<TItem, T>.BitFlag;
+            if ((flags & flag) == 0)
             {
                 return false; // Item is was already removed.
             }
 
             RemoveAtUnchecked(ref values, ref stored, (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (int)QuickID<TItem, T>.Position));
-            flags = (ushort)(flags & ~QuickID<TItem, T>.BitFlag);
+            flags &= ~flag;
             UpdateLookup(flags, out lookup);
             return true;
         }
@@ -162,14 +163,15 @@ namespace NetCore.Common
         public bool Remove<TItem>() where TItem : class, T
         {
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            if ((flags & QuickID<TItem, T>.BitFlag) == 0)
+            uint flag = QuickID<TItem, T>.BitFlag;
+            if ((flags & flag) == 0)
             {
                 // Item is was already removed.
                 return false;
             }
 
             RemoveAtUnchecked(ref values, ref stored, (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (int)QuickID<TItem, T>.Position));
-            flags = (ushort)(flags & ~QuickID<TItem, T>.BitFlag);
+            flags &= ~flag;
             UpdateLookup(flags, out lookup);
             return true;
         }
@@ -182,7 +184,8 @@ namespace NetCore.Common
         public bool Remove<TItem>([NotNullWhen(true)] out TItem? removed) where TItem : class, T
         {
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            if ((flags & QuickID<TItem, T>.BitFlag) == 0)
+            uint flag = QuickID<TItem, T>.BitFlag;
+            if ((flags & flag) == 0)
             {
                 // Item is was already removed.
                 removed = default;
@@ -192,7 +195,7 @@ namespace NetCore.Common
             int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (int)QuickID<TItem, T>.Position);
             removed = (TItem)values[localIndex]!;
             RemoveAtUnchecked(ref values, ref stored, localIndex);
-            flags = (ushort)(flags & ~QuickID<TItem, T>.BitFlag);
+            flags &= ~flag;
             UpdateLookup(flags, out lookup);
             return true;
         }
@@ -310,12 +313,11 @@ namespace NetCore.Common
         /// <summary>
         /// Pop counter for ushort values.
         /// </summary>
-        private static int PopCount(int input)
+        private static int PopCount(uint input)
         {
-            int result = ((input & 0xAA) >> 1) + (input & 0x55);
-            result = (result & 0x33) + ((result >> 2) & 0x33);
-            result = (result + (result >> 4)) & 0x0F;
-            return result;
+            input = ((input & 0xAA) >> 1) + (input & 0x55);
+            input = (input & 0x33) + ((input >> 2) & 0x33);
+            return (int)((input + (input >> 4)) & 0x0F);
         }
     }
 }

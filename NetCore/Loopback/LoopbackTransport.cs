@@ -94,7 +94,7 @@ namespace NetCore.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendReliable(ReadOnlySpan<byte> datagram)
+        public void SendReliable(HeaderReader header, ReadOnlySpan<byte> datagram)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -103,13 +103,13 @@ namespace NetCore.Loopback
             {
                 foreach (var entry in m_Loopbacks)
                 {
-                    entry.Value.Transport.HandleReliable(datagram, entry.Value.RemoteCID);
+                    entry.Value.Transport.HandleReliable(header, datagram, entry.Value.RemoteCID);
                 }
             }
         }
 
         /// <inheritdoc/>
-        public void SendReliableExcluding(ReadOnlySpan<byte> datagram, ConnectionID toExclude)
+        public void SendReliableExcluding(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -120,14 +120,14 @@ namespace NetCore.Loopback
                 {
                     if (entry.Key != toExclude)
                     {
-                        entry.Value.Transport.HandleReliable(datagram, entry.Value.RemoteCID);
+                        entry.Value.Transport.HandleReliable(header, datagram, entry.Value.RemoteCID);
                     }
                 }
             }
         }
 
         /// <inheritdoc/>
-        public void SendReliableTo(ReadOnlySpan<byte> datagram, ConnectionID target)
+        public void SendReliableTo(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID target)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -136,13 +136,13 @@ namespace NetCore.Loopback
             {
                 if (m_Loopbacks.TryGetValue(target, out LoopbackEntry entry))
                 {
-                    entry.Transport.HandleReliable(datagram, target);
+                    entry.Transport.HandleReliable(header, datagram, target);
                 }
             }
         }
 
         /// <inheritdoc/>
-        public void HandleReliable(ReadOnlySpan<byte> datagram, ConnectionID source)
+        public void HandleReliable(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleReliable)}(sourceID: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -150,7 +150,7 @@ namespace NetCore.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendUnreliable(ReadOnlySpan<byte> datagram)
+        public void SendUnreliable(HeaderReader header, ReadOnlySpan<byte> datagram)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -159,13 +159,13 @@ namespace NetCore.Loopback
             {
                 foreach (var entry in m_Loopbacks)
                 {
-                    entry.Value.Transport.HandleUnreliable(datagram, entry.Value.RemoteCID);
+                    entry.Value.Transport.HandleUnreliable(header, datagram, entry.Value.RemoteCID);
                 }
             }
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableExcluding(ReadOnlySpan<byte> datagram, ConnectionID toExclude)
+        public void SendUnreliableExcluding(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -176,14 +176,14 @@ namespace NetCore.Loopback
                 {
                     if (entry.Key != toExclude)
                     {
-                        entry.Value.Transport.HandleUnreliable(datagram, entry.Value.RemoteCID);
+                        entry.Value.Transport.HandleUnreliable(header, datagram, entry.Value.RemoteCID);
                     }
                 }
             }
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, ConnectionID target)
+        public void SendUnreliableTo(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID target)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -192,13 +192,13 @@ namespace NetCore.Loopback
             {
                 if (m_Loopbacks.TryGetValue(target, out LoopbackEntry entry))
                 {
-                    entry.Transport.HandleUnreliable(datagram, target);
+                    entry.Transport.HandleUnreliable(header, datagram, target);
                 }
             }
         }
 
         /// <inheritdoc/>
-        public void HandleUnreliable(ReadOnlySpan<byte> datagram, ConnectionID source)
+        public void HandleUnreliable(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleUnreliable)}(sourceID: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");

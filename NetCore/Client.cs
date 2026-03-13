@@ -10,15 +10,16 @@ namespace NetCore
         /// <summary>
         /// Unreliably sends <paramref name="datagram"/> to the server.
         /// </summary>
+        /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public virtual void SendUnreliable(ReadOnlySpan<byte> datagram)
+        public virtual void SendUnreliable(HeaderReader header, ReadOnlySpan<byte> datagram)
         {
             lock (_lock)
             {
                 // TODO: Consider adding a check for 0 transports being present.
                 foreach (var transport in UnreliableTransports)
                 {
-                    transport.SendUnreliable(datagram);
+                    transport.SendUnreliable(header, datagram);
                 }
             }
         }
@@ -27,28 +28,30 @@ namespace NetCore
         /// Unreliably sends <paramref name="datagram"/> to the server using specified <typeparamref name="TTransport"/> (if it exist).
         /// </summary>
         /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
+        /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public virtual void SendUnreliable<TTransport>(ReadOnlySpan<byte> datagram) where TTransport : class, IUnreliableTransport
+        public virtual void SendUnreliable<TTransport>(HeaderReader header, ReadOnlySpan<byte> datagram) where TTransport : class, IUnreliableTransport
         {
             lock (_lock)
             {
                 // TODO: Consider adding a check for 0 transports being present.
-                GetUnreliableTransport<TTransport>()?.SendUnreliable(datagram);
+                GetUnreliableTransport<TTransport>()?.SendUnreliable(header, datagram);
             }
         }
 
         /// <summary>
         /// Reliably sends <paramref name="datagram"/> to the server.
         /// </summary>
+        /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public virtual void SendReliable(ReadOnlySpan<byte> datagram)
+        public virtual void SendReliable(HeaderReader header, ReadOnlySpan<byte> datagram)
         {
             lock (_lock)
             {
                 // TODO: Consider adding a check for 0 transports being present.
                 foreach (var transport in ReliableTransports)
                 {
-                    transport.SendReliable(datagram);
+                    transport.SendReliable(header, datagram);
                 }
             }
         }
@@ -57,13 +60,14 @@ namespace NetCore
         /// Reliably sends <paramref name="datagram"/> to the server using specified <typeparamref name="TTransport"/> (if it exist).
         /// </summary>
         /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
+        /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public virtual void SendReliable<TTransport>(ReadOnlySpan<byte> datagram) where TTransport : class, IReliableTransport
+        public virtual void SendReliable<TTransport>(HeaderReader header, ReadOnlySpan<byte> datagram) where TTransport : class, IReliableTransport
         {
             lock (_lock)
             {
                 // TODO: Consider adding a check for 0 transports being present.
-                GetReliableTransport<TTransport>()?.SendReliable(datagram);
+                GetReliableTransport<TTransport>()?.SendReliable(header, datagram);
             }
         }
     }

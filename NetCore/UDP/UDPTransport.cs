@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -17,8 +15,24 @@ namespace NetCore.UDP
     /// <remarks>
     /// Does not implement networking functionality at the moment.
     /// </remarks>
-    public class UDPTransport : Transport, IUnreliableTransport
+    public partial class UDPTransport : Transport, IUnreliableTransport
     {
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                                 Constants
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <summary>
+        /// How large a UDP message should be for it to get fragmented.
+        /// </summary>
+        /// <remarks>
+        /// Only used with <see cref="FragmentPackets"/> enabled.
+        /// </remarks>
+        public const int FragmentationThreshold = 1225;
+
+
+
+
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
         /// .                                              Public Properties
@@ -28,17 +42,10 @@ namespace NetCore.UDP
         /// Socket type used by the internal <see cref="Socket"/>.
         /// </summary>
         protected virtual SocketType SocketType => SocketType.Dgram;
-
         /// <summary>
         /// Protocol used by the internal <see cref="Socket"/>.
         /// </summary>
         protected virtual ProtocolType SocketProtocol => ProtocolType.Udp;
-
-        /// <summary>
-        /// By how much internal <see cref="Buffer"/> will resize on reach read/write operation, where there is not enough space.
-        /// </summary>
-        protected virtual int BufferSizeIncrement => 4096;
-
         /// <summary>
         /// <see cref="TCP.TCPTransport"/> pair this <see cref="UDPTransport"/> with.
         /// </summary>
@@ -57,6 +64,16 @@ namespace NetCore.UDP
                     m_TCPTransport = value;
                 }
             }
+        }
+
+        /// <summary>
+        /// Whether or not to support packet fragmentation.
+        /// When message becomes too large.
+        /// </summary>
+        public virtual bool FragmentPackets
+        {
+            get => throw new NotSupportedException($"Packet fragmentation is not supported as of yet.");
+            set => throw new NotSupportedException($"Packet fragmentation is not supported as of yet.");
         }
 
 
@@ -90,83 +107,11 @@ namespace NetCore.UDP
         /// <summary>
         /// Byte buffer used for sending and retrieving data (since .NET Standard 2.1 doesn't support spans with one Socket connection)
         /// </summary>
-        protected byte[] Buffer;
+        protected byte[] Buffer = new byte[Settings.MaxUnreliablePacketSize]; // Note: Maybe use a buffer from shared array pool?
         /// <summary>
         /// <see cref="TCP.TCPTransport"/> to pair this <see cref="UDPTransport"/> with.
         /// </summary>
         private TCPTransport? m_TCPTransport;
-
-        /// <summary>
-        /// Default constructor for this <see cref="UDPTransport"/>.
-        /// </summary>
-        public UDPTransport() : base() => Buffer = new byte[BufferSizeIncrement];
-
-        /// <summary>
-        /// Stores info about currently connected client.
-        /// </summary>
-        protected sealed class ClientData(ConnectionID id, IPEndPoint remoteEndPoint)
-        {
-            /// <summary>
-            /// Amount of ticks which passed since the last time this <see cref="ClientData"/> was used.
-            /// </summary>
-            public int InactiveTickDelta => Environment.TickCount - LastActiveTick;
-
-            /// <summary>
-            /// Connection ID of our client.
-            /// </summary>
-            public readonly ConnectionID ConnectionID = id;
-            /// <summary>
-            /// Remote end-point
-            /// </summary>
-            public readonly IPEndPoint RemoteEndPoint = remoteEndPoint;
-            /// <summary>
-            /// Last tick on which client was active.
-            /// </summary>
-            public int LastActiveTick = Environment.TickCount;
-
-            /// <summary>
-            /// Updates <see cref="LastActiveTick"/> to avoid timeouts.
-            /// </summary>
-            public void NoSleep() => LastActiveTick = Environment.TickCount;
-        }
-
-        /// <summary>
-        /// Internal Client identifier, which can be matched by either <see cref="ConnectionID"/> or <see cref="RemoteEndPoint"/>.
-        /// </summary>
-        protected readonly struct ClientID(ConnectionID id, IPEndPoint? remoteEndPoint) : IEquatable<ClientID>
-        {
-            /// <summary>
-            /// ConnectionID of our client.
-            /// </summary>
-            public readonly ConnectionID ConnectionID = id;
-            /// <summary>
-            /// Remote end-point of our client.
-            /// </summary>
-            public readonly IPEndPoint? RemoteEndPoint = remoteEndPoint;
-            /// <summary>
-            /// Constructor for a <see cref="ConnectionID"/>-only.
-            /// </summary>
-            public ClientID(ConnectionID connection) : this(connection, null) { }
-            /// <summary>
-            /// Constructor for a <see cref="RemoteEndPoint"/>-only.
-            /// </summary>
-            public ClientID(IPEndPoint remoteEndPoint) : this(default, remoteEndPoint) { }
-
-            /// <inheritdoc/>
-            public override string ToString() => $"ID: ({ConnectionID}) RemoteEndPoint: (...:{RemoteEndPoint?.Port})";
-
-            /// <inheritdoc/>
-            public override bool Equals(object obj) => obj is ClientID id && Equals(id);
-
-            /// <inheritdoc/>
-            public override int GetHashCode() => ConnectionID.raw.GetHashCode();
-
-            /// <inheritdoc/>
-            public bool Equals(ClientID other)
-            {
-                return other.ConnectionID == ConnectionID || (other.RemoteEndPoint is not null && other.RemoteEndPoint.Equals(RemoteEndPoint));
-            }
-        }
 
 
 
@@ -229,7 +174,7 @@ namespace NetCore.UDP
                 {
                     RemoteEndPoint = RemoteAnyIPv4
                 };
-                args.SetBuffer(new byte[BufferSizeIncrement]);
+                args.SetBuffer(Buffer);
                 args.Completed += ReceiveRawData;
                 Socket.ReceiveFromAsync(args);
             }
@@ -242,37 +187,40 @@ namespace NetCore.UDP
         {
             lock (_lock)
             {
-                int stored = 0;
-                ClientData? sender = null;
-                do
-                {
-                    if (args.RemoteEndPoint is not IPEndPoint ip)
-                        throw new NotSupportedException($"Non-IP end-points are not supported. Provided type: {args.RemoteEndPoint}");
+                //int stored = 0;
+                //ClientData? sender = null;
+                //do
+                //{
+                //    if (args.SocketError != SocketError.Success)
+                //        return;
 
-                    if (!Clients.TryGetValue(new ClientID(ip), out ClientData client))
-                        continue;
+                //    if (args.RemoteEndPoint is not IPEndPoint ip)
+                //        throw new NotSupportedException($"Non-IP end-points are not supported. Provided type: {args.RemoteEndPoint}");
 
-                    if (sender is null || sender == client)
-                    {
-                        sender = client;
-                        int length = args.BytesTransferred;
-                        var span = args.Buffer.AsSpan(0, length);
-                        ResizeIfNeeded(ref Buffer, target: stored + length, BufferSizeIncrement);
-                        span.CopyTo(Buffer.AsSpan(stored, length));
-                        stored += length;
-                    }
-                    else // Sender changed between reads.
-                    {
-                        // Previously written data should be handled and reading should reset.
-                        HandleUnreliable(args.Buffer.AsSpan(0, stored), sender.ConnectionID);
-                        stored = 0;
-                    }
-                }
-                while (Socket is not null && !Socket.ReceiveFromAsync(args));
-                if (sender is not null)
-                {
-                    HandleUnreliable(Buffer.AsSpan(0, stored), sender.ConnectionID);
-                }
+                //    if (!Clients.TryGetValue(new ClientID(ip), out ClientData client))
+                //        continue;
+
+                //    if (sender is null || sender == client)
+                //    {
+                //        sender = client;
+                //        int length = args.BytesTransferred;
+                //        var span = args.Buffer.AsSpan(0, length);
+                //        ResizeIfNeeded(ref Buffer, target: stored + length, BufferSizeIncrement);
+                //        span.CopyTo(Buffer.AsSpan(stored, length));
+                //        stored += length;
+                //    }
+                //    else // Sender changed between reads.
+                //    {
+                //        // Previously written data should be handled and reading should reset.
+                //        HandleUnreliable(args.Buffer.AsSpan(0, stored), sender.ConnectionID);
+                //        stored = 0;
+                //    }
+                //}
+                //while (Socket is not null && !Socket.ReceiveFromAsync(args));
+                //if (sender is not null)
+                //{
+                //    HandleUnreliable(Buffer.AsSpan(0, stored), sender.ConnectionID);
+                //}
             }
         }
 
@@ -326,7 +274,7 @@ namespace NetCore.UDP
         }
 
         /// <inheritdoc/>
-        public void SendUnreliable(ReadOnlySpan<byte> datagram)
+        public void SendUnreliable(HeaderReader header, ReadOnlySpan<byte> datagram)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -338,17 +286,17 @@ namespace NetCore.UDP
                     return;
                 }
 
-                ResizeIfNeeded(ref Buffer, datagram.Length, BufferSizeIncrement);
-                datagram.CopyTo(Buffer.AsSpan());
-                foreach (var client in Clients.Values)
-                {
-                    Socket.SendTo(Buffer, client.RemoteEndPoint);
-                }
+                //ResizeIfNeeded(ref Buffer, datagram.Length, BufferSizeIncrement);
+                //datagram.CopyTo(Buffer.AsSpan());
+                //foreach (var client in Clients.Values)
+                //{
+                //    Socket.SendTo(Buffer, client.RemoteEndPoint);
+                //}
             }
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableExcluding(ReadOnlySpan<byte> datagram, ConnectionID toExclude)
+        public void SendUnreliableExcluding(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -360,18 +308,18 @@ namespace NetCore.UDP
                     return;
                 }
 
-                ResizeIfNeeded(ref Buffer, datagram.Length, BufferSizeIncrement);
-                datagram.CopyTo(Buffer.AsSpan());
-                foreach (var client in Clients.Values)
-                {
-                    if (client.ConnectionID != toExclude)
-                        Socket.SendTo(Buffer, client.RemoteEndPoint);
-                }
+                //ResizeIfNeeded(ref Buffer, datagram.Length, BufferSizeIncrement);
+                //datagram.CopyTo(Buffer.AsSpan());
+                //foreach (var client in Clients.Values)
+                //{
+                //    if (client.ConnectionID != toExclude)
+                //        Socket.SendTo(Buffer, client.RemoteEndPoint);
+                //}
             }
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, ConnectionID target)
+        public void SendUnreliableTo(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID target)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -383,17 +331,17 @@ namespace NetCore.UDP
                     return;
                 }
 
-                if (Clients.TryGetValue(new ClientID(target), out ClientData client))
-                {
-                    ResizeIfNeeded(ref Buffer, datagram.Length, BufferSizeIncrement);
-                    datagram.CopyTo(Buffer.AsSpan());
-                    Socket.SendTo(Buffer, client.RemoteEndPoint);
-                }
+                //if (Clients.TryGetValue(new ClientID(target), out ClientData client))
+                //{
+                //    ResizeIfNeeded(ref Buffer, datagram.Length, BufferSizeIncrement);
+                //    datagram.CopyTo(Buffer.AsSpan());
+                //    Socket.SendTo(Buffer, client.RemoteEndPoint);
+                //}
             }
         }
 
         /// <inheritdoc/>
-        public void HandleUnreliable(ReadOnlySpan<byte> datagram, ConnectionID source)
+        public void HandleUnreliable(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(HandleUnreliable)}(source: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -402,23 +350,6 @@ namespace NetCore.UDP
             // TODO: Lock the _lock and route the data onwards.
             //  with ComputerysBitStream, try using a separate byte buffer for reading,
             //  lock specific segments of that array, and make sure that lock in a transport is released as soon as data is copied over.
-        }
-
-
-
-        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
-        /// .
-        /// .                                               Private Methods
-        /// .
-        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ResizeIfNeeded(ref byte[] buffer, int target, int increment)
-        {
-            if (buffer.Length < target)
-            {
-                int scale = (target + increment - 1) / increment; // Division with rounding up.
-                Array.Resize(ref buffer, scale * increment);
-            }
         }
     }
 }

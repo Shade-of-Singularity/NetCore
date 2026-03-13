@@ -23,7 +23,7 @@ namespace NetCore.Common
         /// <summary>
         /// Max amount of items (inclusive) which <see cref="QuickIndexing"/> supports.
         /// </summary>
-        public const int Limit = 15;
+        public const int Limit = 19;
         /// <summary>
         /// Encodes no index.
         /// </summary>
@@ -48,11 +48,11 @@ namespace NetCore.Common
         /// <summary>
         /// Flag covering a specific bit, based on when QuickIndex was initialized
         /// </summary>
-        [FieldOffset(10)] public readonly ushort BitFlag = (ushort)(1u << order);
+        [FieldOffset(10)] public readonly uint BitFlag = 1u << order;
         /// <summary>
         /// Offset we need to apply to a <see cref="Mask"/> to get the index of an item in the array.
         /// </summary>
-        [FieldOffset(12)] public readonly QuickIndexPosition Position = offset;
+        [FieldOffset(14)] public readonly QuickIndexPosition Position = offset;
 
 
 
@@ -64,44 +64,44 @@ namespace NetCore.Common
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Retrieves <see cref="QuickIndex"/> for a given <paramref name="index"/>.
+        /// Retrieves <see cref="QuickIndex"/> for a given <paramref name="order"/>.
         /// </summary>
-        /// <param name="index">Index of an item in a collection.</param>
-        /// <returns><see cref="QuickIndex"/> encoding position in an array for a given <paramref name="index"/>.</returns>
-        public static QuickIndex GetFrom(ushort index)
+        /// <param name="order">Index of an item in a collection.</param>
+        /// <returns><see cref="QuickIndex"/> encoding position in an array for a given <paramref name="order"/>.</returns>
+        public static QuickIndex GetFrom(ushort order)
         {
-            if (!TryGetFrom(index, out QuickIndex result))
+            if (!TryGetFrom(order, out QuickIndex result))
             {
-                throw new ArgumentOutOfRangeException($"ConnectionID of an quickly indexed item should be in a range [0:{Limit}]. Provided: {index}");
+                throw new ArgumentOutOfRangeException($"ConnectionID of an quickly indexed item should be in a range [0:{Limit}]. Provided: {order}");
             }
 
             return result;
         }
 
         /// <summary>
-        /// Tries to retrieve <see cref="QuickIndex"/> for a given <paramref name="index"/>.
+        /// Tries to retrieve <see cref="QuickIndex"/> for a given <paramref name="order"/>.
         /// </summary>
-        /// <param name="index">Index of an item in a collection.</param>
-        /// <param name="result"><see cref="QuickIndex"/> encoding position in an array for a given <paramref name="index"/>.</param>
-        public static bool TryGetFrom(ushort index, out QuickIndex result)
+        /// <param name="order">Index of an item in a collection.</param>
+        /// <param name="result"><see cref="QuickIndex"/> encoding position in an array for a given <paramref name="order"/>.</param>
+        public static bool TryGetFrom(ushort order, out QuickIndex result)
         {
-            switch (index)
+            switch (order)
             {
-                case 0: result = new QuickIndex(QuickIndexMask.One, QuickIndexPosition.One, index); return true;
-                case 1: result = new QuickIndex(QuickIndexMask.Two, QuickIndexPosition.Two, index); return true;
-                case 2: result = new QuickIndex(QuickIndexMask.Three, QuickIndexPosition.Three, index); return true;
-                case 3: result = new QuickIndex(QuickIndexMask.Four, QuickIndexPosition.Four, index); return true;
-                case 4: result = new QuickIndex(QuickIndexMask.Five, QuickIndexPosition.Five, index); return true;
-                case 5: result = new QuickIndex(QuickIndexMask.Six, QuickIndexPosition.Six, index); return true;
-                case 6: result = new QuickIndex(QuickIndexMask.Seven, QuickIndexPosition.Seven, index); return true;
-                case 7: result = new QuickIndex(QuickIndexMask.Eight, QuickIndexPosition.Eight, index); return true;
-                case 8: result = new QuickIndex(QuickIndexMask.Nine, QuickIndexPosition.Nine, index); return true;
-                case 9: result = new QuickIndex(QuickIndexMask.Ten, QuickIndexPosition.Ten, index); return true;
-                case 10: result = new QuickIndex(QuickIndexMask.Eleven, QuickIndexPosition.Eleven, index); return true;
-                case 11: result = new QuickIndex(QuickIndexMask.Twelve, QuickIndexPosition.Twelve, index); return true;
-                case 12: result = new QuickIndex(QuickIndexMask.Thirteen, QuickIndexPosition.Thirteen, index); return true;
-                case 13: result = new QuickIndex(QuickIndexMask.Fourteen, QuickIndexPosition.Fourteen, index); return true;
-                case 14: result = new QuickIndex(QuickIndexMask.Fifteen, QuickIndexPosition.Fifteen, index); return true;
+                case 0: result = new QuickIndex(QuickIndexMask.One, QuickIndexPosition.One, order); return true;
+                case 1: result = new QuickIndex(QuickIndexMask.Two, QuickIndexPosition.Two, order); return true;
+                case 2: result = new QuickIndex(QuickIndexMask.Three, QuickIndexPosition.Three, order); return true;
+                case 3: result = new QuickIndex(QuickIndexMask.Four, QuickIndexPosition.Four, order); return true;
+                case 4: result = new QuickIndex(QuickIndexMask.Five, QuickIndexPosition.Five, order); return true;
+                case 5: result = new QuickIndex(QuickIndexMask.Six, QuickIndexPosition.Six, order); return true;
+                case 6: result = new QuickIndex(QuickIndexMask.Seven, QuickIndexPosition.Seven, order); return true;
+                case 7: result = new QuickIndex(QuickIndexMask.Eight, QuickIndexPosition.Eight, order); return true;
+                case 8: result = new QuickIndex(QuickIndexMask.Nine, QuickIndexPosition.Nine, order); return true;
+                case 9: result = new QuickIndex(QuickIndexMask.Ten, QuickIndexPosition.Ten, order); return true;
+                case 10: result = new QuickIndex(QuickIndexMask.Eleven, QuickIndexPosition.Eleven, order); return true;
+                case 11: result = new QuickIndex(QuickIndexMask.Twelve, QuickIndexPosition.Twelve, order); return true;
+                case 12: result = new QuickIndex(QuickIndexMask.Thirteen, QuickIndexPosition.Thirteen, order); return true;
+                case 13: result = new QuickIndex(QuickIndexMask.Fourteen, QuickIndexPosition.Fourteen, order); return true;
+                case 14: result = new QuickIndex(QuickIndexMask.Fifteen, QuickIndexPosition.Fifteen, order); return true;
                 default: result = default; return false;
             }
         }

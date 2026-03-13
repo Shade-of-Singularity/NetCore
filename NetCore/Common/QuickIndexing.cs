@@ -24,6 +24,8 @@ namespace NetCore.Common
             QuickIndexMask.Seven, QuickIndexMask.Eight, QuickIndexMask.Nine,
             QuickIndexMask.Ten, QuickIndexMask.Eleven, QuickIndexMask.Twelve,
             QuickIndexMask.Thirteen, QuickIndexMask.Fourteen, QuickIndexMask.Fifteen,
+            QuickIndexMask.Sixteen, QuickIndexMask.Seventeen, QuickIndexMask.Eightteen,
+            QuickIndexMask.Nineteen,
         ];
 
         /// <summary>
@@ -37,6 +39,8 @@ namespace NetCore.Common
             QuickIndexPosition.Seven, QuickIndexPosition.Eight, QuickIndexPosition.Nine,
             QuickIndexPosition.Ten, QuickIndexPosition.Eleven, QuickIndexPosition.Twelve,
             QuickIndexPosition.Thirteen, QuickIndexPosition.Fourteen, QuickIndexPosition.Fifteen,
+            QuickIndexPosition.Sixteen, QuickIndexPosition.Seventeen, QuickIndexPosition.Eightteen,
+            QuickIndexPosition.Nineteen,
         ];
 
 
@@ -76,48 +80,50 @@ namespace NetCore.Common
         }
 
         /// <summary>
-        /// Retrieves <see cref="QuickIndexMask"/> for a given <paramref name="index"/>.
+        /// Retrieves <see cref="QuickIndexMask"/> for a given <paramref name="order"/>.
         /// </summary>
-        /// <param name="index">Index of an item in a collection.</param>
-        /// <returns><see cref="QuickIndexMask"/> encoding position under a given <paramref name="index"/>.</returns>
-        public static QuickIndexMask GetMask(ushort index)
+        /// <param name="order">Index of an item in a collection.</param>
+        /// <returns><see cref="QuickIndexMask"/> encoding position under a given <paramref name="order"/>.</returns>
+        public static QuickIndexMask GetMask(ushort order)
         {
-            if (!TryGetMask(index, out QuickIndexMask mask))
+            if (!TryGetMask(order, out QuickIndexMask mask))
             {
-                throw new ArgumentOutOfRangeException($"ConnectionID of an quickly indexed item should be in a range [0:{QuickIndex.Limit}]. Provided: {index}");
+                throw new ArgumentOutOfRangeException($"ConnectionID of an quickly indexed item should be in a range [0:{QuickIndex.Limit}]. Provided: {order}");
             }
 
             return mask;
         }
 
         /// <summary>
-        /// Tries to retrieve <see cref="QuickIndexMask"/> for a given <paramref name="index"/>.
+        /// Tries to retrieve <see cref="QuickIndexMask"/> for a given <paramref name="order"/>.
         /// </summary>
-        /// <param name="index">Index of an item in a collection.</param>
-        /// <param name="position"><see cref="QuickIndexMask"/> encoding position under a given <paramref name="index"/>.</param>
-        public static bool TryGetMask(ushort index, out QuickIndexMask position)
+        /// <param name="order">Index of an item in a collection.</param>
+        /// <param name="mask"><see cref="QuickIndexMask"/> encoding position under a given <paramref name="order"/>.</param>
+        public static bool TryGetMask(ushort order, out QuickIndexMask mask)
         {
-            position = index switch
+            switch (order)
             {
-                0 => QuickIndexMask.One,
-                1 => QuickIndexMask.Two,
-                2 => QuickIndexMask.Three,
-                3 => QuickIndexMask.Four,
-                4 => QuickIndexMask.Five,
-                5 => QuickIndexMask.Six,
-                6 => QuickIndexMask.Seven,
-                7 => QuickIndexMask.Eight,
-                8 => QuickIndexMask.Nine,
-                9 => QuickIndexMask.Ten,
-                10 => QuickIndexMask.Eleven,
-                11 => QuickIndexMask.Twelve,
-                12 => QuickIndexMask.Thirteen,
-                13 => QuickIndexMask.Fourteen,
-                14 => QuickIndexMask.Fifteen,
-                _ => QuickIndexMask.None,
-            };
-
-            return position != QuickIndexMask.None;
+                case 0: mask = QuickIndexMask.One; return true;
+                case 1: mask = QuickIndexMask.Two; return true;
+                case 2: mask = QuickIndexMask.Three; return true;
+                case 3: mask = QuickIndexMask.Four; return true;
+                case 4: mask = QuickIndexMask.Five; return true;
+                case 5: mask = QuickIndexMask.Six; return true;
+                case 6: mask = QuickIndexMask.Seven; return true;
+                case 7: mask = QuickIndexMask.Eight; return true;
+                case 8: mask = QuickIndexMask.Nine; return true;
+                case 9: mask = QuickIndexMask.Ten; return true;
+                case 10: mask = QuickIndexMask.Eleven; return true;
+                case 11: mask = QuickIndexMask.Twelve; return true;
+                case 12: mask = QuickIndexMask.Thirteen; return true;
+                case 13: mask = QuickIndexMask.Fourteen; return true;
+                case 14: mask = QuickIndexMask.Fifteen; return true;
+                case 15: mask = QuickIndexMask.Sixteen; return true;
+                case 16: mask = QuickIndexMask.Seventeen; return true;
+                case 17: mask = QuickIndexMask.Eightteen; return true;
+                case 18: mask = QuickIndexMask.Nineteen; return true;
+                default: mask = default; return false;
+            }
         }
 
         /// <summary>
@@ -125,7 +131,7 @@ namespace NetCore.Common
         /// </summary>
         /// <param name="index">Index of an item in a collection.</param>
         /// <returns><see cref="QuickIndexPosition"/> encoding position in an array for a given <paramref name="index"/>.</returns>
-        public static QuickIndexPosition GetPosition(ushort index)
+        public static QuickIndexPosition GetPosition(uint index)
         {
             if (!TryGetPosition(index, out QuickIndexPosition position))
             {
@@ -140,7 +146,7 @@ namespace NetCore.Common
         /// </summary>
         /// <param name="index">Index of an item in a collection.</param>
         /// <param name="position"><see cref="QuickIndexPosition"/> encoding position in an array for a given <paramref name="index"/>.</param>
-        public static bool TryGetPosition(ushort index, out QuickIndexPosition position)
+        public static bool TryGetPosition(uint index, out QuickIndexPosition position)
         {
             switch (index)
             {
@@ -159,6 +165,10 @@ namespace NetCore.Common
                 case 12: position = QuickIndexPosition.Thirteen; return true;
                 case 13: position = QuickIndexPosition.Fourteen; return true;
                 case 14: position = QuickIndexPosition.Fifteen; return true;
+                case 15: position = QuickIndexPosition.Sixteen; return true;
+                case 16: position = QuickIndexPosition.Seventeen; return true;
+                case 17: position = QuickIndexPosition.Eightteen; return true;
+                case 18: position = QuickIndexPosition.Nineteen; return true;
                 default: position = default; return false;
             }
         }
