@@ -5,6 +5,17 @@ using System.Runtime.CompilerServices;
 namespace NetCore.Common
 {
     /// <summary>
+    /// Stores trivia about all <see cref="HashList{TBase}"/> instances.
+    /// </summary>
+    public readonly struct HashLists
+    {
+        /// <summary>
+        /// Maximum amount of items an <see cref="HashList{TBase}"/> can hold.
+        /// </summary>
+        public const int ItemLimit = 16; // Technical limitation.
+    }
+
+    /// <summary>
     /// Similar <see cref="QuickMap{T}"/>, but is ordered and are limited to 16 items instead of 19.
     /// </summary>
     /// <remarks>
@@ -16,13 +27,12 @@ namespace NetCore.Common
         static class BaseSet
         {
             public const int MaskBits = 4; // Amount of bits used to encode the mask.
-            public const int ItemLimit = 16; // Technical limitation.
             static byte inUse;
             public static void NextSet(out ulong mask, out int shift, out ushort bitFlag)
             {
-                if (inUse >= ItemLimit)
+                if (inUse >= HashLists.ItemLimit)
                 {
-                    throw new Exception($"{nameof(HashList<TBase>)} - exhausted all item IDs ({inUse}/{ItemLimit})");
+                    throw new Exception($"{nameof(HashList<TBase>)} - exhausted all item IDs ({inUse}/{HashLists.ItemLimit}).");
                 }
 
                 int index = inUse;
@@ -94,8 +104,8 @@ namespace NetCore.Common
         /// </summary>
         public HashList(int capacity)
         {
-            if (capacity < 0 || capacity >= BaseSet.ItemLimit)
-                throw new ArgumentOutOfRangeException($"{nameof(HashList<TBase>)} {nameof(capacity)} should be within a range: [0:{BaseSet.ItemLimit}]");
+            if (capacity < 0 || capacity >= HashLists.ItemLimit)
+                throw new ArgumentOutOfRangeException($"{nameof(HashList<TBase>)} {nameof(capacity)} should be within a range: [0:{HashLists.ItemLimit}]");
             items = capacity == 0 ? [] : new TBase[capacity];
         }
 
@@ -222,7 +232,7 @@ namespace NetCore.Common
 
             // Updates lookup.
             // Note: It *might* be possible to optimize it with some bit operations, but I couldn't fully figure it out at the time.
-            for (int i = 0; i < BaseSet.ItemLimit; i++)
+            for (int i = 0; i < HashLists.ItemLimit; i++)
             {
                 if ((flags & (1u << i)) == 0)
                 {
@@ -319,7 +329,7 @@ namespace NetCore.Common
             Array.Copy(items, index + 1, items, index, stored - index - 1);
 
             // Updates lookup.
-            for (int i = 0; i < BaseSet.ItemLimit; i++)
+            for (int i = 0; i < HashLists.ItemLimit; i++)
             {
                 if ((flags & (1u << i)) == 0)
                 {
@@ -354,7 +364,7 @@ namespace NetCore.Common
             Array.Copy(items, index + 1, items, index, stored - index - 1);
 
             // Updates lookup.
-            for (int i = 0; i < BaseSet.ItemLimit; i++)
+            for (int i = 0; i < HashLists.ItemLimit; i++)
             {
                 if ((flags & (1u << i)) == 0)
                 {
