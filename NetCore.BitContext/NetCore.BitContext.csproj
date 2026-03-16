@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <Title>NetCore BitContext</Title>
+    <Authors>SoG, DarkJune</Authors>
+    <Company>Shade of Singularity</Company>
+    <Description>
+      Very useful extension over NetCore, natively supporting ComputerysBitStream library for quick writing and reading operations.
+      Ensures 0 heap allocations on the read and write, when used correctly.
+    </Description>
+    <LangVersion>12</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetCore.Handling\NetCore.Messaging.csproj" />
+    <ProjectReference Include="..\NetCore\NetCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="ComputerysBitStream">
+      <HintPath>..\..\..\..\CSharp\ComputerysBitStream\ComputerysBitStream\bin\Release\netstandard2.1\ComputerysBitStream.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

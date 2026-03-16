@@ -1,5 +1,7 @@
 ﻿using NetCore.Common;
 using System;
+using System.Buffers;
+using System.Collections.Generic;
 
 namespace NetCore
 {
@@ -56,6 +58,7 @@ namespace NetCore
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         private static readonly LazyArray<int> m_SizeMap = [];
         private static readonly LazyArray<int> m_BitMap = [];
+        private static readonly List<ulong[]> m_Storages = [];
         private static readonly object _lock = new();
         private static Action? m_OnReset;
 
@@ -98,6 +101,7 @@ namespace NetCore
 
                 m_SizeMap.Clear();
                 m_BitMap.Clear();
+                m_Storages.Clear();
 
                 // Re-registers built-in ones.
                 RegisterBuiltInHeaders();
@@ -129,6 +133,30 @@ namespace NetCore
                 int lastBit = 1 << BitScanner.BitScanForward((ulong)CustomHeader<T>.SizeInBits);
                 m_BitMap.Add(lastBit | (lastBit - 1));
                 m_OnReset += onReset;
+            }
+        }
+
+        /// <summary>
+        /// Rents <see cref="BitStorage"/> with a <see cref="BitStorage.BitCapacity"/> equal or larger than the requests <paramref name="bits"/>.
+        /// </summary>
+        /// <param name="bits">Amount of bits in a storage to request.</param>
+        internal static ulong[] Rent(int bits)
+        {
+            lock (_lock)
+            {
+                return ArrayPool<ulong>.Shared.Rent((bits + 63) >> 6);
+            }
+        }
+
+        /// <summary>
+        /// Returns <see cref="BitStorage"/> to the internal list.
+        /// </summary>
+        /// <param name="storage">Storage to return.</param>
+        internal static void Return(in ulong[] storage)
+        {
+            lock (_lock)
+            {
+                ArrayPool<ulong>.Shared.Return(storage);
             }
         }
     }

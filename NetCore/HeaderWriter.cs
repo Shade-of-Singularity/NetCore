@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Buffers;
+using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace NetCore
 {
@@ -109,7 +111,16 @@ namespace NetCore
         /// </remarks>
         /// <typeparam name="T">Type of the header.</typeparam>
         /// <param name="bytes">Bytes to set a header to.</param>
-        public void Set<T>(ReadOnlySpan<byte> bytes) where T : CustomHeader<T>, new() => Set<T>(bytes, CustomHeader<T>.SizeInBits);
+        public void Set<T>(ReadOnlySpan<ulong> bytes) where T : CustomHeader<T>, new()
+        {
+
+
+
+
+
+            //Set<T>(bytes, CustomHeader<T>.SizeInBits);
+            //Set<T>(MemoryMarshal.Cast<ulong, byte>(bytes));
+        }
 
         /// <summary>
         /// Sets bit data in a region, allocated to the custom header.

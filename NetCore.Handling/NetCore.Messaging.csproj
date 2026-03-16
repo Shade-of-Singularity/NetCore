@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <Title>NetCore Messaging</Title>
+    <Authors>SoG, DarkJune</Authors>
+    <Company>Shade of Singularity</Company>
+    <Description>
+      Intermediate between "NetCore.dll" and message handlers, like: "NetCore.Packets", "NetCore.BitContext".
+      Provides interfaces and callbacks for message handlers to rely on.
+    </Description>
+    <LangVersion>12</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetCore\NetCore.csproj" />
+  </ItemGroup>
+
+</Project>

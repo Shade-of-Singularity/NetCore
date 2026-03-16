@@ -1,21 +1,21 @@
 ﻿namespace NetCore.Common
 {
     /// <summary>
-    /// Holds <see cref="QuickIndex"/>es for all items that can be stored in a <see cref="QuickMap{T}"/>.
+    /// Holds <see cref="QuickMapIndex"/>es for all items that can be stored in a <see cref="QuickMap{T}"/>.
     /// </summary>
     /// <typeparam name="TItem">Item inheriting/implementing <typeparamref name="TCategory"/>.</typeparam>
     /// <typeparam name="TCategory">Base class/interface for an <typeparamref name="TItem"/>.</typeparam>
-    public static class QuickID<TItem, TCategory> where TItem : class, TCategory
+    public static class QuickMapID<TItem, TCategory> where TItem : class, TCategory
     {
         /// <summary>
         /// Cached index for an item in a current category.
         /// </summary>
-        public static readonly QuickIndex Index = QuickIDCategory<TCategory>.GetNext();
-        /// <inheritdoc cref="QuickIndex.Mask"/>
-        public static readonly QuickIndexMask Mask = Index.Mask;
-        /// <inheritdoc cref="QuickIndex.Position"/>
-        public static readonly QuickIndexPosition Position = Index.Position;
-        /// <inheritdoc cref="QuickIndex.BitFlag"/>
+        public static readonly QuickMapIndex Index = QuickIDCategory<TCategory>.GetNext();
+        /// <inheritdoc cref="QuickMapIndex.Mask"/>
+        public static readonly QuickMapIndexMask Mask = Index.Mask;
+        /// <inheritdoc cref="QuickMapIndex.Position"/>
+        public static readonly QuickMapIndexPosition Position = Index.Position;
+        /// <inheritdoc cref="QuickMapIndex.BitFlag"/>
         public static readonly uint BitFlag = Index.BitFlag;
     }
 
@@ -28,9 +28,9 @@
         static ushort inUse;
 
         /// <summary>
-        /// Retrieves next available <see cref="QuickIndex"/> for this category.
+        /// Retrieves next available <see cref="QuickMapIndex"/> for this category.
         /// </summary>
         /// <returns></returns>
-        public static QuickIndex GetNext() => QuickIndexing.GetNextIndex(ref inUse);
+        public static QuickMapIndex GetNext() => QuickMapIndexing.GetNextIndex(ref inUse);
     }
 }

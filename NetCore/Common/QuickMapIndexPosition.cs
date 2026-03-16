@@ -1,12 +1,12 @@
 ﻿namespace NetCore.Common
 {
     /// <summary>
-    /// How much bits you need to offset an <see cref="QuickIndexMask"/> by to unpack your index.
+    /// How much bits you need to offset an <see cref="QuickMapIndexMask"/> by to unpack your index.
     /// </summary>
     /// <remarks>
     /// Can be easily packed as one char in 'Base64'
     /// </remarks>
-    public enum QuickIndexPosition : byte
+    public enum QuickMapIndexPosition : byte
     {
         One = 0,
         Two = 0,

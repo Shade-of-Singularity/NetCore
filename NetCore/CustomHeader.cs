@@ -14,6 +14,11 @@
         /// </summary>
         public static readonly int SizeInBits = Instance.Size;
         /// <summary>
+        /// Minimal amount of bytes needed to encode this header.
+        /// Useful when creating temporary buffers for <see cref="HeaderReader"/> operations.
+        /// </summary>
+        public static readonly int SizeInBytes = (Instance.Size + 7) >> 3; // This is division by 8 with rounding up.
+        /// <summary>
         /// Flag position in a header, indicating whether this header was registered or not.
         /// </summary>
         public static byte RegionFlag { get; private set; }
@@ -34,6 +39,11 @@
         /// .                                              Public Properties
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <summary>
+        /// Source data used for static identification of the header.
+        /// This identifier should not change
+        /// </summary>
+        public abstract string StaticID { get; }
         /// <summary>
         /// Size of the header (in bits).
         /// </summary>

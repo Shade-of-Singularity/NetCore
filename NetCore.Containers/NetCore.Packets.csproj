@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <Title>NetCore Boxing</Title>
+    <Authors>SoG, DarkJune</Authors>
+    <Company>Shade of Singularity</Company>
+    <Description>
+      
+    </Description>
+    <LangVersion>12</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetCore.Handling\NetCore.Messaging.csproj" />
+    <ProjectReference Include="..\NetCore\NetCore.csproj" />
+  </ItemGroup>
+
+</Project>

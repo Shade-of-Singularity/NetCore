@@ -535,9 +535,9 @@ namespace NetCore
         /// </summary>
         public static void SetDefaultTransportCapacity<T>(int capacity) where T : NetworkMember
         {
-            if (capacity is < 0 or > QuickIndex.Limit)
+            if (capacity is < 0 or > QuickMapIndex.Limit)
             {
-                throw new ArgumentOutOfRangeException($"{nameof(QuickMap<ITransport>)} capacity should be within bounds: [0:{QuickIndex.Limit}]. Provided: {capacity}");
+                throw new ArgumentOutOfRangeException($"{nameof(QuickMap<ITransport>)} capacity should be within bounds: [0:{QuickMapIndex.Limit}]. Provided: {capacity}");
             }
 
             lock (m_InitialTransportCapacity)

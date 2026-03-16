@@ -9,10 +9,10 @@ namespace NetCore.Common
     /// </summary>
     /// <remarks>
     /// (1) Not thread-safe by itself.
-    /// (2) Has a technical limit of items. See also: <see cref="QuickIndex.Limit"/>
+    /// (2) Has a technical limit of items. See also: <see cref="QuickMapIndex.Limit"/>
     /// </remarks>
     /// <typeparam name="T">Item type to store.</typeparam>
-    /// Note: By avoiding using <see cref="QuickIndex"/> usage and by using only <see cref="QuickID{TItem, TCategory}.BitFlag"/> instead
+    /// Note: By avoiding using <see cref="QuickMapIndex"/> usage and by using only <see cref="QuickMapID{TItem, TCategory}.BitFlag"/> instead
     ///  we can increase the amount of storable items to the amount of bits in a <see cref="flags"/> variable.
     ///  If we use ushort - the limit will be 16.
     ///  If we use uint - the limit will be 32.
@@ -46,16 +46,16 @@ namespace NetCore.Common
         public QuickMap() => values = [];
 
         /// <summary>
-        /// Constructor allowing you to specify how much space (from 0 to <see cref="QuickIndex.Limit"/>) to pre-allocate in the internal array.
+        /// Constructor allowing you to specify how much space (from 0 to <see cref="QuickMapIndex.Limit"/>) to pre-allocate in the internal array.
         /// </summary>
         /// <param name="capacity">Capacity for the internal array.</param>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="capacity"/> was larger than <see cref="QuickIndex.Limit"/></exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="capacity"/> was larger than <see cref="QuickMapIndex.Limit"/></exception>
         public QuickMap(int capacity)
         {
             if (capacity < 0) throw new ArgumentOutOfRangeException($"{nameof(capacity)} in {nameof(QuickMap<T>)} constructor cannot be less than 0. Provided: {capacity}");
-            if (capacity > QuickIndex.Limit)
+            if (capacity > QuickMapIndex.Limit)
             {
-                throw new ArgumentOutOfRangeException($"Cannot create QuickMap with a {capacity}, larger than {QuickIndex.Limit} (technical limit) (seealso: {nameof(QuickIndex)}).{nameof(QuickIndex.Limit)}");
+                throw new ArgumentOutOfRangeException($"Cannot create QuickMap with a {capacity}, larger than {QuickMapIndex.Limit} (technical limit) (seealso: {nameof(QuickMapIndex)}).{nameof(QuickMapIndex.Limit)}");
             }
 
             values = new T[capacity];
@@ -63,14 +63,14 @@ namespace NetCore.Common
 
         /// <returns>
         /// <c>true</c> if item was added.
-        /// <c>false</c> if item with the same <see cref="Type"/>/<see cref="QuickIndex"/> is already in the map.
+        /// <c>false</c> if item with the same <see cref="Type"/>/<see cref="QuickMapIndex"/> is already in the map.
         /// </returns>
         public bool Add<TItem>(TItem item) where TItem : class, T
         {
             if (item is null) throw new ArgumentNullException(nameof(item));
 
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            uint flag = QuickID<TItem, T>.BitFlag;
+            uint flag = QuickMapID<TItem, T>.BitFlag;
             if ((flags & flag) != 0)
             {
                 // Item is was already stored.
@@ -98,12 +98,12 @@ namespace NetCore.Common
             }
 
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            uint flag = QuickID<TItem, T>.BitFlag;
+            uint flag = QuickMapID<TItem, T>.BitFlag;
             if ((flags & flag) != 0)
             {
                 // Item under a specific order already exist.
                 // Replacing it won't rebuild the lookup table and won't require an array resize.
-                values[(lookup & (ulong)QuickID<TItem, T>.Mask) >> (int)QuickID<TItem, T>.Position] = item;
+                values[(lookup & (ulong)QuickMapID<TItem, T>.Mask) >> (int)QuickMapID<TItem, T>.Position] = item;
                 return;
             }
 
@@ -122,17 +122,17 @@ namespace NetCore.Common
         /// Retrieves <typeparamref name="TItem"/> instance from the map.
         /// </summary>
         /// <returns>Instance of <typeparamref name="TItem"/> from the map, or <c>null</c> if not found.</returns>
-        public readonly TItem? Get<TItem>() where TItem : class, T => (flags & QuickID<TItem, T>.BitFlag) switch
+        public readonly TItem? Get<TItem>() where TItem : class, T => (flags & QuickMapID<TItem, T>.BitFlag) switch
         {
             0 => null,
-            _ => (TItem)values[(lookup & (ulong)QuickID<TItem, T>.Mask) >> (int)QuickID<TItem, T>.Position]!
+            _ => (TItem)values[(lookup & (ulong)QuickMapID<TItem, T>.Mask) >> (int)QuickMapID<TItem, T>.Position]!
         };
 
         /// <summary>
         /// Checks if item of a specific <typeparamref name="TItem"/> type exist exist in the internal map.
         /// </summary>
         /// <returns><c>true</c> if item exist. <c>false</c> otherwise.</returns>
-        public readonly bool Has<TItem>() where TItem : class, T => (flags & QuickID<TItem, T>.BitFlag) != 0;
+        public readonly bool Has<TItem>() where TItem : class, T => (flags & QuickMapID<TItem, T>.BitFlag) != 0;
 
         /// <summary>
         /// Removes specific <paramref name="item"/> of a type <typeparamref name="TItem"/> from the map.
@@ -144,13 +144,13 @@ namespace NetCore.Common
             if (item is null) throw new ArgumentNullException(nameof(item));
 
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            uint flag = QuickID<TItem, T>.BitFlag;
+            uint flag = QuickMapID<TItem, T>.BitFlag;
             if ((flags & flag) == 0)
             {
                 return false; // Item is was already removed.
             }
 
-            RemoveAtUnchecked(ref values, ref stored, (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (int)QuickID<TItem, T>.Position));
+            RemoveAtUnchecked(ref values, ref stored, (int)((lookup & (ulong)QuickMapID<TItem, T>.Mask) >> (int)QuickMapID<TItem, T>.Position));
             flags &= ~flag;
             UpdateLookup(flags, out lookup);
             return true;
@@ -163,14 +163,14 @@ namespace NetCore.Common
         public bool Remove<TItem>() where TItem : class, T
         {
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            uint flag = QuickID<TItem, T>.BitFlag;
+            uint flag = QuickMapID<TItem, T>.BitFlag;
             if ((flags & flag) == 0)
             {
                 // Item is was already removed.
                 return false;
             }
 
-            RemoveAtUnchecked(ref values, ref stored, (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (int)QuickID<TItem, T>.Position));
+            RemoveAtUnchecked(ref values, ref stored, (int)((lookup & (ulong)QuickMapID<TItem, T>.Mask) >> (int)QuickMapID<TItem, T>.Position));
             flags &= ~flag;
             UpdateLookup(flags, out lookup);
             return true;
@@ -184,7 +184,7 @@ namespace NetCore.Common
         public bool Remove<TItem>([NotNullWhen(true)] out TItem? removed) where TItem : class, T
         {
             // QuickID will throw if item cannot be stored. Thus some checks can be removed.
-            uint flag = QuickID<TItem, T>.BitFlag;
+            uint flag = QuickMapID<TItem, T>.BitFlag;
             if ((flags & flag) == 0)
             {
                 // Item is was already removed.
@@ -192,7 +192,7 @@ namespace NetCore.Common
                 return false;
             }
 
-            int localIndex = (int)((lookup & (ulong)QuickID<TItem, T>.Mask) >> (int)QuickID<TItem, T>.Position);
+            int localIndex = (int)((lookup & (ulong)QuickMapID<TItem, T>.Mask) >> (int)QuickMapID<TItem, T>.Position);
             removed = (TItem)values[localIndex]!;
             RemoveAtUnchecked(ref values, ref stored, localIndex);
             flags &= ~flag;
@@ -247,27 +247,27 @@ namespace NetCore.Common
             ulong stored = 0uL;
             lookup = 0uL;
 
-            for (int order = 0; order < QuickIndex.Limit; order++)
+            for (int order = 0; order < QuickMapIndex.Limit; order++)
             {
                 if ((flags & (1u << order)) != 0)
                 {
                     lookup |= stored << (int)(order switch
                     {
-                        0 => QuickIndexPosition.One,
-                        1 => QuickIndexPosition.Two,
-                        2 => QuickIndexPosition.Three,
-                        3 => QuickIndexPosition.Four,
-                        4 => QuickIndexPosition.Five,
-                        5 => QuickIndexPosition.Six,
-                        6 => QuickIndexPosition.Seven,
-                        7 => QuickIndexPosition.Eight,
-                        8 => QuickIndexPosition.Nine,
-                        9 => QuickIndexPosition.Ten,
-                        10 => QuickIndexPosition.Eleven,
-                        11 => QuickIndexPosition.Twelve,
-                        12 => QuickIndexPosition.Thirteen,
-                        13 => QuickIndexPosition.Fourteen,
-                        14 => QuickIndexPosition.Fifteen,
+                        0 => QuickMapIndexPosition.One,
+                        1 => QuickMapIndexPosition.Two,
+                        2 => QuickMapIndexPosition.Three,
+                        3 => QuickMapIndexPosition.Four,
+                        4 => QuickMapIndexPosition.Five,
+                        5 => QuickMapIndexPosition.Six,
+                        6 => QuickMapIndexPosition.Seven,
+                        7 => QuickMapIndexPosition.Eight,
+                        8 => QuickMapIndexPosition.Nine,
+                        9 => QuickMapIndexPosition.Ten,
+                        10 => QuickMapIndexPosition.Eleven,
+                        11 => QuickMapIndexPosition.Twelve,
+                        12 => QuickMapIndexPosition.Thirteen,
+                        13 => QuickMapIndexPosition.Fourteen,
+                        14 => QuickMapIndexPosition.Fifteen,
                         _ => throw new ArgumentOutOfRangeException(nameof(order)),
                     });
 

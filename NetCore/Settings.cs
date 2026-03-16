@@ -73,6 +73,24 @@ namespace NetCore
             set => m_BufferSizeIncrement = Math.Max(0, value);
         }
 
+        /// <summary>
+        /// <para>(Default: false)</para>
+        /// If enabled - during a handshake, will check which <see cref="CustomHeader{T}"/> are defined client-side and server-side.
+        /// If they are different - systems will synchronize header identifiers, and exclude from writing unused ones.
+        /// <para>
+        /// If disabled - <see cref="NetCore"/> will assume that headers are the same.
+        /// This is typical for games which update constantly.
+        /// </para>
+        /// </summary>
+        /// <remarks>
+        /// Only enable this feature if you communicate globally and cannot ensure that everyone will use the same core system.
+        /// </remarks>
+        public static bool SynchronizeHeaders
+        {
+            get => throw new NotImplementedException();
+            set => throw new NotImplementedException();
+        }
+
 
 
 
@@ -84,5 +102,6 @@ namespace NetCore
         static int m_MaxUnreliablePacketSize = 1024 * 16; // 16 KB.
         static int m_MaxReliablePacketSize = 1024 * 1024; // 1 MB
         static int m_BufferSizeIncrement = 2048; // 2 KB.
+        //static bool m_SynchronizeHeaders = false;
     }
 }

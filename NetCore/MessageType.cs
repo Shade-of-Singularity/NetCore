@@ -6,6 +6,7 @@ namespace NetCore
     /// Type of a message which is being sent.
     /// Sits in a very front of the message, to identify how special headers should be formed.
     /// </summary>
+    [Flags]
     public enum MessageType : byte
     {
         /// <summary>
@@ -15,22 +16,7 @@ namespace NetCore
         /// System messages does not contain <see cref="CustomHeaders"/>.
         /// </remarks>
         System = 0,
-        /// <summary>
-        /// Ordered reliable message type.
-        /// </summary>
-        OrderedReliable = 1,
-        /// <summary>
-        /// Unordered reliable message type.
-        /// </summary>
-        UnorderedReliable = 2,
-        /// <summary>
-        /// Ordered reliable message type.
-        /// </summary>
-        OrderedUnreliable = 3,
-        /// <summary>
-        /// Unordered reliable message type.
-        /// </summary>
-        UnorderedUnreliable = 4,
+        // Note: types, like "Reliable", "Unreliable", "Ordered", etc. should be separated in its own class.
     }
 
     /// <summary>
@@ -44,6 +30,24 @@ namespace NetCore
         /// No flags are defined.
         /// </summary>
         None = 0,
+
+        /// <summary>
+        /// Ordered reliable message type.
+        /// </summary>
+        Reliable = 0b0001,
+        /// <summary>
+        /// Unordered reliable message type.
+        /// </summary>
+        Ordered = 0b0010,
+        /// <summary>
+        /// Ordered reliable message type.
+        /// </summary>
+        OrderedUnreliable = 3,
+        /// <summary>
+        /// Unordered reliable message type.
+        /// </summary>
+        UnorderedUnreliable = 4,
+
         /// <summary>
         /// Indicates whether message has a custom header.
         /// </summary>

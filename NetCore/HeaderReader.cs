@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Runtime.InteropServices;
 
 namespace NetCore
 {
@@ -14,6 +15,11 @@ namespace NetCore
     public readonly ref struct HeaderReader
     {
         /// <summary>
+        /// Thrown on read in <see cref="HeaderReader"/>, if you provide insufficiently large buffer for the bytes.
+        /// </summary>
+        public class InsufficientBufferException : Exception {}
+
+        /// <summary>
         /// Type of the message this header describes.
         /// </summary>
         public readonly MessageType type;
@@ -24,13 +30,17 @@ namespace NetCore
         /// <summary>
         /// Regions, encoding presence of the headers.
         /// </summary>
-        private readonly ReadOnlySpan<byte> regions;
+        public readonly ReadOnlySpan<byte> regions;
         /// <summary>
         /// The rest of the datagram, storing custom header data and message content itself.
         /// Not sliced to avoid counting bits at the initial setup.
         /// </summary>
         /// Note: We can probably encode amount of bits used using zigzag writing/reading.
-        private readonly ReadOnlySpan<byte> content;
+        public readonly ReadOnlySpan<byte> content;
+        /// <summary>
+        /// Describes where each header is positioned based on their <see cref="CustomHeader{T}.HeaderOrder"/> value.
+        /// </summary>
+        public readonly int[] bitPositions;
 
 
 
@@ -40,10 +50,15 @@ namespace NetCore
         /// .                                                Constructors
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <summary>
+        /// Initializes a <see cref="HeaderReader"/> using data from a provided <paramref name="datagram"/>.
+        /// Reads header data and allows you to use <see cref="Read"/> methods.
+        /// </summary>
         public HeaderReader(ReadOnlySpan<byte> datagram)
         {
             if (datagram.IsEmpty)
             {
+                bitPositions = [];
                 return;
             }
 
@@ -53,20 +68,24 @@ namespace NetCore
                 int amount = CustomHeaders.Amount;
                 regions = datagram.Slice(1, (amount + 7) >> 3);
 
-                int offset = 0;
+                int position = 0;
                 var bitMap = CustomHeaders.BitMap;
                 // TODO: Rent array from a storage defined in CustomHeaders.
                 // Note: Since array aligns with CustomHeader{T}.HeaderOrder - array will contain default values over unset headers.
-                int[] offsets = new int[amount];
+                bitPositions = new int[amount];
                 for (int i = 0; i < amount; i++)
                 {
                     byte region = regions[i >> 3]; // TODO: Optimize by accessing the array only on each 8th bit.
                     if ((region & (i & 0b111)) != 0)
                     {
-                        offsets[i] = offset;
-                        offset += bitMap[i];
+                        bitPositions[i] = position;
+                        position += bitMap[i];
                     }
                 }
+            }
+            else
+            {
+                bitPositions = [];
             }
         }
 
@@ -91,35 +110,99 @@ namespace NetCore
         /// <summary>
         /// Reads all data associated with this custom header into provided <paramref name="buffer"/>.
         /// </summary>
-        public void Read<T>(ref Span<byte> buffer, out int bits) where T : CustomHeader<T>, new()
+        /// <exception cref="InsufficientBufferException">
+        /// <paramref name="buffer"/> is smaller than <see cref="CustomHeader{T}.SizeInBytes"/> and cannot contain all the data.
+        /// </exception>
+        public void Read<T>(in Span<byte> buffer) where T : CustomHeader<T>, new()
         {
-            if (!Has<T>())
-            {
-                bits = 0;
+            if (CustomHeader<T>.SizeInBytes == 0 || !Has<T>())
                 return;
-            }
 
-            // TODO: Simplify lookup if possible. Maybe use advanced bit-packing like with QuickMap after all?
-            int position = 0;
-            var sizes = CustomHeaders.SizeMap;
-            int order = CustomHeader<T>.HeaderOrder;
-            int limit = order >> 3;
+            if (buffer.Length < CustomHeader<T>.SizeInBytes)
+                throw new InsufficientBufferException();
 
-            int index = 0;
-            for (int i = 0; i < limit; i++)
+            // Decides which reader to use.
+            // Byte-size reading requires the most operations.
+            // TODO: with values like 3, 5 and 7, part of the buffer can be read as ushort.
+            //  And with 6 - as uint. We can use it to partially copy using larger value types, and fill-in the rest using simple bytes.
+            switch (CustomHeader<T>.SizeInBytes & 0b1111)
             {
-                int region = regions[i];
-                for (int f = 1; 0b1_0000_0000 > f; f <<= 1)
-                {
-                    if ((region & f) != 0)
-                        position += sizes[index];
-                    index++;
-                }
+                case 1 or 3 or 5 or 7: ReadByte(buffer); return; // Read as byte span.
+                case 2 or 6: ReadUShort(MemoryMarshal.Cast<byte, ushort>(buffer[..CustomHeader<T>.SizeInBytes])); return; // Read as ushort span.
+                case 4: ReadUInt(MemoryMarshal.Cast<byte, uint>(buffer[..CustomHeader<T>.SizeInBytes])); return; // Read as uint span.
+                default: ReadULong(MemoryMarshal.Cast<byte, ulong>(buffer[..CustomHeader<T>.SizeInBytes])); return; // Read as ulong span.
             }
 
+            static void ReadByte(in Span<byte> buffer)
+            {
 
-            bits = CustomHeader<T>.SizeInBits;
-            CustomHeader<T>.
+            }
+
+            static void ReadUShort(in Span<ushort> buffer)
+            {
+
+            }
+
+            static void ReadUInt(in Span<uint> buffer)
+            {
+
+            }
+
+            static void ReadULong(in Span<ulong> buffer)
+            {
+
+            }
+
+            //int position = bitPositions[CustomHeader<T>.HeaderOrder];
+            //int offset = position & 0b111; // Offset within a byte.
+            //if (offset == 0)
+            //{
+            //    // This is glimpse in a world of butterflies! Just plain block copy.
+            //    // I wish I could do something similar with buffers.
+            //    content.Slice(position >> 3, CustomHeader<T>.SizeInBytes).CopyTo(buffer);
+            //    return;
+            //}
+
+            //int length = (CustomHeader<T>.SizeInBits + offset + 7) >> 3;
+            //content.Slice(position >> 3, length).CopyTo(buffer);
+
+            //int src = position >> 3;
+            //byte last = content[src + length - 1];
+            //for (int i = CustomHeader<T>.SizeInBytes - 1; i >= 0; i--)
+            //{
+                
+            //}
+
+
+            //buffer[CustomHeader<T>.SizeInBytes - 1] = (byte)(last >> offset);
+            //for (int i = CustomHeader<T>.SizeInBytes - 2; i >= 0; i--)
+            //{
+            //    buffer[i] = 
+            //}
+
+
+            //int lowMask = (1 << offset)
+            //switch (length)
+            //{
+            //    case 0: return;
+            //    case 1: buffer[0] = (byte)(content[position >> 3] & ((1 << CustomHeader<T>.SizeInBits) - 1 + offset));
+            //        return;
+            //}
+
+            //int src = position >> 3;
+            //byte last = content[src];
+            //buffer[0] = (byte)(last >> offset);
+            //for (int i = 1; i < length; i++)
+            //{
+
+            //    buffer[i - 1] = content[src + i];
+            //}
+
+
+            //for (int i = 0; i < length; i++)
+            //{
+            //    ushort
+            //}
         }
 
         /// <summary>
@@ -181,8 +264,8 @@ namespace NetCore
         /// </summary>
         public readonly void Dispose()
         {
-            if (packed is not null)
-                ArrayPool<byte>.Shared.Return(packed);
+            //if (packed is not null)
+            //    ArrayPool<byte>.Shared.Return(packed);
         }
     }
 }

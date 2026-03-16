@@ -6,10 +6,10 @@ namespace NetCore.Common
     /// Supports up to 15 different indexes.
     /// </summary>
     /// <remarks>
-    /// 8 bits at the left are used by <see cref="QuickIndexPosition"/> for mapping.
+    /// 8 bits at the left are used by <see cref="QuickMapIndexPosition"/> for mapping.
     /// </remarks>
     [Flags]
-    public enum QuickIndexMask : ulong
+    public enum QuickMapIndexMask : ulong
     {
         One       = 0b00000_00000_00000_0000_0000_0000_0000_0000_0000_0000_0000_000_000_000_000_00_00_0uL, // of: 0
         Two       = 0b00000_00000_00000_0000_0000_0000_0000_0000_0000_0000_0000_000_000_000_000_00_00_1uL, // of: 0
