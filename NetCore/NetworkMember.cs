@@ -17,7 +17,7 @@ namespace NetCore
     /// TODO: Add a way to map connections, arrived from different transports
     /// to either one connection (TCP+UDP to one)
     /// or to multiple(UDP + SteamUDP to separate).
-    public abstract class NetworkMember
+    public abstract class NetworkMember(int transports)
     {
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
@@ -25,7 +25,7 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Default of 3 for usually default transports: <see cref="TCP.TCPTransport"/>, <see cref="UDP.UDPTransport"/> and <see cref="Loopback.LoopbackTransport"/>.
+        /// Default of 3 for usually default transports: <see cref="TCP.TCPTransport"/>, <see cref="UDP.UDPTransport"/> and <see cref="LoopbackTransport"/>.
         /// </summary>
         public const int DefaultInitialTransportCapacity = 3;
 
@@ -58,7 +58,7 @@ namespace NetCore
         /// <summary>
         /// Provider for all <see cref="ConnectionID"/>s managed by this <see cref="NetworkMember"/> and its transports.
         /// </summary>
-        public ConnectionIDProvider CIDProvider => m_CIDProvider;
+        public ConnectionIDProvider CIDProvider => m_ConnectionIDProvider;
 
 
 
@@ -84,14 +84,14 @@ namespace NetCore
         /// <remarks>
         /// Not readonly to support mutation in registration methods.
         /// </remarks>
-        protected QuickMap<IReliableTransport> ReliableTransports;
+        protected HashList<IReliableTransport> ReliableTransports = new(transports);
         /// <summary>
         /// Dictionary with all <see cref="ITransport"/>s this <see cref="NetworkMember"/> can use.
         /// </summary>
         /// <remarks>
         /// Not readonly to support mutation in registration methods.
         /// </remarks>
-        protected QuickMap<IUnreliableTransport> UnreliableTransports;
+        protected HashList<IUnreliableTransport> UnreliableTransports = new(transports);
         /// <summary>
         /// Lock used everywhere, including for accessing <see cref="ReliableTransports"/> and <see cref="UnreliableTransports"/> maps.
         /// </summary>
@@ -108,7 +108,7 @@ namespace NetCore
         /// <summary>
         /// Provider for Connection IDs.
         /// </summary>
-        private readonly ConnectionIDProvider m_CIDProvider = new();
+        private readonly ConnectionIDProvider m_ConnectionIDProvider = new();
 
 
 
@@ -118,20 +118,10 @@ namespace NetCore
         /// .                                                Constructors
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        public NetworkMember()
-        {
-            int capacity;
-            lock (m_InitialTransportCapacity)
-            {
-                if (!m_InitialTransportCapacity.TryGetValue(GetType().TypeHandle, out capacity))
-                {
-                    capacity = DefaultInitialTransportCapacity;
-                }
-            }
-
-            ReliableTransports = new(capacity);
-            UnreliableTransports = new(capacity);
-        }
+        /// <summary>
+        /// Constructs <see cref="NetworkMember"/> with a default initial transport capacity - <see cref="DefaultInitialTransportCapacity"/>.
+        /// </summary>
+        public NetworkMember() : this(DefaultInitialTransportCapacity) { }
 
 
 
@@ -535,9 +525,9 @@ namespace NetCore
         /// </summary>
         public static void SetDefaultTransportCapacity<T>(int capacity) where T : NetworkMember
         {
-            if (capacity is < 0 or > QuickMapIndex.Limit)
+            if (capacity is < 0 or > HashLists.ItemLimit)
             {
-                throw new ArgumentOutOfRangeException($"{nameof(QuickMap<ITransport>)} capacity should be within bounds: [0:{QuickMapIndex.Limit}]. Provided: {capacity}");
+                throw new ArgumentOutOfRangeException($"{nameof(QuickMap<ITransport>)} capacity should be within bounds: [0:{HashLists.ItemLimit}]. Provided: {capacity}");
             }
 
             lock (m_InitialTransportCapacity)
