@@ -36,7 +36,7 @@ namespace NetCore
         public static void Main()
         {
             Header header;
-            using (header = client.GetHeader())
+            using (header = client.GetHeaderLocked())
             {
                 header.Set<UIDHeader>(325623253uL);
                 header.Set<AlignmentHeader, Alignment>(Alignment.BottomLeft);
@@ -45,16 +45,24 @@ namespace NetCore
                 //  Size can be defined procedurally as well.
                 //  However, this will only be possible to use with enum-only headers.
                 Console.WriteLine($"Alignment (client): {header.GetEnum<AlignmentHeader, Alignment>()}");
-                client.SendReliable(header, default);
+                client.SendReliable(ref header, default);
             }
 
-            using (header = server.GetHeader())
+            using (header = server.GetHeaderLocked())
             {
+                header.Lock();
                 header.Set<UIDHeader>(54634563463546uL);
                 header.Set<AlignmentHeader, Alignment>(Alignment.TopRight);
                 Console.WriteLine($"UID (server): {header.GetULong<UIDHeader>()}");
                 Console.WriteLine($"Alignment (server): {header.GetEnum<AlignmentHeader, Alignment>()}");
-                server.SendReliable(header, default);
+                server.SendReliable(ref header, default);
+            }
+
+            client.SendReliable(stackalloc byte[8], Construct);
+            static void Construct(ref Header header)
+            {
+                header.Set<UIDHeader>(981231234uL);
+                header.Set<AlignmentHeader, Alignment>(Alignment.Bottom);
             }
         }
     }

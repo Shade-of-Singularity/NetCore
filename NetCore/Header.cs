@@ -39,6 +39,10 @@ namespace NetCore
         /// Whether instance is disposed or not.
         /// </summary>
         private bool disposed;
+        /// <summary>
+        /// Amount of sources using this header in a <![CDATA[using (var header = ...) { }]]> context.
+        /// </summary>
+        private ushort locks;
 
 
 
@@ -166,12 +170,34 @@ namespace NetCore
         }
 
         /// <summary>
-        /// Disposes internal arrays.
+        /// Increments the amount of locks used on the header.
         /// </summary>
+        public void IncrementLocks()
+        {
+            if (disposed)
+                throw new ObjectDisposedException(nameof(Header));
+
+            locks++;
+        }
+
+        /// <summary>
+        /// Releases all internal resources.
+        /// </summary>
+        /// <exception cref="ObjectDisposedException"><see cref="Header"/> is already disposed.</exception>
+        /// Note: We can mutate what Dispose does only because we use ref struct.
+        ///  Ref structs cannot define interfaces as of right now, so we cannot use <see cref="IDisposable"/>.
+        ///  Thus its functionality is open for innovations.
         public void Dispose()
         {
             if (disposed)
                 throw new ObjectDisposedException(nameof(Header));
+
+            switch (locks)
+            {
+                case 0: break;
+                case 1: locks--; break;
+                default: locks--; return; // Do not dispose.
+            }
 
             // Wipes sensitive data before returning.
             foreach (var supplier in CustomHeaders.GetSensitiveRegions())

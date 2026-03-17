@@ -6,6 +6,7 @@ namespace NetCore
     /// <summary>
     /// Base class working with different <see cref="ITransport"/>s.
     /// </summary>
+    /// TODO: Consider adding a check for 0 transports being present.
     public class Client : NetworkMember
     {
         /// <summary>
@@ -13,14 +14,16 @@ namespace NetCore
         /// </summary>
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public virtual void SendUnreliable(Header header, ReadOnlySpan<byte> datagram)
+        public virtual void SendUnreliable(ref Header header, ReadOnlySpan<byte> datagram)
         {
-            lock (_lock)
+            using (header.Lock())
             {
-                // TODO: Consider adding a check for 0 transports being present.
-                foreach (var transport in UnreliableTransports)
+                lock (_lock)
                 {
-                    transport.SendUnreliable(header, datagram);
+                    foreach (var transport in UnreliableTransports)
+                    {
+                        transport.SendUnreliable(header, datagram);
+                    }
                 }
             }
         }
@@ -31,12 +34,14 @@ namespace NetCore
         /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public virtual void SendUnreliable<TTransport>(Header header, ReadOnlySpan<byte> datagram) where TTransport : class, IUnreliableTransport
+        public virtual void SendUnreliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram) where TTransport : class, IUnreliableTransport
         {
-            lock (_lock)
+            using (header.Lock())
             {
-                // TODO: Consider adding a check for 0 transports being present.
-                GetUnreliableTransport<TTransport>()?.SendUnreliable(header, datagram);
+                lock (_lock)
+                {
+                    GetUnreliableTransport<TTransport>()?.SendUnreliable(header, datagram);
+                }
             }
         }
 
@@ -45,14 +50,16 @@ namespace NetCore
         /// </summary>
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public virtual void SendReliable(Header header, ReadOnlySpan<byte> datagram)
+        public virtual void SendReliable(ref Header header, ReadOnlySpan<byte> datagram)
         {
-            lock (_lock)
+            using (header.Lock())
             {
-                // TODO: Consider adding a check for 0 transports being present.
-                foreach (var transport in ReliableTransports)
+                lock (_lock)
                 {
-                    transport.SendReliable(header, datagram);
+                    foreach (var transport in ReliableTransports)
+                    {
+                        transport.SendReliable(header, datagram);
+                    }
                 }
             }
         }
@@ -63,12 +70,14 @@ namespace NetCore
         /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public virtual void SendReliable<TTransport>(Header header, ReadOnlySpan<byte> datagram) where TTransport : class, IReliableTransport
+        public virtual void SendReliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram) where TTransport : class, IReliableTransport
         {
-            lock (_lock)
+            using (header.Lock())
             {
-                // TODO: Consider adding a check for 0 transports being present.
-                GetReliableTransport<TTransport>()?.SendReliable(header, datagram);
+                lock (_lock)
+                {
+                    GetReliableTransport<TTransport>()?.SendReliable(header, datagram);
+                }
             }
         }
     }

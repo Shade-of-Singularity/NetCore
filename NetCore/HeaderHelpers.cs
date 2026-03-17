@@ -59,6 +59,18 @@ namespace NetCore
         //}
 
         /// <summary>
+        /// Increments amount of locks on a given <paramref name="header"/> instance.
+        /// </summary>
+        /// <returns>
+        /// The <paramref name="header"/> instance itself for easier inlining.
+        /// </returns>
+        public static ref Header Lock(this ref Header header)
+        {
+            header.IncrementLocks();
+            return ref header;
+        }
+
+        /// <summary>
         /// Sets <paramref name="value"/> as content under the current <see cref="CustomHeader{T}"/>.
         /// </summary>
         /// <remarks>

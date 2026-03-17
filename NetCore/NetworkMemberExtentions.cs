@@ -2,6 +2,8 @@
 using NetCore.Transports.Special;
 using NetCore.Transports.TCP;
 using NetCore.Transports.UDP;
+using System;
+using System.Runtime.CompilerServices;
 
 namespace NetCore
 {
@@ -17,6 +19,7 @@ namespace NetCore
         /// <typeparam name="T">Specific type of <see cref="ITransport"/>.</typeparam>
         /// <param name="member">Member capable of working with <see cref="ITransport"/>s.</param>
         /// <param name="transport">Transport to register in a target <paramref name="member"/>.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void RegisterTransportAsBoth<T>(this NetworkMember member, T transport) where T : class, IReliableTransport, IUnreliableTransport
         {
             member.RegisterReliableTransport(transport);
@@ -32,6 +35,7 @@ namespace NetCore
         /// <c>true</c> if transport was found.
         /// <c>false</c> otherwise.
         /// </returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool HasTransport<T>(this NetworkMember member) where T : class, IReliableTransport, IUnreliableTransport
         {
             return member.HasReliableTransport<T>() || member.HasUnreliableTransport<T>();
@@ -44,10 +48,223 @@ namespace NetCore
         /// </summary>
         /// <param name="member">Member capable of working with <see cref="ITransport"/>s.</param>
         /// <param name="transport">Transport handing both reliable and unreliable messages.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void RegisterTCPUDPTransport(this NetworkMember member, TCPUDPTransport transport)
         {
             member.RegisterReliableTransport(transport);
             member.RegisterUnreliableTransport(transport);
         }
+
+        /// <summary>
+        /// Uses <see cref="NetworkMember.GetHeader"/> on a given <paramref name="member"/> instance
+        /// and automatically calls <see cref="HeaderHelpers.Lock(ref Header)"/> on it.
+        /// </summary>
+        /// <param name="member"></param>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Header GetHeaderLocked(this NetworkMember member)
+        {
+            Header header = member.GetHeader();
+            return header.Lock();
+        }
+
+
+
+        #region Client-side extensions
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                                   Client
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <inheritdoc cref="Client.SendReliable(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliable(this Client client, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
+        {
+            Header header = client.GetHeader();
+            constructor(ref header);
+            client.SendReliable(ref header, datagram);
+        }
+
+        /// <inheritdoc cref="Client.SendReliable{TTransport}(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliable<TTransport>(this Client client, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
+            where TTransport : class, IReliableTransport
+        {
+            Header header = client.GetHeader();
+            constructor(ref header);
+            client.SendReliable<TTransport>(ref header, datagram);
+        }
+
+        /// <inheritdoc cref="Client.SendUnreliable(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliable(this Client client, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
+        {
+            Header header = client.GetHeader();
+            constructor(ref header);
+            client.SendUnreliable(ref header, datagram);
+        }
+
+        /// <inheritdoc cref="Client.SendUnreliable{TTransport}(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliable<TTransport>(this Client client, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
+            where TTransport : class, IUnreliableTransport
+        {
+            Header header = client.GetHeader();
+            constructor(ref header);
+            client.SendUnreliable<TTransport>(ref header, datagram);
+        }
+
+
+
+
+        /// <inheritdoc cref="Client.SendReliable(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliable(this Client client, ReadOnlySpan<byte> datagram)
+        {
+            Header header = client.GetHeader();
+            client.SendReliable(ref header, datagram);
+        }
+
+        /// <inheritdoc cref="Client.SendReliable{TTransport}(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliable<TTransport>(this Client client, ReadOnlySpan<byte> datagram)
+            where TTransport : class, IReliableTransport
+        {
+            Header header = client.GetHeader();
+            client.SendReliable<TTransport>(ref header, datagram);
+        }
+
+        /// <inheritdoc cref="Client.SendUnreliable(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliable(this Client client, ReadOnlySpan<byte> datagram)
+        {
+            Header header = client.GetHeader();
+            client.SendUnreliable(ref header, datagram);
+        }
+
+        /// <inheritdoc cref="Client.SendUnreliable{TTransport}(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliable<TTransport>(this Client client, ReadOnlySpan<byte> datagram)
+            where TTransport : class, IUnreliableTransport
+        {
+            Header header = client.GetHeader();
+            client.SendUnreliable<TTransport>(ref header, datagram);
+        }
+        #endregion
+
+        #region Server-side extensions
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                                   Server
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <inheritdoc cref="Server.SendUnreliable(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliable(this Server server, ReadOnlySpan<byte> datagram)
+        {
+            Header header = server.GetHeader();
+            server.SendUnreliable(ref header, datagram);
+        }
+
+        /// <inheritdoc cref="Server.SendUnreliable{TTransport}(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliable<TTransport>(this Server server, ReadOnlySpan<byte> datagram)
+            where TTransport : class, IUnreliableTransport
+        {
+            Header header = server.GetHeader();
+            server.SendUnreliable<TTransport>(ref header, datagram);
+        }
+
+        /// <inheritdoc cref="Server.SendUnreliableExcluding(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliableExcluding(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
+        {
+            Header header = server.GetHeader();
+            server.SendUnreliableExcluding(ref header, datagram, connection);
+        }
+
+        /// <inheritdoc cref="Server.SendUnreliableExcluding{TTransport}(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliableExcluding<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
+            where TTransport : class, IUnreliableTransport
+        {
+            Header header = server.GetHeader();
+            server.SendUnreliableExcluding<TTransport>(ref header, datagram, connection);
+        }
+
+        /// <inheritdoc cref="Server.SendUnreliableTo(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliableTo(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
+        {
+            Header header = server.GetHeader();
+            server.SendUnreliableTo(ref header, datagram, connection);
+        }
+
+        /// <inheritdoc cref="Server.SendUnreliableTo{TTransport}(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliableTo<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
+            where TTransport : class, IUnreliableTransport
+        {
+            Header header = server.GetHeader();
+            server.SendUnreliableTo<TTransport>(ref header, datagram, connection);
+        }
+
+        /// <inheritdoc cref="Server.SendReliable(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliable(this Server server, ReadOnlySpan<byte> datagram)
+        {
+            Header header = server.GetHeader();
+            server.SendReliable(ref header, datagram);
+        }
+
+        /// <inheritdoc cref="Server.SendReliable{TTransport}(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliable<TTransport>(this Server server, ReadOnlySpan<byte> datagram)
+            where TTransport : class, IReliableTransport
+        {
+            Header header = server.GetHeader();
+            server.SendReliable<TTransport>(ref header, datagram);
+        }
+
+        /// <inheritdoc cref="Server.SendReliableExcluding(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliableExcluding(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
+        {
+            Header header = server.GetHeader();
+            server.SendReliableExcluding(ref header, datagram, connection);
+        }
+
+        /// <inheritdoc cref="Server.SendReliableExcluding{TTransport}(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliableExcluding<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
+            where TTransport : class, IReliableTransport
+        {
+            Header header = server.GetHeader();
+            server.SendReliableExcluding<TTransport>(ref header, datagram, connection);
+        }
+
+        /// <inheritdoc cref="Server.SendReliableTo(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliableTo(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
+        {
+            Header header = server.GetHeader();
+            server.SendUnreliableExcluding(ref header, datagram, connection);
+        }
+
+        /// <inheritdoc cref="Server.SendReliableTo{TTransport}(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliableTo<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
+            where TTransport : class, IReliableTransport
+        {
+            Header header = server.GetHeader();
+            server.SendReliableTo<TTransport>(ref header, datagram, connection);
+        }
+        #endregion
     }
+
+    /// <summary>
+    /// Constructor delegate providing essential <see cref="CustomHeaders"/> to the input <see cref="Header"/>.
+    /// </summary>
+    /// <param name="header">Header to modify.</param>
+    public delegate void HeaderConstructor(ref Header header);
 }

@@ -145,6 +145,7 @@ namespace NetCore
         /// </summary>
         /// <remarks>
         /// Don't forget to call <see cref="Header.Dispose"/> when you are done using it!
+        /// Or use inside of an <![CDATA[using (var header = ...) {}]]> block.
         /// </remarks>
         public virtual Header GetHeader()
         {

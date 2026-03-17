@@ -16,7 +16,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NetCore.Handling\NetCore.Messaging.csproj" />
     <ProjectReference Include="..\NetCore\NetCore.csproj" />
   </ItemGroup>
 

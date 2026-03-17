@@ -36,7 +36,7 @@ namespace NetCore.Examples
             client.Connect(new IPEndPoint(IPAddress.Loopback, ServerPort));
             await Task.Delay(10);
 
-            client.SendUnreliable(default, Encoding.UTF8.GetBytes("Test message."));
+            client.SendUnreliable(Encoding.UTF8.GetBytes("Test message."));
             await Task.Delay(150);
         }
 
@@ -49,7 +49,7 @@ namespace NetCore.Examples
             server.Start(25000);
             client.Start(new IPEndPoint(IPAddress.Any, 0));
             client.Connect(new IPEndPoint(IPAddress.Loopback, 25000));
-            client.SendUnreliable(default, MemoryMarshal.AsBytes("test".AsSpan()));
+            client.SendUnreliable(MemoryMarshal.AsBytes("test".AsSpan()));
         }
 
         static void RegisterTransports()
@@ -64,16 +64,16 @@ namespace NetCore.Examples
             server.RegisterReliableTransport(new TCPTransport());
             server.RegisterTransportAsBoth(new PipeTransport());
 
-            client.SendReliable(default, MemoryMarshal.AsBytes("data #1 (from client)".AsSpan()));
-            server.SendReliable(default, MemoryMarshal.AsBytes("data #1 (from server)".AsSpan()));
+            client.SendReliable(MemoryMarshal.AsBytes("data #1 (from client)".AsSpan()));
+            server.SendReliable(MemoryMarshal.AsBytes("data #1 (from server)".AsSpan()));
             Console.WriteLine();
-            client.SendUnreliable(default, MemoryMarshal.AsBytes("data #2 (from client)".AsSpan()));
-            server.SendUnreliable(default, MemoryMarshal.AsBytes("data #2 (from server)".AsSpan()));
+            client.SendUnreliable(MemoryMarshal.AsBytes("data #2 (from client)".AsSpan()));
+            server.SendUnreliable(MemoryMarshal.AsBytes("data #2 (from server)".AsSpan()));
             Console.WriteLine();
-            server.SendUnreliableTo(default, MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
-            server.SendReliableTo(default, MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
-            server.SendReliableExcluding(default, MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
-            server.SendUnreliableExcluding(default, MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
+            server.SendUnreliableTo(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
+            server.SendReliableTo(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
+            server.SendReliableExcluding(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
+            server.SendUnreliableExcluding(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
         }
 
         static void SendMessages()
@@ -87,10 +87,10 @@ namespace NetCore.Examples
             client.Start(new IPEndPoint(IPAddress.Loopback, ClientPort));
             client.Connect(new IPEndPoint(IPAddress.Loopback, ServerPort));
 
-            client.SendReliable(default, MemoryMarshal.AsBytes("client (OrderedReliable) message".AsSpan()));
-            server.SendReliable(default, MemoryMarshal.AsBytes("server (OrderedReliable) message".AsSpan()));
-            client.SendUnreliable(default, MemoryMarshal.AsBytes("client (Unreliable) message".AsSpan()));
-            server.SendUnreliable(default, MemoryMarshal.AsBytes("server (Unreliable) message".AsSpan()));
+            client.SendReliable(MemoryMarshal.AsBytes("client (OrderedReliable) message".AsSpan()));
+            server.SendReliable(MemoryMarshal.AsBytes("server (OrderedReliable) message".AsSpan()));
+            client.SendUnreliable(MemoryMarshal.AsBytes("client (Unreliable) message".AsSpan()));
+            server.SendUnreliable(MemoryMarshal.AsBytes("server (Unreliable) message".AsSpan()));
         }
 
         static void SendMessagesFromTesting()
@@ -109,15 +109,15 @@ namespace NetCore.Examples
 
             client.Connect(new IPEndPoint(IPAddress.Loopback, 25000));
 
-            server.SendReliable(default, MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
-            server.SendReliable<TCPTransport>(default, MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
-            server.SendUnreliable(default, MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
-            server.SendUnreliable<UDPTransport>(default, MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
+            server.SendReliable(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
+            server.SendReliable<TCPTransport>(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
+            server.SendUnreliable(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
+            server.SendUnreliable<UDPTransport>(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
 
-            client.SendReliable(default, MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
-            client.SendReliable<LoopbackTransport>(default, MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
-            client.SendUnreliable(default, MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
-            client.SendUnreliable<LoopbackTransport>(default, MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
+            client.SendReliable(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
+            client.SendReliable<LoopbackTransport>(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
+            client.SendUnreliable(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
+            client.SendUnreliable<LoopbackTransport>(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
 
             client.Disconnect();
             client.Stop();
