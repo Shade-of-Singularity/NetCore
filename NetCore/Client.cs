@@ -34,7 +34,8 @@ namespace NetCore
         /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public virtual void SendUnreliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram) where TTransport : class, IUnreliableTransport
+        public virtual void SendUnreliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram)
+            where TTransport : class, IUnreliableTransport
         {
             using (header.Lock())
             {
@@ -70,7 +71,8 @@ namespace NetCore
         /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public virtual void SendReliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram) where TTransport : class, IReliableTransport
+        public virtual void SendReliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram)
+            where TTransport : class, IReliableTransport
         {
             using (header.Lock())
             {
