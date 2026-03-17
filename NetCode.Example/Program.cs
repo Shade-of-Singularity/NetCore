@@ -1,4 +1,7 @@
-﻿using NetCore.UDP;
+﻿using NetCore.Transports.Loopback;
+using NetCore.Transports.Pipes;
+using NetCore.Transports.TCP;
+using NetCore.Transports.UDP;
 using System;
 using System.Net;
 using System.Runtime.InteropServices;
@@ -30,14 +33,14 @@ namespace NetCore.Examples
         static void RegisterTransports()
         {
             Client client = new();
-            client.RegisterUnreliableTransport(new UDP.UDPTransport());
-            client.RegisterReliableTransport(new TCP.TCPTransport());
-            client.RegisterTransportAsBoth(new Pipes.PipeTransport());
+            client.RegisterUnreliableTransport(new UDPTransport());
+            client.RegisterReliableTransport(new TCPTransport());
+            client.RegisterTransportAsBoth(new PipeTransport());
 
             Server server = new();
-            server.RegisterUnreliableTransport(new UDP.UDPTransport());
-            server.RegisterReliableTransport(new TCP.TCPTransport());
-            server.RegisterTransportAsBoth(new Pipes.PipeTransport());
+            server.RegisterUnreliableTransport(new UDPTransport());
+            server.RegisterReliableTransport(new TCPTransport());
+            server.RegisterTransportAsBoth(new PipeTransport());
 
             client.SendReliable(default, MemoryMarshal.AsBytes("data #1 (from client)".AsSpan()));
             server.SendReliable(default, MemoryMarshal.AsBytes("data #1 (from server)".AsSpan()));
@@ -71,28 +74,28 @@ namespace NetCore.Examples
         static void SendMessagesFromTesting()
         {
             Client client = new();
-            client.RegisterUnreliableTransport(new UDP.UDPTransport());
-            client.RegisterReliableTransport(new TCP.TCPTransport());
-            client.RegisterTransportAsBoth(new Pipes.PipeTransport());
+            client.RegisterUnreliableTransport(new UDPTransport());
+            client.RegisterReliableTransport(new TCPTransport());
+            client.RegisterTransportAsBoth(new PipeTransport());
             client.Start(new IPEndPoint(IPAddress.Loopback, 25001));
 
             Server server = new();
-            server.RegisterUnreliableTransport(new UDP.UDPTransport());
-            server.RegisterReliableTransport(new TCP.TCPTransport());
-            server.RegisterTransportAsBoth(new Pipes.PipeTransport());
+            server.RegisterUnreliableTransport(new UDPTransport());
+            server.RegisterReliableTransport(new TCPTransport());
+            server.RegisterTransportAsBoth(new PipeTransport());
             server.Start(25000);
 
             client.Connect(new IPEndPoint(IPAddress.Loopback, 25000));
 
             server.SendReliable(default, MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
-            server.SendReliable<TCP.TCPTransport>(default, MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
+            server.SendReliable<TCPTransport>(default, MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
             server.SendUnreliable(default, MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
-            server.SendUnreliable<UDP.UDPTransport>(default, MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
+            server.SendUnreliable<UDPTransport>(default, MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
 
             client.SendReliable(default, MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
-            client.SendReliable<Loopback.LoopbackTransport>(default, MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
+            client.SendReliable<LoopbackTransport>(default, MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
             client.SendUnreliable(default, MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
-            client.SendUnreliable<Loopback.LoopbackTransport>(default, MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
+            client.SendUnreliable<LoopbackTransport>(default, MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
 
             client.Disconnect();
             client.Stop();

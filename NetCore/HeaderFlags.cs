@@ -3,14 +3,35 @@
 namespace NetCore
 {
     /// <summary>
-    /// Encodes special data which <see cref="HeaderReader"/> or <see cref="HeaderWriter"/> can have.
+    /// Encodes special data which <see cref="Header"/> can have.
     /// </summary>
     /// <remarks>
-    /// Base value for those flags can change. Do not assume it will always be <see cref="byte"/>.
-    /// Better use <see cref="HeaderReader(ReadOnlySpan{byte})"/> or <see cref="HeaderWriter.TryRead(ReadOnlySpan{byte}, out HeaderReader)"/> instead.
+    /// Base value for those flags can change.
+    /// Do not assume it will always be <see cref="byte"/>.
+    /// Better use <see cref="Header"/> natively provided by the library:
+    /// <para><see cref="NetworkMember.GetHeader()"/></para>
     /// For encoding, use <see cref="HeaderFlagsHelpers"/> instead of manually writing your own methods.
+    /// You can retrieve a size of this value by using <see cref="HeaderFlagsHelpers.HeaderBits"/>.
     /// </remarks>
     public enum HeaderFlags : byte { } // Merely a carrier for other types.
+
+    /// <summary>
+    /// Type of the header - what it holds, etc.
+    /// </summary>
+    [Obsolete("I feel like we can simply use one type instead of two.")]
+    public enum HeaderType : byte
+    {
+        /// <summary>
+        /// Defines headers, which are system-defined.
+        /// Those are used for welcoming messages, internal communication, etc.
+        /// They only include build-in headers, allowing for optimizations due to predictable initialization order.
+        /// </summary>
+        System = 0,
+        /// <summary>
+        /// Defines all headers.
+        /// </summary>
+        Custom = 1,
+    }
 
     /// <summary>
     /// Encodes how <see cref="CustomHeaders"/> are defined in a given header instance.
@@ -55,15 +76,35 @@ namespace NetCore
     /// <summary>
     /// Helpers for working with <see cref="HeaderFlags"/>
     /// </summary>
+    /// <remarks>
+    /// Most of the flags are not stored at their real positions in a header to make flags usable in switch cases.
+    /// This is why you need helper methods.
+    /// </remarks>
     public static class HeaderFlagsHelpers
     {
         /// <summary>
-        /// Covers all the bits in <see cref="HeaderFlags"/>, covering values for <see cref="CustomHeaderUsage"/>.
+        /// How many bits are used to encode <see cref="HeaderFlags"/>.
         /// </summary>
-        public const HeaderFlags CustomHeaderUsageMask = (HeaderFlags)0b11;
+        public const int HeaderBits = 8;
+
+        /// <see cref="CustomHeaderUsage"/>
+        internal const uint CustomHeaderUsageMask = 0b11;
+        internal const int CustomHeaderUsageShift = 0;
+
         /// <summary>
         /// Decodes <see cref="CustomHeaderUsage"/> from a given <see cref="HeaderFlags"/> value.
         /// </summary>
-        public static CustomHeaderUsage GetCustomHeaderUsage(this HeaderFlags flags) => (CustomHeaderUsage)(flags & CustomHeaderUsageMask);
+        public static CustomHeaderUsage GetCustomHeaderUsage(this HeaderFlags flags)
+        {
+            return (CustomHeaderUsage)(((uint)flags >> CustomHeaderUsageShift) & CustomHeaderUsageMask);
+        }
+
+        /// <summary>
+        /// Encodes <see cref="CustomHeaderUsage"/> in a given <see cref="HeaderFlags"/> value.
+        /// </summary>
+        public static HeaderFlags SetCustomHeaderUsage(this HeaderFlags flags, CustomHeaderUsage usage)
+        {
+            return (HeaderFlags)(((uint)flags & ~(CustomHeaderUsageMask << CustomHeaderUsageShift)) | ((uint)usage << CustomHeaderUsageShift));
+        }
     }
 }

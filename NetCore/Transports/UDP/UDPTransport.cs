@@ -1,5 +1,5 @@
-﻿using NetCore.Loopback;
-using NetCore.TCP;
+﻿using NetCore.Transports.Loopback;
+using NetCore.Transports.TCP;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -7,7 +7,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace NetCore.UDP
+namespace NetCore.Transports.UDP
 {
     /// <summary>
     /// Transport for UDP messages.
@@ -274,7 +274,7 @@ namespace NetCore.UDP
         }
 
         /// <inheritdoc/>
-        public void SendUnreliable(HeaderReader header, ReadOnlySpan<byte> datagram)
+        public void SendUnreliable(Header header, ReadOnlySpan<byte> datagram)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -296,7 +296,7 @@ namespace NetCore.UDP
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableExcluding(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
+        public void SendUnreliableExcluding(Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -319,7 +319,7 @@ namespace NetCore.UDP
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableTo(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID target)
+        public void SendUnreliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -341,7 +341,7 @@ namespace NetCore.UDP
         }
 
         /// <inheritdoc/>
-        public void HandleUnreliable(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID source)
+        public void HandleUnreliable(Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(HandleUnreliable)}(source: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");

@@ -1,6 +1,8 @@
 ﻿using NetCore.Common;
-using NetCore.Loopback;
+using NetCore.Transports;
+using NetCore.Transports.Loopback;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
@@ -25,7 +27,7 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Default of 3 for usually default transports: <see cref="TCP.TCPTransport"/>, <see cref="UDP.UDPTransport"/> and <see cref="LoopbackTransport"/>.
+        /// Default of 3 for usually default transports: <see cref="Transports.TCP.TCPTransport"/>, <see cref="Transports.UDP.UDPTransport"/> and <see cref="LoopbackTransport"/>.
         /// </summary>
         public const int DefaultInitialTransportCapacity = 3;
 
@@ -41,12 +43,10 @@ namespace NetCore
         /// Whether this <see cref="NetworkMember"/> was started and <see cref="LocalEndPoint"/> was set.
         /// </summary>
         public bool IsActive => LocalEndPoint is not null;
-
         /// <summary>
         /// Local end-point on which network member was started.
         /// </summary>
         public IPEndPoint? LocalEndPoint { get; private set; }
-
         /// <summary>
         /// Remote end-point to which this <see cref="NetworkMember"/> is connected to.
         /// </summary>
@@ -54,7 +54,6 @@ namespace NetCore
         /// When used in <see cref="Server"/> - represent end-point of an relay server.
         /// </remarks>
         public IPEndPoint? RemoteEndPoint { get; private set; }
-
         /// <summary>
         /// Provider for all <see cref="ConnectionID"/>s managed by this <see cref="NetworkMember"/> and its transports.
         /// </summary>
@@ -109,7 +108,17 @@ namespace NetCore
         /// Provider for Connection IDs.
         /// </summary>
         private readonly ConnectionIDProvider m_ConnectionIDProvider = new();
-
+        /// <summary>
+        /// Maximum amount of headers reported by any registered <see cref="ITransport"/>.
+        /// </summary>
+        /// <remarks>
+        /// If client and server have different headers - they will be combined during the initial communication step.
+        /// Transports will report combined total of headers back to the <see cref="NetworkMember"/>
+        /// so we can better optimize <see cref="Header"/> and <see cref="Header"/>.
+        /// </remarks>
+        /// Note: Removed, because we should not depend on asynchronously arriving data in the internal code.
+        ///  Async data or transport-only data should only influence how one transport performs.
+        //private int m_MaxReportedHeaderAmount = 1024;
 
 
 
@@ -131,6 +140,20 @@ namespace NetCore
         /// .                                               Public Methods
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <summary>
+        /// Creates <see cref="Header"/>, optimized for usage with currently registered <see cref="ITransport"/>s.
+        /// </summary>
+        /// <remarks>
+        /// Don't forget to call <see cref="Header.Dispose"/> when you are done using it!
+        /// </remarks>
+        public virtual Header GetHeader()
+        {
+            //byte[] headers = ArrayPool<byte>.Shared.Rent(m_MaxReportedHeaderAmount);
+            byte[] headers = ArrayPool<byte>.Shared.Rent((CustomHeaders.Amount + 7) >> 3);
+            byte[] content = ArrayPool<byte>.Shared.Rent(CustomHeaders.MaxContentSizeInBytes);
+            return new Header(headers, content);
+        }
+        
         /// <summary>
         /// Binds all registered <see cref="ITransport"/>s to an <paramref name="localEndPoint"/> and marks instance as active.
         /// </summary>
@@ -160,6 +183,7 @@ namespace NetCore
                 }
 
                 LocalEndPoint = localEndPoint;
+                NetworkMembers.IncrementActiveMembers();
                 return true;
 
                 ResetState:
@@ -179,6 +203,7 @@ namespace NetCore
                 {
                     StopInternal();
                     LocalEndPoint = null;
+                    NetworkMembers.DecrementActiveMembers();
                 }
             }
         }

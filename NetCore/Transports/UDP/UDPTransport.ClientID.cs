@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Net;
 
-namespace NetCore.UDP
+namespace NetCore.Transports.UDP
 {
-public partial class UDPTransport
+    public partial class UDPTransport
     {
         /// <summary>
         /// Internal Client identifier, which can be matched by either <see cref="ConnectionID"/> or <see cref="RemoteEndPoint"/>.

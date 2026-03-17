@@ -85,7 +85,7 @@ namespace NetCore
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     if (exception is SocketException se)
-                        Console.WriteLine($"SocketException code: {se.ErrorCode}");
+                        Console.WriteLine($"SocketException Code: {se.ErrorCode}");
                     Console.WriteLine(exception);
                     Console.ForegroundColor = ConsoleColor.White;
 
@@ -97,7 +97,7 @@ namespace NetCore
                     {
                         Console.ForegroundColor = ConsoleColor.DarkRed;
                         if (exception is SocketException se2)
-                            Console.WriteLine($"SocketException code: {se2.ErrorCode}");
+                            Console.WriteLine($"SocketException Code: {se2.ErrorCode}");
                         Console.WriteLine(inner);
                         Console.ForegroundColor = ConsoleColor.White;
                     }
@@ -132,7 +132,7 @@ namespace NetCore
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     if (exception is SocketException se)
-                        Console.WriteLine($"SocketException code: {se.ErrorCode}");
+                        Console.WriteLine($"SocketException Code: {se.ErrorCode}");
                     Console.WriteLine(exception);
                     Console.ForegroundColor = ConsoleColor.White;
                     return false;
@@ -165,7 +165,7 @@ namespace NetCore
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     if (exception is SocketException se)
-                        Console.WriteLine($"SocketException code: {se.ErrorCode}");
+                        Console.WriteLine($"SocketException Code: {se.ErrorCode}");
                     Console.WriteLine(exception);
                     Console.ForegroundColor = ConsoleColor.White;
 
@@ -177,7 +177,7 @@ namespace NetCore
                     {
                         Console.ForegroundColor = ConsoleColor.DarkRed;
                         if (exception is SocketException se2)
-                            Console.WriteLine($"SocketException code: {se2.ErrorCode}");
+                            Console.WriteLine($"SocketException Code: {se2.ErrorCode}");
                         Console.WriteLine(inner);
                         Console.ForegroundColor = ConsoleColor.White;
                     }
@@ -210,7 +210,7 @@ namespace NetCore
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     if (exception is SocketException se)
-                        Console.WriteLine($"SocketException code: {se.ErrorCode}");
+                        Console.WriteLine($"SocketException Code: {se.ErrorCode}");
                     Console.WriteLine(exception);
                     Console.ForegroundColor = ConsoleColor.White;
                     return false;
@@ -247,7 +247,7 @@ namespace NetCore
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     if (exception is SocketException se)
-                        Console.WriteLine($"SocketException code: {se.ErrorCode}");
+                        Console.WriteLine($"SocketException Code: {se.ErrorCode}");
                     Console.WriteLine(exception);
                     Console.ForegroundColor = ConsoleColor.White;
 
@@ -259,7 +259,7 @@ namespace NetCore
                     {
                         Console.ForegroundColor = ConsoleColor.DarkRed;
                         if (exception is SocketException se2)
-                            Console.WriteLine($"SocketException code: {se2.ErrorCode}");
+                            Console.WriteLine($"SocketException Code: {se2.ErrorCode}");
                         Console.WriteLine(inner);
                         Console.ForegroundColor = ConsoleColor.White;
                     }
@@ -293,7 +293,7 @@ namespace NetCore
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     if (exception is SocketException se)
-                        Console.WriteLine($"SocketException code: {se.ErrorCode}");
+                        Console.WriteLine($"SocketException Code: {se.ErrorCode}");
                     Console.WriteLine(exception);
                     Console.ForegroundColor = ConsoleColor.White;
                     return false;

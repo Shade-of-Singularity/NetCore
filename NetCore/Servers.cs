@@ -9,7 +9,7 @@ namespace NetCore
 {
     /// <summary>
     /// Describes servers currently running within current <see cref="AppDomain"/>.
-    /// Needed mainly for <see cref="Loopback.LoopbackTransport"/>.
+    /// Needed mainly for <see cref="Transports.Loopback.LoopbackTransport"/>.
     /// </summary>
     public static class Servers
     {

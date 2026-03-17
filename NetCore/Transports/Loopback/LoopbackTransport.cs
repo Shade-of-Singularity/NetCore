@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Runtime.InteropServices;
 
-namespace NetCore.Loopback
+namespace NetCore.Transports.Loopback
 {
     /// <summary>
     /// Implements native loopback connection, without overhead of any in-between systems, like TCP or UDP.
@@ -94,7 +94,7 @@ namespace NetCore.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendReliable(HeaderReader header, ReadOnlySpan<byte> datagram)
+        public void SendReliable(Header header, ReadOnlySpan<byte> datagram)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -109,7 +109,7 @@ namespace NetCore.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendReliableExcluding(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
+        public void SendReliableExcluding(Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -127,7 +127,7 @@ namespace NetCore.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendReliableTo(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID target)
+        public void SendReliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -142,7 +142,7 @@ namespace NetCore.Loopback
         }
 
         /// <inheritdoc/>
-        public void HandleReliable(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID source)
+        public void HandleReliable(Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleReliable)}(sourceID: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -150,7 +150,7 @@ namespace NetCore.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendUnreliable(HeaderReader header, ReadOnlySpan<byte> datagram)
+        public void SendUnreliable(Header header, ReadOnlySpan<byte> datagram)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -165,7 +165,7 @@ namespace NetCore.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableExcluding(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
+        public void SendUnreliableExcluding(Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -183,7 +183,7 @@ namespace NetCore.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableTo(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID target)
+        public void SendUnreliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -198,7 +198,7 @@ namespace NetCore.Loopback
         }
 
         /// <inheritdoc/>
-        public void HandleUnreliable(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID source)
+        public void HandleUnreliable(Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleUnreliable)}(sourceID: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");

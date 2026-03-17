@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NetCore.Transports;
+using System;
 
 namespace NetCore
 {
@@ -12,7 +13,7 @@ namespace NetCore
         /// </summary>
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public virtual void SendUnreliable(HeaderReader header, ReadOnlySpan<byte> datagram)
+        public virtual void SendUnreliable(Header header, ReadOnlySpan<byte> datagram)
         {
             lock (_lock)
             {
@@ -30,7 +31,7 @@ namespace NetCore
         /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public virtual void SendUnreliable<TTransport>(HeaderReader header, ReadOnlySpan<byte> datagram) where TTransport : class, IUnreliableTransport
+        public virtual void SendUnreliable<TTransport>(Header header, ReadOnlySpan<byte> datagram) where TTransport : class, IUnreliableTransport
         {
             lock (_lock)
             {
@@ -44,7 +45,7 @@ namespace NetCore
         /// </summary>
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public virtual void SendReliable(HeaderReader header, ReadOnlySpan<byte> datagram)
+        public virtual void SendReliable(Header header, ReadOnlySpan<byte> datagram)
         {
             lock (_lock)
             {
@@ -62,7 +63,7 @@ namespace NetCore
         /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public virtual void SendReliable<TTransport>(HeaderReader header, ReadOnlySpan<byte> datagram) where TTransport : class, IReliableTransport
+        public virtual void SendReliable<TTransport>(Header header, ReadOnlySpan<byte> datagram) where TTransport : class, IReliableTransport
         {
             lock (_lock)
             {

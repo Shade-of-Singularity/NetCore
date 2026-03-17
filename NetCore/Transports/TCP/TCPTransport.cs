@@ -1,9 +1,9 @@
-﻿using NetCore.UDP;
+﻿using NetCore.Transports.UDP;
 using System;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
-namespace NetCore.TCP
+namespace NetCore.Transports.TCP
 {
     /// <summary>
     /// Transport for TCP messages.
@@ -70,7 +70,7 @@ namespace NetCore.TCP
         }
 
         /// <inheritdoc/>
-        public void SendReliable(HeaderReader header, ReadOnlySpan<byte> datagram)
+        public void SendReliable(Header header, ReadOnlySpan<byte> datagram)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(TCPTransport)}.{nameof(SendReliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -78,7 +78,7 @@ namespace NetCore.TCP
         }
 
         /// <inheritdoc/>
-        public void SendReliableExcluding(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
+        public void SendReliableExcluding(Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(TCPTransport)}.{nameof(SendReliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -86,7 +86,7 @@ namespace NetCore.TCP
         }
 
         /// <inheritdoc/>
-        public void SendReliableTo(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID target)
+        public void SendReliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(TCPTransport)}.{nameof(SendReliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -94,7 +94,7 @@ namespace NetCore.TCP
         }
 
         /// <inheritdoc/>
-        public void HandleReliable(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID source)
+        public void HandleReliable(Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"{nameof(TCPTransport)}.{nameof(HandleReliable)}(source: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");

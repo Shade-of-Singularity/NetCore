@@ -1,8 +1,8 @@
 ﻿using BenchmarkDotNet.Attributes;
 using NetCore.Common;
-using NetCore.Loopback;
-using NetCore.TCP;
-using NetCore.UDP;
+using NetCore.Transports.Loopback;
+using NetCore.Transports.TCP;
+using NetCore.Transports.UDP;
 using System;
 using System.Collections.Generic;
 

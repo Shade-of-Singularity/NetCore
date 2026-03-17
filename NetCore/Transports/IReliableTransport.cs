@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NetCore
+namespace NetCore.Transports
 {
     /// <summary>
     /// Transport for sending messages reliably.
@@ -13,7 +13,7 @@ namespace NetCore
         /// </summary>
         /// <param name="header">Header of the message.</param>
         /// <param name="datagram">Datagram to send.</param>
-        public void SendReliable(HeaderReader header, ReadOnlySpan<byte> datagram);
+        public void SendReliable(Header header, ReadOnlySpan<byte> datagram);
 
         /// <summary>
         /// Reliably sends <paramref name="datagram"/> to all connections this <see cref="ITransport"/> manages, excluding <paramref name="toExclude"/>.
@@ -21,7 +21,7 @@ namespace NetCore
         /// <param name="header">Header of the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="toExclude">Connection to avoid sending a <paramref name="datagram"/> to.</param>
-        public void SendReliableExcluding(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID toExclude);
+        public void SendReliableExcluding(Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude);
 
         /// <summary>
         /// Reliably sends <paramref name="datagram"/> to a target connection.
@@ -29,7 +29,7 @@ namespace NetCore
         /// <param name="header">Header of the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="target">Connection to send a <paramref name="datagram"/> to. Nothing should be sent if transport doesn't manage this connection.</param>
-        public void SendReliableTo(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID target);
+        public void SendReliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionID target);
 
         /// <summary>
         /// Handles raw <paramref name="datagram"/> of a reliable message.
@@ -37,6 +37,6 @@ namespace NetCore
         /// <param name="header">Header of the message.</param>
         /// <param name="datagram">Datagram from a remote connection.</param>
         /// <param name="source">Connection ID from which <paramref name="datagram"/> has arrived.</param>
-        public void HandleReliable(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID source);
+        public void HandleReliable(Header header, ReadOnlySpan<byte> datagram, ConnectionID source);
     }
 }

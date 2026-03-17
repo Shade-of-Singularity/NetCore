@@ -1,4 +1,8 @@
-﻿namespace NetCore
+﻿using NetCore.Transports;
+using NetCore.Transports.TCP;
+using NetCore.Transports.UDP;
+
+namespace NetCore
 {
     /// <summary>
     /// Extensions methods for working with <see cref="NetworkMember"/>s.
@@ -33,14 +37,14 @@
         }
 
         /// <summary>
-        /// Registers both <see cref="TCP.TCPTransport"/> and <see cref="UDP.UDPTransport"/>, and configures them to work together:
+        /// Registers both <see cref="Transports.TCP.TCPTransport"/> and <see cref="Transports.UDP.UDPTransport"/>, and configures them to work together:
         /// <para><paramref name="udp"/> - sends only unreliable messages.</para>
         /// <para><paramref name="tcp"/> - sends only reliable messages.</para>
         /// </summary>
         /// <param name="member">Member capable of working with <see cref="ITransport"/>s.</param>
         /// <param name="tcp">TCP Transport.</param>
         /// <param name="udp">UDP Transport.</param>
-        public static void RegisterTCPUDPPair(this NetworkMember member, TCP.TCPTransport tcp, UDP.UDPTransport udp)
+        public static void RegisterTCPUDPPair(this NetworkMember member, TCPTransport tcp, UDPTransport udp)
         {
             udp.TCPTransport = tcp;
             tcp.UDPTransport = udp;

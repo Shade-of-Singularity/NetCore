@@ -1,13 +1,12 @@
 ﻿using NetCore.Common;
 using System;
-using System.Buffers;
-using System.Collections.Generic;
 
 namespace NetCore
 {
     /// <summary>
     /// Controls where <see cref="CustomHeader{T}"/> data is located.
     /// </summary>
+    /// TODO: Provide custom pooling solution for byte arrays, for better GC compatibility.
     public static class CustomHeaders
     {
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
@@ -16,13 +15,66 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
+        /// Max amount of headers system should expect.
+        /// </summary>
+        //public static int MaxHeaderAmount
+        //{
+        //    get => m_MaxHeaderAmount;
+        //    set => m_MaxHeaderAmount = Math.Max(1024, value);
+        //}
+
+        /// <summary>
         /// Amount of currently registered custom headers.
         /// </summary>
         public static int Amount
         {
             get
             {
-                lock (_lock) return m_SizeMap.Count;
+                lock (_lock) return m_SizeBytes.Count;
+            }
+        }
+
+        /// <summary>
+        /// Max size (in bytes) seen amongst all currently registered headers. Can be 0.
+        /// </summary>
+        public static int MaxHeaderSizeInBytes
+        {
+            get
+            {
+                lock (_lock) return m_MaxHeaderSizeInBytes;
+            }
+        }
+
+        /// <summary>
+        /// Max size (in bits) seen amongst all currently registered headers. Can be 0.
+        /// </summary>
+        public static int MaxHeaderSizeInBits
+        {
+            get
+            {
+                lock (_lock) return m_MaxHeaderSizeInBits;
+            }
+        }
+
+        /// <summary>
+        /// Max total size of unpacked headers, if all registered headers are defined.
+        /// </summary>
+        public static int MaxContentSizeInBytes
+        {
+            get
+            {
+                lock (_lock) return m_MaxContentSizeInBytes;
+            }
+        }
+
+        /// <summary>
+        /// Max total size of packed headers, if all registered headers are defined.
+        /// </summary>
+        public static int MaxContentSizeInBits
+        {
+            get
+            {
+                lock (_lock) return m_MaxContentSizeInBits;
             }
         }
 
@@ -33,7 +85,7 @@ namespace NetCore
         {
             get
             {
-                lock (_lock) return [.. m_SizeMap];
+                lock (_lock) return [.. m_SizeBytes];
             }
         }
 
@@ -41,10 +93,10 @@ namespace NetCore
         /// Map, enlisting how much bits <see cref="CustomHeader{T}.SizeInBits"/> actually take.
         /// </summary>
         public static int[] BitMap
-        { 
+        {
             get
             {
-                lock (_lock) return [.. m_SizeMap];
+                lock (_lock) return [.. m_SizeBits];
             }
         }
 
@@ -56,11 +108,17 @@ namespace NetCore
         /// .                                               Private Fields
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        private static readonly LazyArray<int> m_SizeMap = [];
-        private static readonly LazyArray<int> m_BitMap = [];
-        private static readonly List<ulong[]> m_Storages = [];
+        private static readonly LazyArray<CustomHeaderRegionSupplier> m_SensitiveRegions = [];
+        private static readonly LazyArray<int> m_SizeBytes = [];
+        private static readonly LazyArray<int> m_SizeBits = [];
         private static readonly object _lock = new();
         private static Action? m_OnReset;
+
+        //private static int m_MaxHeaderAmount = 2048;
+        private static int m_MaxContentSizeInBytes;
+        private static int m_MaxContentSizeInBits;
+        private static int m_MaxHeaderSizeInBytes;
+        private static int m_MaxHeaderSizeInBits;
 
 
 
@@ -81,27 +139,21 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Removes all custom header allocations, without touching any built-in headers.
+        /// Removes all custom header allocations, and re-registers built-in ones.
         /// </summary>
         public static void Reset()
         {
             lock (_lock)
             {
-                try
-                {
-                    m_OnReset?.Invoke();
-                }
-                catch (Exception ex)
-                {
-                    var color = Console.ForegroundColor;
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(ex);
-                    Console.ForegroundColor = color;
-                }
+                m_OnReset?.Invoke();
+                m_OnReset = null;
 
-                m_SizeMap.Clear();
-                m_BitMap.Clear();
-                m_Storages.Clear();
+                m_SizeBytes.Clear();
+                m_SizeBits.Clear();
+                m_MaxContentSizeInBytes = 0;
+                m_MaxContentSizeInBits = 0;
+                m_MaxHeaderSizeInBytes = 0;
+                m_MaxHeaderSizeInBits = 0;
 
                 // Re-registers built-in ones.
                 RegisterBuiltInHeaders();
@@ -119,45 +171,61 @@ namespace NetCore
             }
         }
 
+        /// <summary>
+        /// Stores info about which item was registered.
+        /// </summary>
+        internal static class Registrar<T>
+        {
+            public static bool IsRegistered = false;
+        }
 
         /// <remarks>
         /// If you call this method multiple times - it will create multiple allocations.
         /// Make sure to call it only once after app startup or after <see cref="Reset"/>!
         /// </remarks>
-        internal static void Register<T>(Action onReset, out int index) where T : CustomHeader<T>, new()
+        internal static void Register<T>() where T : CustomHeader<T>, new()
         {
+            if (NetworkMembers.IsAnyActive)
+            {
+                throw new Exception($"Cannot define new headers after any {nameof(NetworkMember)} were started! HeaderHelpers: {typeof(T).Name}");
+            }
+
             lock (_lock)
             {
-                index = m_SizeMap.Count;
-                m_SizeMap.Add(CustomHeader<T>.SizeInBits);
-                int lastBit = 1 << BitScanner.BitScanForward((ulong)CustomHeader<T>.SizeInBits);
-                m_BitMap.Add(lastBit | (lastBit - 1));
-                m_OnReset += onReset;
+                if (Registrar<T>.IsRegistered)
+                {
+                    throw new Exception($"Cannot register a header twice! HeaderHelpers: {typeof(T).Name}");
+                }
+
+                // Fetches info about header position in flags and content.
+                int order = m_SizeBytes.Count;
+                int contentPosition = m_MaxContentSizeInBytes;
+                m_OnReset += static () =>
+                {
+                    Registrar<T>.IsRegistered = false;
+                    CustomHeader<T>.Descriptor.Provider(default, default);
+                };
+
+                // Registers information:
+                m_SizeBits.Add(CustomHeader<T>.SizeInBits);
+                m_MaxContentSizeInBits += CustomHeader<T>.SizeInBits;
+                m_MaxHeaderSizeInBits = Math.Max(m_MaxHeaderSizeInBits, CustomHeader<T>.SizeInBits);
+                m_SizeBytes.Add(CustomHeader<T>.SizeInBytes);
+                m_MaxContentSizeInBytes += CustomHeader<T>.SizeInBytes;
+                m_MaxHeaderSizeInBytes = Math.Max(m_MaxHeaderSizeInBytes, CustomHeader<T>.SizeInBytes);
+
+                // Fires registration callbacks:
+                Registrar<T>.IsRegistered = true;
+                CustomHeader<T>.Descriptor.Provider(order, contentPosition);
             }
         }
 
         /// <summary>
-        /// Rents <see cref="BitStorage"/> with a <see cref="BitStorage.BitCapacity"/> equal or larger than the requests <paramref name="bits"/>.
+        /// Gets enumerator for iterating over all sensitive regions.
         /// </summary>
-        /// <param name="bits">Amount of bits in a storage to request.</param>
-        internal static ulong[] Rent(int bits)
-        {
-            lock (_lock)
-            {
-                return ArrayPool<ulong>.Shared.Rent((bits + 63) >> 6);
-            }
-        }
-
-        /// <summary>
-        /// Returns <see cref="BitStorage"/> to the internal list.
-        /// </summary>
-        /// <param name="storage">Storage to return.</param>
-        internal static void Return(in ulong[] storage)
-        {
-            lock (_lock)
-            {
-                ArrayPool<ulong>.Shared.Return(storage);
-            }
-        }
+        /// <remarks>
+        /// Returns a *copy* of the <see cref="LazyArray{T}"/>.
+        /// </remarks>
+        internal static LazyArray<CustomHeaderRegionSupplier> GetSensitiveRegions() => m_SensitiveRegions;
     }
 }

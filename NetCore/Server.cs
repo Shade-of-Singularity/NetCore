@@ -1,6 +1,6 @@
-﻿using System;
+﻿using NetCore.Transports;
+using System;
 using System.Net;
-using System.Runtime.Serialization;
 
 namespace NetCore
 {
@@ -53,7 +53,7 @@ namespace NetCore
         /// </summary>
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public void SendUnreliable(HeaderReader header, ReadOnlySpan<byte> datagram)
+        public void SendUnreliable(Header header, ReadOnlySpan<byte> datagram)
         {
             lock (_lock)
             {
@@ -71,7 +71,7 @@ namespace NetCore
         /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public void SendUnreliable<TTransport>(HeaderReader header, ReadOnlySpan<byte> datagram) where TTransport : class, IUnreliableTransport
+        public void SendUnreliable<TTransport>(Header header, ReadOnlySpan<byte> datagram) where TTransport : class, IUnreliableTransport
         {
             lock (_lock)
             {
@@ -86,7 +86,7 @@ namespace NetCore
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to avoid sending a <paramref name="datagram"/> to.</param>
-        public void SendUnreliableExcluding(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID connection)
+        public void SendUnreliableExcluding(Header header, ReadOnlySpan<byte> datagram, ConnectionID connection)
         {
             lock (_lock)
             {
@@ -114,7 +114,7 @@ namespace NetCore
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to avoid sending a <paramref name="datagram"/> to.</param>
-        public void SendUnreliableExcluding<TTransport>(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID connection) where TTransport : class, IUnreliableTransport
+        public void SendUnreliableExcluding<TTransport>(Header header, ReadOnlySpan<byte> datagram, ConnectionID connection) where TTransport : class, IUnreliableTransport
         {
             lock (_lock)
             {
@@ -129,7 +129,7 @@ namespace NetCore
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to send a <paramref name="datagram"/> to.</param>
-        public void SendUnreliableTo(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID connection)
+        public void SendUnreliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionID connection)
         {
             lock (_lock)
             {
@@ -148,7 +148,7 @@ namespace NetCore
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to send a <paramref name="datagram"/> to.</param>
-        public void SendUnreliableTo<TTransport>(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID connection) where TTransport : class, IUnreliableTransport
+        public void SendUnreliableTo<TTransport>(Header header, ReadOnlySpan<byte> datagram, ConnectionID connection) where TTransport : class, IUnreliableTransport
         {
             lock (_lock)
             {
@@ -162,7 +162,7 @@ namespace NetCore
         /// </summary>
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public void SendReliable(HeaderReader header, ReadOnlySpan<byte> datagram)
+        public void SendReliable(Header header, ReadOnlySpan<byte> datagram)
         {
             lock (_lock)
             {
@@ -180,7 +180,7 @@ namespace NetCore
         /// <typeparam name="TTransport"><see cref="IReliableTransport"/> to use for sending of a message.</typeparam>
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
-        public void SendReliable<TTransport>(HeaderReader header, ReadOnlySpan<byte> datagram) where TTransport : class, IReliableTransport
+        public void SendReliable<TTransport>(Header header, ReadOnlySpan<byte> datagram) where TTransport : class, IReliableTransport
         {
             lock (_lock)
             {
@@ -195,7 +195,7 @@ namespace NetCore
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to avoid sending a <paramref name="datagram"/> to.</param>
-        public void SendReliableExcluding(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID connection)
+        public void SendReliableExcluding(Header header, ReadOnlySpan<byte> datagram, ConnectionID connection)
         {
             lock (_lock)
             {
@@ -222,7 +222,7 @@ namespace NetCore
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to avoid sending a <paramref name="datagram"/> to.</param>
-        public void SendReliableExcluding<TTransport>(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID connection) where TTransport : class, IReliableTransport
+        public void SendReliableExcluding<TTransport>(Header header, ReadOnlySpan<byte> datagram, ConnectionID connection) where TTransport : class, IReliableTransport
         {
             lock (_lock)
             {
@@ -237,7 +237,7 @@ namespace NetCore
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to send a <paramref name="datagram"/> to.</param>
-        public void SendReliableTo(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID connection)
+        public void SendReliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionID connection)
         {
             lock (_lock)
             {
@@ -256,7 +256,7 @@ namespace NetCore
         /// <param name="header"></param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to send a <paramref name="datagram"/> to.</param>
-        public void SendReliableTo<TTransport>(HeaderReader header, ReadOnlySpan<byte> datagram, ConnectionID connection) where TTransport : class, IReliableTransport
+        public void SendReliableTo<TTransport>(Header header, ReadOnlySpan<byte> datagram, ConnectionID connection) where TTransport : class, IReliableTransport
         {
             lock (_lock)
             {

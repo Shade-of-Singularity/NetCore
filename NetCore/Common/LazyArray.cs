@@ -1,6 +1,6 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace NetCore.Common
 {
@@ -15,18 +15,30 @@ namespace NetCore.Common
         /// .                                              Public Properties
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        /// <inheritdoc/>
+        /// <summary>
+        /// Gets or sets value in the underlying list/array.
+        /// </summary>
         public readonly T this[int index]
         {
             get => list[index];
-            set => list[index] = value;
+            set
+            {
+                if (array is not null)
+                {
+                    array[index] = value;
+                }
+
+                list[index] = value;
+            }
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Amount of items in the array.
+        /// </summary>
         public readonly int Count => list.Count;
 
         /// <inheritdoc/>
-        public readonly bool IsReadOnly => false;
+        readonly bool ICollection<T>.IsReadOnly => false;
 
 
 
@@ -51,15 +63,20 @@ namespace NetCore.Common
         /// Turns internal list into array, and caches it to be returned again next time.
         /// </summary>
         public T[] ToArray() => array ??= [.. list];
-        
-        /// <inheritdoc/>
+
+        /// <summary>
+        /// Adds item to the list.
+        /// </summary>
+        /// <param name="item">Item to add.</param>
         public void Add(T item)
         {
             list.Add(item);
             array = null;
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Clears the list.
+        /// </summary>
         public void Clear()
         {
             if (list.Count == 0)
@@ -71,15 +88,29 @@ namespace NetCore.Common
             array = null;
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Checks if list contains target item.
+        /// </summary>
+        /// <param name="item">Item to check for.</param>
+        /// <returns>
+        /// <c>true</c> - if <paramref name="item"/> was found.
+        /// <c>false</c> - otherwise.
+        /// </returns>
         public readonly bool Contains(T item) => list.Contains(item);
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Copies all items from the list to a target array.
+        /// </summary>
+        /// <param name="array">Array to cope the items to.</param>
+        /// <param name="arrayIndex">Index from which to start.</param>
         public readonly void CopyTo(T[] array, int arrayIndex) => list.CopyTo(array, arrayIndex);
 
-        /// <inheritdoc/>
-        public readonly IEnumerator<T> GetEnumerator() => list.GetEnumerator();
-        readonly IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        /// <summary>
+        /// Retrieves enumerator, enumerating over the entire list.
+        /// </summary>
+        public Enumerator GetEnumerator() => new(ToArray());
+        readonly IEnumerator<T> IEnumerable<T>.GetEnumerator() => list.GetEnumerator();
+        readonly IEnumerator IEnumerable.GetEnumerator() => list.GetEnumerator();
 
         /// <inheritdoc/>
         public readonly int IndexOf(T item) => list.IndexOf(item);
@@ -108,6 +139,31 @@ namespace NetCore.Common
         {
             list.RemoveAt(index);
             array = null;
+        }
+
+        /// <summary>
+        /// Custom struct-based enumerator for iterating over <see cref="LazyArray{T}"/>.
+        /// </summary>
+        /// <remarks>
+        /// Using it will automatically trigger <see cref="ToArray"/>.
+        /// </remarks>
+        /// <param name="items">Items to iterate over.</param>
+        public ref struct Enumerator(T[] items)
+        {
+            private readonly T[] items = items;
+            private int iterator = -1;
+            /// <summary>
+            /// Retrieves currently enumerated item.
+            /// </summary>
+            public readonly T Current => iterator < items.Length ? items[iterator] : default!;
+            /// <summary>
+            /// Moves the enumerator forward.
+            /// </summary>
+            /// <returns>
+            /// <c>true</c> - there are more items to iterate over, and <see cref="Current"/> was assigned.
+            /// <c>false</c> - there are no more items to iterate over.
+            /// </returns>
+            public bool MoveNext() => ++iterator < items.Length;
         }
     }
 }
