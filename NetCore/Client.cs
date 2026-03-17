@@ -6,9 +6,29 @@ namespace NetCore
     /// <summary>
     /// Base class working with different <see cref="ITransport"/>s.
     /// </summary>
+    /// <inheritdoc cref="NetworkMember"/>
     /// TODO: Consider adding a check for 0 transports being present.
-    public class Client : NetworkMember
+    public class Client(int transports) : NetworkMember<Client>(transports)
     {
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                                Constructors
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <summary>
+        /// Default parameter-less .ctor.
+        /// Pre-allocates some space for transports with <see cref="NetworkMember.DefaultInitialTransportCapacity"/>.
+        /// </summary>
+        public Client() : this(DefaultInitialTransportCapacity) { }
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                               Public Methods
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
         /// Unreliably sends <paramref name="datagram"/> to the server.
         /// </summary>

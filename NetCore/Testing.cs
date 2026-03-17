@@ -64,6 +64,9 @@ namespace NetCore
                 header.Set<UIDHeader>(981231234uL);
                 header.Set<AlignmentHeader, Alignment>(Alignment.Bottom);
             }
+
+            client.ForEachReliableTransport(static (c, t) => c.RemoveReliableTransport(t));
+            client.ForEachUnreliableTransport(static (c, t) => c.RemoveUnreliableTransport(t));
         }
     }
 }

@@ -160,6 +160,123 @@ namespace NetCore
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <inheritdoc cref="Server.SendUnreliable(ref Header, ReadOnlySpan{byte})"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliable(this Server server, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
+        {
+            Header header = server.GetHeader();
+            constructor(ref header);
+            server.SendUnreliable(ref header, datagram);
+        }
+
+        /// <inheritdoc cref="Server.SendUnreliable{TTransport}(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliable<TTransport>(this Server server, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
+            where TTransport : class, IUnreliableTransport
+        {
+            Header header = server.GetHeader();
+            constructor(ref header);
+            server.SendUnreliable<TTransport>(ref header, datagram);
+        }
+
+        /// <inheritdoc cref="Server.SendUnreliableExcluding(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliableExcluding(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
+        {
+            Header header = server.GetHeader();
+            constructor(ref header);
+            server.SendUnreliableExcluding(ref header, datagram, connection);
+        }
+
+        /// <inheritdoc cref="Server.SendUnreliableExcluding{TTransport}(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliableExcluding<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
+            where TTransport : class, IUnreliableTransport
+        {
+            Header header = server.GetHeader();
+            constructor(ref header);
+            server.SendUnreliableExcluding<TTransport>(ref header, datagram, connection);
+        }
+
+        /// <inheritdoc cref="Server.SendUnreliableTo(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliableTo(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
+        {
+            Header header = server.GetHeader();
+            constructor(ref header);
+            server.SendUnreliableTo(ref header, datagram, connection);
+        }
+
+        /// <inheritdoc cref="Server.SendUnreliableTo{TTransport}(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliableTo<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
+            where TTransport : class, IUnreliableTransport
+        {
+            Header header = server.GetHeader();
+            constructor(ref header);
+            server.SendUnreliableTo<TTransport>(ref header, datagram, connection);
+        }
+
+        /// <inheritdoc cref="Server.SendReliable(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliable(this Server server, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
+        {
+            Header header = server.GetHeader();
+            constructor(ref header);
+            server.SendReliable(ref header, datagram);
+        }
+
+        /// <inheritdoc cref="Server.SendReliable{TTransport}(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliable<TTransport>(this Server server, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
+            where TTransport : class, IReliableTransport
+        {
+            Header header = server.GetHeader();
+            constructor(ref header);
+            server.SendReliable<TTransport>(ref header, datagram);
+        }
+
+        /// <inheritdoc cref="Server.SendReliableExcluding(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliableExcluding(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
+        {
+            Header header = server.GetHeader();
+            constructor(ref header);
+            server.SendReliableExcluding(ref header, datagram, connection);
+        }
+
+        /// <inheritdoc cref="Server.SendReliableExcluding{TTransport}(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliableExcluding<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
+            where TTransport : class, IReliableTransport
+        {
+            Header header = server.GetHeader();
+            constructor(ref header);
+            server.SendReliableExcluding<TTransport>(ref header, datagram, connection);
+        }
+
+        /// <inheritdoc cref="Server.SendReliableTo(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliableTo(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
+        {
+            Header header = server.GetHeader();
+            constructor(ref header);
+            server.SendUnreliableExcluding(ref header, datagram, connection);
+        }
+
+        /// <inheritdoc cref="Server.SendReliableTo{TTransport}(ref Header, ReadOnlySpan{byte}, ConnectionID)"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliableTo<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
+            where TTransport : class, IReliableTransport
+        {
+            Header header = server.GetHeader();
+            constructor(ref header);
+            server.SendReliableTo<TTransport>(ref header, datagram, connection);
+        }
+
+
+
+
+        /// <inheritdoc cref="Server.SendUnreliable(ref Header, ReadOnlySpan{byte})"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendUnreliable(this Server server, ReadOnlySpan<byte> datagram)
         {
             Header header = server.GetHeader();

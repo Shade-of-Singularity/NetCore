@@ -1,6 +1,5 @@
 ﻿using NetCore.Common;
 using NetCore.Transports;
-using NetCore.Transports.Loopback;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -10,8 +9,59 @@ using System.Net;
 namespace NetCore
 {
     /// <summary>
+    /// Consumer used in ForEach methods for <see cref="ITransport"/>s.
+    /// </summary>
+    public delegate void TransportConsumer<in TTransport>(TTransport transport)
+        where TTransport : ITransport;
+
+    /// <summary>
+    /// Consumer used in ForEach methods for <see cref="ITransport"/>s with a <see cref="NetworkMember"/> explicitly specified.
+    /// </summary>
+    public delegate void MemberTransportConsumer<in TMember, in TTransport>(TMember member, TTransport transport)
+        where TMember : NetworkMember<TMember>
+        where TTransport : ITransport;
+
+    /// <inheritdoc cref="NetworkMember"/>
+    public abstract class NetworkMember<T>(int transports) : NetworkMember(transports) where T : NetworkMember<T>
+    {
+        /// <summary>
+        /// Iterates over all reliable transports using a given <paramref name="consumer"/> delegate.
+        /// </summary>
+        /// <param name="consumer">Action to use on all registered <see cref="IReliableTransport"/>s.</param>
+        public void ForEachReliableTransport(MemberTransportConsumer<T, IReliableTransport> consumer)
+        {
+            lock (_lock)
+            {
+                T self = (T)this;
+                foreach (var transport in ReliableTransports)
+                {
+                    consumer(self, transport);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Iterates over all unreliable transports using a given <paramref name="consumer"/> delegate.
+        /// </summary>
+        /// <param name="consumer">Action to use on all registered <see cref="IUnreliableTransport"/>s.</param>
+        public void ForEachUnreliableTransport(MemberTransportConsumer<T, IUnreliableTransport> consumer)
+        {
+            lock (_lock)
+            {
+                T self = (T)this;
+                foreach (var transport in UnreliableTransports)
+                {
+                    consumer(self, transport);
+                }
+            }
+        }
+    }
+
+
+    /// <summary>
     /// Base class for <see cref="Server"/> and <see cref="Client"/>.
     /// </summary>
+    /// <param name="transports">Initial capacity for transports to pre-initialize.</param>
     /// <remarks>
     /// If you need something other than <see cref="IReliableTransport"/> or <see cref="IUnreliableTransport"/>
     /// - fork the project and modify this base class, or define the same logic in a custom <see cref="Client"/> and <see cref="Server"/> class.
@@ -27,9 +77,10 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Default of 3 for usually default transports: <see cref="Transports.TCP.TCPTransport"/>, <see cref="Transports.UDP.UDPTransport"/> and <see cref="LoopbackTransport"/>.
+        /// Default of 2 for transports commonly used by us:
+        /// <see cref="Transports.Unix.UnixTransport"/> and <see cref="Transports.Special.TCPUDPTransport"/>s (or others).
         /// </summary>
-        public const int DefaultInitialTransportCapacity = 3;
+        public const int DefaultInitialTransportCapacity = 2;
 
 
 
@@ -154,7 +205,7 @@ namespace NetCore
             byte[] content = ArrayPool<byte>.Shared.Rent(CustomHeaders.MaxContentSizeInBytes);
             return new Header(headers, content);
         }
-        
+
         /// <summary>
         /// Binds all registered <see cref="ITransport"/>s to an <paramref name="localEndPoint"/> and marks instance as active.
         /// </summary>
@@ -300,11 +351,6 @@ namespace NetCore
         ///  Those can be already provided using TCP and UDP transport, but they will need a specific flag to differentiate which mode to use.
         public void RegisterReliableTransport<T>(T transport) where T : class, IReliableTransport
         {
-            if (typeof(T) == typeof(LoopbackTransport))
-            {
-                throw new NotSupportedException($"Modifying reference to a {nameof(LoopbackTransport)} in {nameof(NetworkMember)} is not allowed.");
-            }
-
             lock (_lock)
             {
                 if (ReliableTransports.Remove(out T? removed))
@@ -328,11 +374,6 @@ namespace NetCore
         /// </returns>
         public bool RemoveReliableTransport<T>([NotNullWhen(true)] out T? transport) where T : class, IReliableTransport
         {
-            if (typeof(T) == typeof(LoopbackTransport))
-            {
-                throw new NotSupportedException($"Modifying reference to a {nameof(LoopbackTransport)} in {nameof(NetworkMember)} is not allowed.");
-            }
-
             lock (_lock)
             {
                 if (ReliableTransports.Remove(out transport))
@@ -356,11 +397,6 @@ namespace NetCore
         /// </returns>
         public bool RemoveReliableTransport<T>(T transport) where T : class, IReliableTransport
         {
-            if (typeof(T) == typeof(LoopbackTransport))
-            {
-                throw new NotSupportedException($"Modifying reference to a {nameof(LoopbackTransport)} in {nameof(NetworkMember)} is not allowed.");
-            }
-
             lock (_lock)
             {
                 if (ReliableTransports.Remove(transport))
@@ -413,6 +449,43 @@ namespace NetCore
                 return ReliableTransports.Get<T>();
             }
         }
+
+        /// <summary>
+        /// Iterates over all reliable transports using a given <paramref name="action"/>.
+        /// </summary>
+        /// <param name="action">Action to use on all registered <see cref="IReliableTransport"/>s.</param>
+        public void ForEachReliableTransport(TransportConsumer<IReliableTransport> action)
+        {
+            lock (_lock)
+            {
+                foreach (var transport in ReliableTransports)
+                {
+                    action(transport);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Removes all <see cref="IReliableTransport"/>s
+        /// and calls <see cref="ITransport.Terminate(NetworkMember)"/> of all of them.
+        /// </summary>
+        /// <returns>
+        /// <c>true</c> - all transports were removed successfully.
+        /// <c>false</c> - some transports had issues executing <see cref="ITransport.Terminate(NetworkMember)"/>.
+        /// </returns>
+        public bool ClearReliableTransports()
+        {
+            lock (_lock)
+            {
+                bool anyFailed = false;
+                foreach (var transport in ReliableTransports)
+                {
+                    anyFailed = !transport.InvokeTerminate(this);
+                }
+
+                return !anyFailed;
+            }
+        }
         #endregion
 
         #region Unreliable transport registration/removal.
@@ -423,11 +496,6 @@ namespace NetCore
         ///  Those can be already provided using TCP and UDP transport, but they will need a specific flag to differentiate which mode to use.
         public void RegisterUnreliableTransport<T>(T transport) where T : class, IUnreliableTransport
         {
-            if (typeof(T) == typeof(LoopbackTransport))
-            {
-                throw new NotSupportedException($"Modifying reference to a {nameof(LoopbackTransport)} in {nameof(NetworkMember)} is not allowed.");
-            }
-
             lock (_lock)
             {
                 if (UnreliableTransports.Remove(out T? removed))
@@ -451,11 +519,6 @@ namespace NetCore
         /// </returns>
         public bool RemoveUnreliableTransport<T>([NotNullWhen(true)] out T? transport) where T : class, IUnreliableTransport
         {
-            if (typeof(T) == typeof(LoopbackTransport))
-            {
-                throw new NotSupportedException($"Modifying reference to a {nameof(LoopbackTransport)} in {nameof(NetworkMember)} is not allowed.");
-            }
-
             lock (_lock)
             {
                 if (UnreliableTransports.Remove(out transport))
@@ -479,11 +542,6 @@ namespace NetCore
         /// </returns>
         public bool RemoveUnreliableTransport<T>(T transport) where T : class, IUnreliableTransport
         {
-            if (typeof(T) == typeof(LoopbackTransport))
-            {
-                throw new NotSupportedException($"Modifying reference to a {nameof(LoopbackTransport)} in {nameof(NetworkMember)} is not allowed.");
-            }
-
             lock (_lock)
             {
                 if (UnreliableTransports.Remove(transport))
@@ -534,6 +592,43 @@ namespace NetCore
             lock (_lock)
             {
                 return UnreliableTransports.Get<T>();
+            }
+        }
+
+        /// <summary>
+        /// Iterates over all reliable transports using a given <paramref name="action"/>.
+        /// </summary>
+        /// <param name="action">Action to use on all registered <see cref="IUnreliableTransport"/>s.</param>
+        public void ForEachUnreliableTransport(TransportConsumer<IUnreliableTransport> action)
+        {
+            lock (_lock)
+            {
+                foreach (var transport in UnreliableTransports)
+                {
+                    action(transport);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Removes all <see cref="IUnreliableTransport"/>s
+        /// and calls <see cref="ITransport.Terminate(NetworkMember)"/> of all of them.
+        /// </summary>
+        /// <returns>
+        /// <c>true</c> - all transports were removed successfully.
+        /// <c>false</c> - some transports had issues executing <see cref="ITransport.Terminate(NetworkMember)"/>.
+        /// </returns>
+        public bool ClearUnreliableTransports()
+        {
+            lock (_lock)
+            {
+                bool anyFailed = false;
+                foreach (var transport in ReliableTransports)
+                {
+                    anyFailed = !transport.InvokeTerminate(this);
+                }
+
+                return !anyFailed;
             }
         }
         #endregion

@@ -7,9 +7,29 @@ namespace NetCore
     /// <summary>
     /// Base class working with different <see cref="ITransport"/>s.
     /// </summary>
+    /// <inheritdoc cref="NetworkMember"/>
     /// TODO: Consider adding a check for 0 transports being present.
-    public class Server : NetworkMember
+    public class Server(int transports) : NetworkMember<Server>(transports)
     {
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                                Constructors
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <summary>
+        /// Default parameter-less .ctor.
+        /// Pre-allocates some space for transports with <see cref="NetworkMember.DefaultInitialTransportCapacity"/>.
+        /// </summary>
+        public Server() : this(DefaultInitialTransportCapacity) { }
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                               Public Methods
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
         /// Starts a server and binds all registered transports to a provided <paramref name="localPort"/> and IPv4 address <see cref="IPAddress.Any"/>.
         /// </summary>
