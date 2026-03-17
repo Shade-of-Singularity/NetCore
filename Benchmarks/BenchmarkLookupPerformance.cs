@@ -14,7 +14,7 @@ namespace NetCore.Benchmarks
         private readonly Dictionary<Type, ITransport> Native = [];
         private ITransport? NativeConsumer;
 
-        private QuickMap<ITransport> Quick;
+        private HashList<ITransport> Quick;
         private LoopbackTransport? LoopbackConsumer;
         private UDPTransport? UDPConsumer;
 
@@ -40,6 +40,29 @@ namespace NetCore.Benchmarks
         | RunLastNative     | 7.794 ns | 0.1227 ns | 0.1088 ns |         - |
         |------------------ |---------:|----------:|----------:|----------:|
 
+
+
+        After switching to HashList usage:
+                          - --:  Random-access  :-- -
+        | Method            | Mean     | Error     | StdDev    | Allocated |
+        |------------------ |---------:|----------:|----------:|----------:|
+        | SingleFirstHash   | 2.658 ns | 0.0792 ns | 0.1256 ns |         - |
+        | SingleLastHash    | 2.490 ns | 0.0346 ns | 0.0307 ns |         - |
+        |------------------ |---------:|----------:|----------:|----------:|
+        | SingleFirstNative | 8.693 ns | 0.1231 ns | 0.1091 ns |         - |
+        | SingleLastNative  | 8.839 ns | 0.1406 ns | 0.1315 ns |         - |
+        |------------------ |---------:|----------:|----------:|----------:|
+        
+
+                         - --:  Frequent-access  :-- -
+        | Method            | Mean     | Error     | StdDev    | Allocated |
+        |------------------ |---------:|----------:|----------:|----------:|
+        | RunFirstHash      | 1.726 ns | 0.0338 ns | 0.0376 ns |         - |
+        | RunLastHash       | 1.825 ns | 0.0317 ns | 0.0296 ns |         - |
+        |------------------ |---------:|----------:|----------:|----------:|
+        | RunFirstNative    | 8.021 ns | 0.0408 ns | 0.0341 ns |         - |
+        | RunLastNative     | 8.261 ns | 0.1645 ns | 0.1828 ns |         - |
+        |------------------ |---------:|----------:|----------:|----------:|
         */
 
         private sealed class ATransport : Transport

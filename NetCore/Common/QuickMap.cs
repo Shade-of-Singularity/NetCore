@@ -245,7 +245,17 @@ namespace NetCore.Common
         /// Attempts to retrieve <typeparamref name="TItem"/> instance from the map.
         /// </summary>
         /// <returns><c>true</c> if found. <c>false</c> otherwise.</returns>
-        public readonly bool TryGet<TItem>([NotNullWhen(true)] out TItem? item) where TItem : class, TBase => (item = Get<TItem>()) is not null;
+        public readonly bool TryGet<TItem>([NotNullWhen(true)] out TItem? item) where TItem : class, TBase
+        {
+            if ((flags & ID<TItem>.BitFlag) == 0)
+            {
+                item = default;
+                return false;
+            }
+
+            item = (TItem)values[(lookup & ID<TItem>.Mask) >> ID<TItem>.Shift]!;
+            return true;
+        }
 
         /// <summary>
         /// Retrieves <typeparamref name="TItem"/> instance from the map.
@@ -254,7 +264,7 @@ namespace NetCore.Common
         public readonly TItem? Get<TItem>() where TItem : class, TBase => (flags & ID<TItem>.BitFlag) switch
         {
             0 => null,
-            _ => (TItem)values[(lookup & ID<TItem>.Mask) >> ID<TItem>.Shift]!
+            _ => (TItem?)values[(lookup & ID<TItem>.Mask) >> ID<TItem>.Shift]
         };
 
         /// <summary>
