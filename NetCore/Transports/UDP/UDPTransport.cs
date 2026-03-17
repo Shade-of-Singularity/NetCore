@@ -1,11 +1,12 @@
 ﻿using NetCore.Transports.Loopback;
-using NetCore.Transports.TCP;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace NetCore.Transports.UDP
 {
@@ -46,26 +47,6 @@ namespace NetCore.Transports.UDP
         /// Protocol used by the internal <see cref="Socket"/>.
         /// </summary>
         protected virtual ProtocolType SocketProtocol => ProtocolType.Udp;
-        /// <summary>
-        /// <see cref="TCP.TCPTransport"/> pair this <see cref="UDPTransport"/> with.
-        /// </summary>
-        public virtual TCPTransport? TCPTransport
-        {
-            get => m_TCPTransport;
-            set
-            {
-                lock (_lock)
-                {
-                    if (IsInitialized || value?.IsInitialized == true)
-                    {
-                        throw new Exception($"Cannot pair UDP with TCP after any of the transports were initialized/attached to a {nameof(NetworkMember)}.");
-                    }
-
-                    m_TCPTransport = value;
-                }
-            }
-        }
-
         /// <summary>
         /// Whether or not to support packet fragmentation.
         /// When message becomes too large.
@@ -108,10 +89,6 @@ namespace NetCore.Transports.UDP
         /// Byte buffer used for sending and retrieving data (since .NET Standard 2.1 doesn't support spans with one Socket connection)
         /// </summary>
         protected byte[] Buffer = new byte[Settings.MaxUnreliablePacketSize]; // Note: Maybe use a buffer from shared array pool?
-        /// <summary>
-        /// <see cref="TCP.TCPTransport"/> to pair this <see cref="UDPTransport"/> with.
-        /// </summary>
-        private TCPTransport? m_TCPTransport;
 
 
 
@@ -170,60 +147,9 @@ namespace NetCore.Transports.UDP
                 base.Start(localEndPoint);
                 Socket!.Bind(localEndPoint);
                 Source = new();
-                SocketAsyncEventArgs args = new()
-                {
-                    RemoteEndPoint = RemoteAnyIPv4
-                };
-                args.SetBuffer(Buffer);
-                args.Completed += ReceiveRawData;
-                Socket.ReceiveFromAsync(args);
+                _ = ListenForMessages(Socket, Source.Token); // TODO: Activate only if transport is used for messages (?)
             }
         }
-
-        /// <summary>
-        /// Method for handling incoming UDP data.
-        /// </summary>
-        protected virtual void ReceiveRawData(object socket, SocketAsyncEventArgs args)
-        {
-            lock (_lock)
-            {
-                //int stored = 0;
-                //ClientData? sender = null;
-                //do
-                //{
-                //    if (args.SocketError != SocketError.Success)
-                //        return;
-
-                //    if (args.RemoteEndPoint is not IPEndPoint ip)
-                //        throw new NotSupportedException($"Non-IP end-points are not supported. Provided type: {args.RemoteEndPoint}");
-
-                //    if (!Clients.TryGetValue(new ClientID(ip), out ClientData client))
-                //        continue;
-
-                //    if (sender is null || sender == client)
-                //    {
-                //        sender = client;
-                //        int length = args.BytesTransferred;
-                //        var span = args.Buffer.AsSpan(0, length);
-                //        ResizeIfNeeded(ref Buffer, target: stored + length, BufferSizeIncrement);
-                //        span.CopyTo(Buffer.AsSpan(stored, length));
-                //        stored += length;
-                //    }
-                //    else // Sender changed between reads.
-                //    {
-                //        // Previously written data should be handled and reading should reset.
-                //        HandleUnreliable(args.Buffer.AsSpan(0, stored), sender.ConnectionID);
-                //        stored = 0;
-                //    }
-                //}
-                //while (Socket is not null && !Socket.ReceiveFromAsync(args));
-                //if (sender is not null)
-                //{
-                //    HandleUnreliable(Buffer.AsSpan(0, stored), sender.ConnectionID);
-                //}
-            }
-        }
-
 
         /// <inheritdoc/>
         public override void Stop()
@@ -240,6 +166,46 @@ namespace NetCore.Transports.UDP
                 Socket!.Shutdown(SocketShutdown.Both);
                 base.Stop();
             }
+        }
+
+        private async Task ListenForMessages(Socket socket, CancellationToken token)
+        {
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    var result = await socket.ReceiveFromAsync(Buffer, SocketFlags.None, RemoteAnyIPv4);
+                    if (result.ReceivedBytes == 0)
+                    {
+                        continue; // Note: [CPU] To burn or not to burn?
+                    }
+
+                    if (result.RemoteEndPoint is not IPEndPoint ip)
+                        continue;
+                    //throw new NotSupportedException($"Non-IP end-points are not supported. Provided type: {result.RemoteEndPoint}");
+
+                    if (!Clients.TryGetValue(new ClientID(ip), out ClientData client))
+#if !DEBUG
+                        continue;
+#else
+                    {
+                        Clients[new ClientID(ip)] = client = new ClientData(Holder!.CIDProvider.NextCID(), ip);
+                    }
+#endif
+
+                    try
+                    {
+                        HandleUnreliable(default, Buffer.AsSpan(0, result.ReceivedBytes), default);
+                    }
+#if DEBUG
+                    catch (Exception ex) { Console.WriteLine($"{ex.Message}\n{ex.StackTrace}"); }
+#else
+                    catch { }
+#endif
+                }
+            }
+            catch (OperationCanceledException) { } // Graceful shutdown.
+            catch (SocketException) { } // Socket closed.
         }
 
         /// <inheritdoc/>
@@ -277,7 +243,7 @@ namespace NetCore.Transports.UDP
         public void SendUnreliable(Header header, ReadOnlySpan<byte> datagram)
         {
 #if DEBUG
-            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliable)}(datagram: {Encoding.UTF8.GetString(datagram)})");
 #endif
             lock (_lock)
             {
@@ -286,12 +252,14 @@ namespace NetCore.Transports.UDP
                     return;
                 }
 
-                //ResizeIfNeeded(ref Buffer, datagram.Length, BufferSizeIncrement);
-                //datagram.CopyTo(Buffer.AsSpan());
-                //foreach (var client in Clients.Values)
-                //{
-                //    Socket.SendTo(Buffer, client.RemoteEndPoint);
-                //}
+                datagram.CopyTo(Buffer.AsSpan());
+#if DEBUG
+                Socket.SendTo(Buffer, datagram.Length, SocketFlags.None, new IPEndPoint(IPAddress.Loopback, 27001));
+#endif
+                foreach (var client in Clients.Values)
+                {
+                    Socket.SendTo(Buffer, client.RemoteEndPoint);
+                }
             }
         }
 
@@ -299,7 +267,7 @@ namespace NetCore.Transports.UDP
         public void SendUnreliableExcluding(Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
 #if DEBUG
-            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableExcluding)}(exclude: ({toExclude}) datagram: {Encoding.UTF8.GetString(datagram)})");
 #endif
             lock (_lock)
             {
@@ -322,7 +290,7 @@ namespace NetCore.Transports.UDP
         public void SendUnreliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
         {
 #if DEBUG
-            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableTo)}(target: ({target}) datagram: {Encoding.UTF8.GetString(datagram)})");
 #endif
             lock (_lock)
             {
@@ -344,7 +312,7 @@ namespace NetCore.Transports.UDP
         public void HandleUnreliable(Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(HandleUnreliable)}(source: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
+            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(HandleUnreliable)}(source: ({source}) datagram: {Encoding.UTF8.GetString(datagram)})");
             Console.ForegroundColor = ConsoleColor.White;
 
             // TODO: Lock the _lock and route the data onwards.

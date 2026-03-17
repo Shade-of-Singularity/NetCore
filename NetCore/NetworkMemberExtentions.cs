@@ -1,4 +1,5 @@
 ﻿using NetCore.Transports;
+using NetCore.Transports.Special;
 using NetCore.Transports.TCP;
 using NetCore.Transports.UDP;
 
@@ -37,19 +38,16 @@ namespace NetCore
         }
 
         /// <summary>
-        /// Registers both <see cref="Transports.TCP.TCPTransport"/> and <see cref="Transports.UDP.UDPTransport"/>, and configures them to work together:
-        /// <para><paramref name="udp"/> - sends only unreliable messages.</para>
-        /// <para><paramref name="tcp"/> - sends only reliable messages.</para>
+        /// Registers both <see cref="TCPTransport"/> and <see cref="UDPTransport"/>, and configures them to work together:
+        /// <para><see cref="UDPTransport"/> - sends only unreliable messages.</para>
+        /// <para><see cref="TCPTransport"/> - sends only reliable messages.</para>
         /// </summary>
         /// <param name="member">Member capable of working with <see cref="ITransport"/>s.</param>
-        /// <param name="tcp">TCP Transport.</param>
-        /// <param name="udp">UDP Transport.</param>
-        public static void RegisterTCPUDPPair(this NetworkMember member, TCPTransport tcp, UDPTransport udp)
+        /// <param name="transport">Transport handing both reliable and unreliable messages.</param>
+        public static void RegisterTCPUDPTransport(this NetworkMember member, TCPUDPTransport transport)
         {
-            udp.TCPTransport = tcp;
-            tcp.UDPTransport = udp;
-            member.RegisterReliableTransport(tcp);
-            member.RegisterUnreliableTransport(udp);
+            member.RegisterReliableTransport(transport);
+            member.RegisterUnreliableTransport(transport);
         }
     }
 }

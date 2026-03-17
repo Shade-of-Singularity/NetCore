@@ -5,6 +5,8 @@ using NetCore.Transports.UDP;
 using System;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace NetCore.Examples
 {
@@ -12,10 +14,30 @@ namespace NetCore.Examples
     {
         static void Main()
         {
-            UDPTesting();
+            UDPSending();
 
-            Console.WriteLine("Press <enter> key to stop UDP server...");
-            Console.ReadLine(); // This block until user hit <enter> key
+            Console.WriteLine("Press any key to stop UDP server...");
+            Console.ReadKey(); // This block until user hits any key.
+        }
+
+        static async void UDPSending()
+        {
+            Server server = new();
+            server.RegisterUnreliableTransport(new UDPTransport());
+            Client client = new();
+            client.RegisterUnreliableTransport(new UDPTransport());
+
+            const ushort ServerPort = 27001;
+            server.Start(new IPEndPoint(IPAddress.Loopback, ServerPort));
+            await Task.Delay(10);
+
+            client.Start(new IPEndPoint(IPAddress.Any, 0));
+            await Task.Delay(10);
+            client.Connect(new IPEndPoint(IPAddress.Loopback, ServerPort));
+            await Task.Delay(10);
+
+            client.SendUnreliable(default, Encoding.UTF8.GetBytes("Test message."));
+            await Task.Delay(150);
         }
 
         static void UDPTesting()
