@@ -351,6 +351,11 @@ namespace NetCore
         ///  Those can be already provided using TCP and UDP transport, but they will need a specific flag to differentiate which mode to use.
         public void RegisterReliableTransport<T>(T transport) where T : class, IReliableTransport
         {
+            if (typeof(T) == typeof(IReliableTransport))
+            {
+                throw new ArgumentException($"You should only register transports with explicitly defined end-type - do not rely on the base.");
+            }
+
             lock (_lock)
             {
                 if (ReliableTransports.Remove(out T? removed))
@@ -374,6 +379,11 @@ namespace NetCore
         /// </returns>
         public bool RemoveReliableTransport<T>([NotNullWhen(true)] out T? transport) where T : class, IReliableTransport
         {
+            if (typeof(T) == typeof(IReliableTransport))
+            {
+                throw new ArgumentException($"You should only remove transports with explicitly defined end-type - do not rely on the base.");
+            }
+
             lock (_lock)
             {
                 if (ReliableTransports.Remove(out transport))
@@ -397,6 +407,11 @@ namespace NetCore
         /// </returns>
         public bool RemoveReliableTransport<T>(T transport) where T : class, IReliableTransport
         {
+            if (typeof(T) == typeof(IReliableTransport))
+            {
+                throw new ArgumentException($"You should only remove transports with explicitly defined end-type - do not rely on the base.");
+            }
+
             lock (_lock)
             {
                 if (ReliableTransports.Remove(transport))
@@ -414,6 +429,11 @@ namespace NetCore
         /// </summary>
         public bool HasReliableTransport<T>() where T : class, IReliableTransport
         {
+            if (typeof(T) == typeof(IReliableTransport))
+            {
+                throw new ArgumentException($"You should only check transports with explicitly defined end-type - do not rely on the base.");
+            }
+
             lock (_lock)
             {
                 return ReliableTransports.Has<T>();
@@ -431,6 +451,11 @@ namespace NetCore
         /// </returns>
         public bool TryGetReliableTransport<T>([NotNullWhen(true)] out T? transport) where T : class, IReliableTransport
         {
+            if (typeof(T) == typeof(IReliableTransport))
+            {
+                throw new ArgumentException($"You should only retrieve transports with explicitly defined end-type - do not rely on the base.");
+            }
+
             lock (_lock)
             {
                 return ReliableTransports.TryGet(out transport);
@@ -444,6 +469,11 @@ namespace NetCore
         /// <returns>Transport instance or <c>null</c> when not found.</returns>
         public T? GetReliableTransport<T>() where T : class, IReliableTransport
         {
+            if (typeof(T) == typeof(IReliableTransport))
+            {
+                throw new ArgumentException($"You should only retrieve transports with explicitly defined end-type - do not rely on the base.");
+            }
+
             lock (_lock)
             {
                 return ReliableTransports.Get<T>();
@@ -496,6 +526,11 @@ namespace NetCore
         ///  Those can be already provided using TCP and UDP transport, but they will need a specific flag to differentiate which mode to use.
         public void RegisterUnreliableTransport<T>(T transport) where T : class, IUnreliableTransport
         {
+            if (typeof(T) == typeof(IUnreliableTransport))
+            {
+                throw new ArgumentException($"You should only register transports with explicitly defined end-type - do not rely on the base.");
+            }
+
             lock (_lock)
             {
                 if (UnreliableTransports.Remove(out T? removed))
@@ -519,6 +554,11 @@ namespace NetCore
         /// </returns>
         public bool RemoveUnreliableTransport<T>([NotNullWhen(true)] out T? transport) where T : class, IUnreliableTransport
         {
+            if (typeof(T) == typeof(IUnreliableTransport))
+            {
+                throw new ArgumentException($"You should only remove transports with explicitly defined end-type - do not rely on the base.");
+            }
+
             lock (_lock)
             {
                 if (UnreliableTransports.Remove(out transport))
@@ -542,6 +582,11 @@ namespace NetCore
         /// </returns>
         public bool RemoveUnreliableTransport<T>(T transport) where T : class, IUnreliableTransport
         {
+            if (typeof(T) == typeof(IUnreliableTransport))
+            {
+                throw new ArgumentException($"You should only remove transports with explicitly defined end-type - do not rely on the base.");
+            }
+
             lock (_lock)
             {
                 if (UnreliableTransports.Remove(transport))
@@ -559,6 +604,11 @@ namespace NetCore
         /// </summary>
         public bool HasUnreliableTransport<T>() where T : class, IUnreliableTransport
         {
+            if (typeof(T) == typeof(IUnreliableTransport))
+            {
+                throw new ArgumentException($"You should only check transports with explicitly defined end-type - do not rely on the base.");
+            }
+
             lock (_lock)
             {
                 return UnreliableTransports.Has<T>();
@@ -576,6 +626,11 @@ namespace NetCore
         /// </returns>
         public bool TryGetUnreliableTransport<T>([NotNullWhen(true)] out T? transport) where T : class, IUnreliableTransport
         {
+            if (typeof(T) == typeof(IUnreliableTransport))
+            {
+                throw new ArgumentException($"You should only retrieve transports with explicitly defined end-type - do not rely on the base.");
+            }
+
             lock (_lock)
             {
                 return UnreliableTransports.TryGet(out transport);
@@ -589,6 +644,11 @@ namespace NetCore
         /// <returns>Transport instance or <c>null</c> when not found.</returns>
         public T? GetUnreliableTransport<T>() where T : class, IUnreliableTransport
         {
+            if (typeof(T) == typeof(IUnreliableTransport))
+            {
+                throw new ArgumentException($"You should only retrieve transports with explicitly defined end-type - do not rely on the base.");
+            }
+
             lock (_lock)
             {
                 return UnreliableTransports.Get<T>();
