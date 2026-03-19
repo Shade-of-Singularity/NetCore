@@ -34,17 +34,19 @@ namespace NetCore.Transports.Loopback
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <inheritdoc/>
-        public override void Connect(IPEndPoint remoteEndPoint)
+        public override void Connect(IReadOnlyConnectionArgs args)
         {
-            base.Connect(remoteEndPoint);
+            base.Connect(args);
             if (IsServerSide)
             {
                 return;
             }
 
-            if (!Servers.TryGet(remoteEndPoint, out var server))
+            var ipep = args.RemoteIPEndPoint;
+            if (ipep is null) return;
+            if (!Servers.TryGet(ipep, out var server))
             {
-                throw new KeyNotFoundException($"ClientData-side {nameof(LoopbackTransport)} cannot find an active server under a port ({remoteEndPoint.Port}).");
+                throw new KeyNotFoundException($"ClientData-side {nameof(LoopbackTransport)} cannot find an active server under a port ({ipep.Port}).");
             }
 
             if (!server.TryGetReliableTransport(out LoopbackTransport? remote))
@@ -56,8 +58,8 @@ namespace NetCore.Transports.Loopback
             {
                 lock (remote.m_Loopbacks)
                 {
-                    ConnectionID sourceID = Holder!.CIDProvider.NextCID();
-                    ConnectionID remoteID = server.CIDProvider.NextCID();
+                    ConnectionID sourceID = Holder!.ConnectionIDProvider.NextCID();
+                    ConnectionID remoteID = server.ConnectionIDProvider.NextCID();
                     remote.m_Loopbacks[remoteID] = new(this, sourceID);
                     m_Loopbacks[sourceID] = new(remote, remoteID);
                 }

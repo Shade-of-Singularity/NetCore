@@ -1,10 +1,7 @@
 ﻿using NetCore.Common;
 using NetCore.Transports;
 using System;
-using System.Buffers;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Net;
 
 namespace NetCore
 {
@@ -91,34 +88,25 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Whether this <see cref="NetworkMember"/> was started and <see cref="LocalEndPoint"/> was set.
+        /// Whether this <see cref="NetworkMember"/> was started using <see cref="Start()"/> method.
         /// </summary>
-        public bool IsActive => LocalEndPoint is not null;
+        public bool IsStarted { get; protected set; }
         /// <summary>
-        /// Local end-point on which network member was started.
+        /// Whether this <see cref="NetworkMember"/> is attempting to connect or is connected to a remote host.
         /// </summary>
-        public IPEndPoint? LocalEndPoint { get; private set; }
+        public bool IsActive { get; protected set; }
         /// <summary>
-        /// Remote end-point to which this <see cref="NetworkMember"/> is connected to.
+        /// Arguments that were used to start this <see cref="NetworkMember"/>, in a read-only form.
         /// </summary>
-        /// <remarks>
-        /// When used in <see cref="Server"/> - represent end-point of an relay server.
-        /// </remarks>
-        public IPEndPoint? RemoteEndPoint { get; private set; }
+        public IReadOnlyStartupArgs StartupArgs => m_StartupArgs;
+        /// <summary>
+        /// Arguments that were used to connect this <see cref="NetworkMember"/> to remote host, in a read-only form.
+        /// </summary>
+        public IReadOnlyConnectionArgs ConnectionArgs => m_ConnectionArgs;
         /// <summary>
         /// Provider for all <see cref="ConnectionID"/>s managed by this <see cref="NetworkMember"/> and its transports.
         /// </summary>
-        public ConnectionIDProvider CIDProvider => m_ConnectionIDProvider;
-
-
-
-
-        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
-        /// .
-        /// .                                               Private Fields
-        /// .
-        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        private static readonly Dictionary<RuntimeTypeHandle, int> m_InitialTransportCapacity = new(2); // 2 - for Server and Client, by default.
+        public ConnectionIDProvider ConnectionIDProvider => m_ConnectionIDProvider;
 
 
 
@@ -142,6 +130,14 @@ namespace NetCore
         /// Not readonly to support mutation in registration methods.
         /// </remarks>
         protected HashList<IUnreliableTransport> UnreliableTransports = new(transports);
+        /// <summary>
+        /// Arguments used to start this <see cref="NetworkMember"/>.
+        /// </summary>
+        protected readonly StartupArgs m_StartupArgs = [];
+        /// <summary>
+        /// Arguments used to connect this <see cref="NetworkMember"/> to remote host.
+        /// </summary>
+        protected readonly ConnectionArgs m_ConnectionArgs = [];
         /// <summary>
         /// Lock used everywhere, including for accessing <see cref="ReliableTransports"/> and <see cref="UnreliableTransports"/> maps.
         /// </summary>
@@ -192,49 +188,29 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Creates <see cref="Header"/>, optimized for usage with currently registered <see cref="ITransport"/>s.
-        /// </summary>
-        /// <remarks>
-        /// Don't forget to call <see cref="Header.Dispose"/> when you are done using it!
-        /// Or use inside of an <![CDATA[using (var header = ...) {}]]> block.
-        /// </remarks>
-        public virtual Header GetHeader()
-        {
-            //byte[] headers = ArrayPool<byte>.Shared.Rent(m_MaxReportedHeaderAmount);
-            byte[] headers = ArrayPool<byte>.Shared.Rent((CustomHeaders.Amount + 7) >> 3);
-            byte[] content = ArrayPool<byte>.Shared.Rent(CustomHeaders.MaxContentSizeInBytes);
-            return new Header(headers, content);
-        }
-
-        /// <summary>
-        /// Binds all registered <see cref="ITransport"/>s to an <paramref name="localEndPoint"/> and marks instance as active.
+        /// Starts this <see cref="NetworkMember"/> using current <see cref="StartupArgs"/>.
         /// </summary>
         /// <returns>
         /// <c>true</c> if started successfully.
-        /// <c>false</c> if couldn't start (reasons: already started, invalid endPoint, custom errors from transports, etc).
+        /// <c>false</c> if couldn't start (reasons: invalid end-points, custom errors from transports, etc).
         /// </returns>
-        public virtual bool Start(IPEndPoint localEndPoint)
+        protected virtual bool Start()
         {
             lock (_lock)
             {
-                if (LocalEndPoint is not null)
-                {
-                    return false;
-                }
-
+                var args = StartupArgs;
                 foreach (var transport in ReliableTransports)
                 {
-                    if (!transport.InvokeStart(localEndPoint))
+                    if (!transport.InvokeStart(args))
                         goto ResetState;
                 }
 
                 foreach (var transport in UnreliableTransports)
                 {
-                    if (!transport.InvokeStart(localEndPoint))
+                    if (!transport.InvokeStart(args))
                         goto ResetState;
                 }
 
-                LocalEndPoint = localEndPoint;
                 NetworkMembers.IncrementActiveMembers();
                 return true;
 
@@ -245,16 +221,53 @@ namespace NetCore
         }
 
         /// <summary>
+        /// Starts this <see cref="NetworkMember"/> using args, modified by <see cref="StartupArgsHandler"/> - <paramref name="handler"/>.
+        /// </summary>
+        /// <remarks>
+        /// Binds all registered <see cref="ITransport"/>s to an <see cref="StartupArgs.LocalIPEndPoint"/> and marks instance as active.
+        /// </remarks>
+        /// <param name="handler">Handler modifying provided <see cref="StartupArgs"/>.</param>
+        /// <returns>
+        /// <c>true</c> if started successfully.
+        /// <c>false</c> if couldn't start (reasons: invalid end-points, custom errors from transports, etc).
+        /// </returns>
+        public bool Start(StartupArgsHandler handler)
+        {
+            lock (_lock)
+            {
+                Stop();
+                m_StartupArgs.Clear();
+                handler(m_StartupArgs);
+                return Start();
+            }
+        }
+
+        /// <summary>
+        /// Restarts this <see cref="NetworkMember"/> using <see cref="StartupArgs"/> from a previous session.
+        /// </summary>
+        /// <returns>
+        /// <c>true</c> if started successfully.
+        /// <c>false</c> if couldn't start (reasons: invalid endPoint, custom errors from transports, etc).
+        /// </returns>
+        public bool Restart()
+        {
+            lock (_lock)
+            {
+                Stop();
+                return Start();
+            }
+        }
+
+        /// <summary>
         /// Unbinds and stops all registered <see cref="ITransport"/>s and marks instance as inactive.
         /// </summary>
         public virtual void Stop()
         {
             lock (_lock)
             {
-                if (LocalEndPoint is not null)
+                if (IsStarted)
                 {
                     StopInternal();
-                    LocalEndPoint = null;
                     NetworkMembers.DecrementActiveMembers();
                 }
             }
@@ -274,39 +287,79 @@ namespace NetCore
         }
 
         /// <summary>
-        /// Connects this <see cref="NetworkMember"/> to a remote host.
+        /// Connects this <see cref="NetworkMember"/> to a remote host, using current <see cref="ConnectionArgs"/>.
         /// </summary>
         /// <remarks>
         /// When called on a <see cref="Server"/> - connects server to a relay and manages a NAT hole.
         /// </remarks>
-        /// <param name="remoteEndPoint">Remote end-point to connect to.</param>
-        public virtual bool Connect(IPEndPoint remoteEndPoint)
+        /// <returns>
+        /// <c>true</c> if connection began.
+        /// <c>false</c> if connection couldn't start (reasons: invalid end-points, custom errors from transports, etc).
+        /// </returns>
+        protected virtual bool Connect()
         {
             lock (_lock)
             {
-                if (RemoteEndPoint is not null)
-                {
-                    Disconnect();
-                }
-
+                var args = ConnectionArgs;
                 foreach (var transport in ReliableTransports)
                 {
-                    if (!transport.InvokeConnect(remoteEndPoint))
+                    if (!transport.InvokeConnect(args))
                         goto ResetState;
                 }
 
                 foreach (var transport in UnreliableTransports)
                 {
-                    if (!transport.InvokeConnect(remoteEndPoint))
+                    if (!transport.InvokeConnect(args))
                         goto ResetState;
                 }
 
-                RemoteEndPoint = remoteEndPoint;
                 return true;
 
                 ResetState:
                 DisconnectInternal();
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Connects this <see cref="NetworkMember"/> to a remote host
+        /// using args, modified by <see cref="ConnectionArgsHandler"/> - <paramref name="handler"/>.
+        /// </summary>
+        /// <remarks>
+        /// When called on a <see cref="Server"/> - connects server to a relay and manages a NAT hole.
+        /// </remarks>
+        /// <param name="handler">Handler modifying provided <see cref="ConnectionArgs"/>.</param>
+        /// <returns>
+        /// <c>true</c> if connection began.
+        /// <c>false</c> if connection couldn't start (reasons: invalid end-points, custom errors from transports, etc).
+        /// </returns>
+        public bool Connect(ConnectionArgsHandler handler)
+        {
+            lock (_lock)
+            {
+                Disconnect();
+                m_ConnectionArgs.Clear();
+                handler(m_ConnectionArgs);
+                return Connect();
+            }
+        }
+
+        /// <summary>
+        /// Reconnects this <see cref="NetworkMember"/> using <see cref="ConnectionArgs"/> from a previous connection attempt/session.
+        /// </summary>
+        /// <remarks>
+        /// When called on a <see cref="Server"/> - connects server to a relay and manages a NAT hole.
+        /// </remarks>
+        /// <returns>
+        /// <c>true</c> if connection began.
+        /// <c>false</c> if connection couldn't start (reasons: invalid end-points, custom errors from transports, etc).
+        /// </returns>
+        public bool Reconnect()
+        {
+            lock (_lock)
+            {
+                Disconnect();
+                return Connect();
             }
         }
 
@@ -320,13 +373,11 @@ namespace NetCore
         {
             lock (_lock)
             {
-                if (RemoteEndPoint is null)
+                if (IsActive)
                 {
-                    return;
+                    DisconnectInternal();
+                    IsActive = false;
                 }
-
-                DisconnectInternal();
-                RemoteEndPoint = null;
             }
         }
 
@@ -692,29 +743,5 @@ namespace NetCore
             }
         }
         #endregion
-
-
-
-
-        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
-        /// .
-        /// .                                               Static Methods
-        /// .
-        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        /// <summary>
-        /// Sets default initial capacity of the internal <see cref="QuickMap{T}"/> for <see cref="ITransport"/>s (see also: <see cref="ReliableTransports"/>).
-        /// </summary>
-        public static void SetDefaultTransportCapacity<T>(int capacity) where T : NetworkMember
-        {
-            if (capacity is < 0 or > HashLists.ItemLimit)
-            {
-                throw new ArgumentOutOfRangeException($"{nameof(QuickMap<ITransport>)} capacity should be within bounds: [0:{HashLists.ItemLimit}]. Provided: {capacity}");
-            }
-
-            lock (m_InitialTransportCapacity)
-            {
-                m_InitialTransportCapacity[typeof(T).TypeHandle] = capacity;
-            }
-        }
     }
 }

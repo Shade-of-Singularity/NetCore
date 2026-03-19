@@ -31,25 +31,12 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Starts a server and binds all registered transports to a provided <paramref name="localPort"/> and IPv4 address <see cref="IPAddress.Any"/>.
-        /// </summary>
-        /// <param name="localPort">Port to bind all transports to. Transports that rely on UID (such as SteamNetworking) might use another port instead.</param>
-        public void Start(ushort localPort) => Start(new IPEndPoint(IPAddress.Any, localPort));
-
-        /// <summary>
-        /// Starts a server and binds all registered transports to a provided <paramref name="localAddress"/> and <paramref name="localPort"/>.
-        /// </summary>
-        /// <param name="localAddress">Address to bind all transports to.</param>
-        /// <param name="localPort">Port to bind all transports to. Transports that rely on UID (such as SteamNetworking) might use another port instead.</param>
-        public void Start(IPAddress localAddress, ushort localPort) => Start(new IPEndPoint(localAddress, localPort));
-
-        /// <summary>
         /// Starts a server and binds all registered transports to a provided <paramref name="localEndPoint"/> <see cref="IPEndPoint"/>.
         /// </summary>
         /// <inheritdoc/>
-        public override bool Start(IPEndPoint localEndPoint)
+        protected override bool Start()
         {
-            if (base.Start(localEndPoint))
+            if (base.Start())
             {
                 Servers.Add(this);
                 return true;

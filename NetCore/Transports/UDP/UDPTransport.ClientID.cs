@@ -28,7 +28,7 @@ namespace NetCore.Transports.UDP
             public ClientID(IPEndPoint remoteEndPoint) : this(default, remoteEndPoint) { }
 
             /// <inheritdoc/>
-            public override string ToString() => $"ID: ({ConnectionID}) RemoteEndPoint: (...:{RemoteEndPoint?.Port})";
+            public override string ToString() => $"ID: ({ConnectionID}) RemoteIPEndPoint: (...:{RemoteEndPoint?.Port})";
 
             /// <inheritdoc/>
             public override bool Equals(object obj) => obj is ClientID id && Equals(id);

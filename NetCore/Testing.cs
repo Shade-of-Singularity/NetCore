@@ -36,7 +36,7 @@ namespace NetCore
         public static void Main()
         {
             Header header;
-            using (header = client.GetHeaderLocked())
+            using (header = Header.GetLocked())
             {
                 header.Set<UIDHeader>(325623253uL);
                 header.Set<AlignmentHeader, Alignment>(Alignment.BottomLeft);
@@ -48,7 +48,7 @@ namespace NetCore
                 client.SendReliable(ref header, default);
             }
 
-            using (header = server.GetHeaderLocked())
+            using (header = Header.GetLocked())
             {
                 header.Lock();
                 header.Set<UIDHeader>(54634563463546uL);

@@ -55,17 +55,9 @@ namespace NetCore
             member.RegisterUnreliableTransport(transport);
         }
 
-        /// <summary>
-        /// Uses <see cref="NetworkMember.GetHeader"/> on a given <paramref name="member"/> instance
-        /// and automatically calls <see cref="HeaderHelpers.Lock(ref Header)"/> on it.
-        /// </summary>
-        /// <param name="member"></param>
-        /// <returns></returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Header GetHeaderLocked(this NetworkMember member)
+        public static void Start(this NetworkMember member, StartupArgsHandler handler)
         {
-            Header header = member.GetHeader();
-            return header.Lock();
+
         }
 
 
@@ -80,7 +72,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendReliable(this Client client, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
         {
-            Header header = client.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             client.SendReliable(ref header, datagram);
         }
@@ -90,7 +82,7 @@ namespace NetCore
         public static void SendReliable<TTransport>(this Client client, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
             where TTransport : class, IReliableTransport
         {
-            Header header = client.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             client.SendReliable<TTransport>(ref header, datagram);
         }
@@ -99,7 +91,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendUnreliable(this Client client, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
         {
-            Header header = client.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             client.SendUnreliable(ref header, datagram);
         }
@@ -109,7 +101,7 @@ namespace NetCore
         public static void SendUnreliable<TTransport>(this Client client, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
             where TTransport : class, IUnreliableTransport
         {
-            Header header = client.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             client.SendUnreliable<TTransport>(ref header, datagram);
         }
@@ -121,7 +113,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendReliable(this Client client, ReadOnlySpan<byte> datagram)
         {
-            Header header = client.GetHeader();
+            Header header = Header.Get();
             client.SendReliable(ref header, datagram);
         }
 
@@ -130,7 +122,7 @@ namespace NetCore
         public static void SendReliable<TTransport>(this Client client, ReadOnlySpan<byte> datagram)
             where TTransport : class, IReliableTransport
         {
-            Header header = client.GetHeader();
+            Header header = Header.Get();
             client.SendReliable<TTransport>(ref header, datagram);
         }
 
@@ -138,7 +130,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendUnreliable(this Client client, ReadOnlySpan<byte> datagram)
         {
-            Header header = client.GetHeader();
+            Header header = Header.Get();
             client.SendUnreliable(ref header, datagram);
         }
 
@@ -147,7 +139,7 @@ namespace NetCore
         public static void SendUnreliable<TTransport>(this Client client, ReadOnlySpan<byte> datagram)
             where TTransport : class, IUnreliableTransport
         {
-            Header header = client.GetHeader();
+            Header header = Header.Get();
             client.SendUnreliable<TTransport>(ref header, datagram);
         }
         #endregion
@@ -162,7 +154,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendUnreliable(this Server server, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             server.SendUnreliable(ref header, datagram);
         }
@@ -172,7 +164,7 @@ namespace NetCore
         public static void SendUnreliable<TTransport>(this Server server, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
             where TTransport : class, IUnreliableTransport
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             server.SendUnreliable<TTransport>(ref header, datagram);
         }
@@ -181,7 +173,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendUnreliableExcluding(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             server.SendUnreliableExcluding(ref header, datagram, connection);
         }
@@ -191,7 +183,7 @@ namespace NetCore
         public static void SendUnreliableExcluding<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
             where TTransport : class, IUnreliableTransport
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             server.SendUnreliableExcluding<TTransport>(ref header, datagram, connection);
         }
@@ -200,7 +192,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendUnreliableTo(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             server.SendUnreliableTo(ref header, datagram, connection);
         }
@@ -210,7 +202,7 @@ namespace NetCore
         public static void SendUnreliableTo<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
             where TTransport : class, IUnreliableTransport
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             server.SendUnreliableTo<TTransport>(ref header, datagram, connection);
         }
@@ -219,7 +211,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendReliable(this Server server, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             server.SendReliable(ref header, datagram);
         }
@@ -229,7 +221,7 @@ namespace NetCore
         public static void SendReliable<TTransport>(this Server server, ReadOnlySpan<byte> datagram, HeaderConstructor constructor)
             where TTransport : class, IReliableTransport
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             server.SendReliable<TTransport>(ref header, datagram);
         }
@@ -238,7 +230,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendReliableExcluding(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             server.SendReliableExcluding(ref header, datagram, connection);
         }
@@ -248,7 +240,7 @@ namespace NetCore
         public static void SendReliableExcluding<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
             where TTransport : class, IReliableTransport
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             server.SendReliableExcluding<TTransport>(ref header, datagram, connection);
         }
@@ -257,7 +249,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendReliableTo(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             server.SendUnreliableExcluding(ref header, datagram, connection);
         }
@@ -267,7 +259,7 @@ namespace NetCore
         public static void SendReliableTo<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection, HeaderConstructor constructor)
             where TTransport : class, IReliableTransport
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             constructor(ref header);
             server.SendReliableTo<TTransport>(ref header, datagram, connection);
         }
@@ -279,7 +271,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendUnreliable(this Server server, ReadOnlySpan<byte> datagram)
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             server.SendUnreliable(ref header, datagram);
         }
 
@@ -288,7 +280,7 @@ namespace NetCore
         public static void SendUnreliable<TTransport>(this Server server, ReadOnlySpan<byte> datagram)
             where TTransport : class, IUnreliableTransport
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             server.SendUnreliable<TTransport>(ref header, datagram);
         }
 
@@ -296,7 +288,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendUnreliableExcluding(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             server.SendUnreliableExcluding(ref header, datagram, connection);
         }
 
@@ -305,7 +297,7 @@ namespace NetCore
         public static void SendUnreliableExcluding<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
             where TTransport : class, IUnreliableTransport
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             server.SendUnreliableExcluding<TTransport>(ref header, datagram, connection);
         }
 
@@ -313,7 +305,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendUnreliableTo(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             server.SendUnreliableTo(ref header, datagram, connection);
         }
 
@@ -322,7 +314,7 @@ namespace NetCore
         public static void SendUnreliableTo<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
             where TTransport : class, IUnreliableTransport
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             server.SendUnreliableTo<TTransport>(ref header, datagram, connection);
         }
 
@@ -330,7 +322,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendReliable(this Server server, ReadOnlySpan<byte> datagram)
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             server.SendReliable(ref header, datagram);
         }
 
@@ -339,7 +331,7 @@ namespace NetCore
         public static void SendReliable<TTransport>(this Server server, ReadOnlySpan<byte> datagram)
             where TTransport : class, IReliableTransport
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             server.SendReliable<TTransport>(ref header, datagram);
         }
 
@@ -347,7 +339,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendReliableExcluding(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             server.SendReliableExcluding(ref header, datagram, connection);
         }
 
@@ -356,7 +348,7 @@ namespace NetCore
         public static void SendReliableExcluding<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
             where TTransport : class, IReliableTransport
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             server.SendReliableExcluding<TTransport>(ref header, datagram, connection);
         }
 
@@ -364,7 +356,7 @@ namespace NetCore
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SendReliableTo(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             server.SendUnreliableExcluding(ref header, datagram, connection);
         }
 
@@ -373,7 +365,7 @@ namespace NetCore
         public static void SendReliableTo<TTransport>(this Server server, ReadOnlySpan<byte> datagram, ConnectionID connection)
             where TTransport : class, IReliableTransport
         {
-            Header header = server.GetHeader();
+            Header header = Header.Get();
             server.SendReliableTo<TTransport>(ref header, datagram, connection);
         }
         #endregion

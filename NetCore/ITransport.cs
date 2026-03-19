@@ -23,7 +23,6 @@ namespace NetCore
         /// might choose to throw if you attach them to an unsupported <see cref="NetworkMember"/>.
         /// </remarks>
         public bool IsServerSide { get; }
-
         /// <summary>
         /// Whether this transport is client-side (true) or server-side (false).
         /// </summary>
@@ -32,38 +31,22 @@ namespace NetCore
         /// might choose to throw if you attach them to an unsupported <see cref="NetworkMember"/>.
         /// </remarks>
         public bool IsClientSide => !IsServerSide;
-
         /// <summary>
         /// <see cref="ITransport"/> holder which manages this <see cref="ITransport"/> instance.
         /// </summary>
         public NetworkMember? Holder { get; }
-
-        /// <summary>
-        /// Local end-point on which this <see cref="ITransport"/> was started.
-        /// </summary>
-        /// <remarks>
-        /// UID-based transports might choose to use different local port than the one provided in a <see cref="Start(IPEndPoint)"/> method.
-        /// </remarks>
-        public IPEndPoint? LocalEndPoint { get; }
-
-        /// <summary>
-        /// Remote end-point to which this <see cref="ITransport"/> was requested to connect to.
-        /// </summary>
-        /// <remarks>
-        /// When used with <see cref="IsServerSide"/> - represents a remote <see cref="IPEndPoint"/> of a relay server.
-        /// </remarks>
-        public IPEndPoint? RemoteEndPoint { get; }
-
         /// <summary>
         /// Whether this <see cref="ITransport"/> is initialized or not.
         /// </summary>
         public bool IsInitialized { get; protected set; }
-
         /// <summary>
         /// Whether this <see cref="ITransport"/> was activated with <see cref="Start"/> or not.
         /// </summary>
+        public bool IsStarted { get; protected set; }
+        /// <summary>
+        /// Whether this <see cref="ITransport"/> was requested to connect to anything with <see cref="Connect"/> or not.
+        /// </summary>
         public bool IsActive { get; protected set; }
-
         /// <summary>
         /// Initializes the <see cref="ITransport"/>.
         /// Called when transport is registered in a <see cref="NetworkMember"/>.
@@ -145,21 +128,21 @@ namespace NetCore
         }
 
         /// <summary>
-        /// Starts transport on a provided <paramref name="endPoint"/>.
+        /// Starts transport with a provided <see cref="IReadOnlyStartupArgs"/>.
         /// Transports which rely on UID, like SteamNetworking UDP transport, can choose to use a different port than a provided one.
         /// </summary>
-        /// <param name="endPoint"><see cref="IPEndPoint"/> provided when <see cref="NetworkMember"/> was starting.</param>
+        /// <param name="args"><see cref="IReadOnlyStartupArgs"/> to use for setting up the transport.</param>
         /// <returns>
         /// <c>true</c> if started successfully.
         /// <c>false</c> if any issues appeared at starting (see console for more info).
         /// </returns>
-        public bool InvokeStart(IPEndPoint endPoint)
+        public bool InvokeStart(IReadOnlyStartupArgs args)
         {
-            if (!IsActive)
+            if (!IsStarted)
             {
                 try
                 {
-                    Start(endPoint);
+                    Start(args);
                 }
                 catch (Exception exception)
                 {
@@ -185,7 +168,7 @@ namespace NetCore
                     return false;
                 }
 
-                IsActive = true;
+                IsStarted = true;
             }
 
             return true;
@@ -200,7 +183,7 @@ namespace NetCore
         /// </returns>
         public bool InvokeStop()
         {
-            if (IsActive)
+            if (IsStarted)
             {
                 try
                 {
@@ -216,32 +199,32 @@ namespace NetCore
                     return false;
                 }
 
-                IsActive = false;
+                IsStarted = false;
             }
 
             return true;
         }
 
         /// <summary>
-        /// Attempts to connect to a <paramref name="remoteEndPoint"/>.
+        /// Attempts to connect to a remote host from provided <see cref="IReadOnlyConnectionArgs"/>.
         /// </summary>
         /// <remarks>
         /// When used with <see cref="IsServerSide"/> - connects to a remote relay and manages NAT hole if needed.
         /// </remarks>
-        /// <param name="remoteEndPoint">Remote <see cref="IPEndPoint"/> to connect to.</param>
+        /// <param name="args"><see cref="IReadOnlyConnectionArgs"/> to use for connection.</param>
         /// <returns>
         /// <c>true</c> if connection started successfully.
         /// <c>false</c> if already connected or any issues appeared during connection attempt (see console for more info).
         /// </returns>
         /// TODO: Maybe return awaitable UniTask or a ValueTask?
         /// TODO: Add a way to specify which transport sets expect to fire (TCP+UDP, SteamUDP-only, TCP-only, UDP-only, Pipe-only, etc).
-        public bool InvokeConnect(IPEndPoint remoteEndPoint)
+        public bool InvokeConnect(IReadOnlyConnectionArgs args)
         {
-            if (RemoteEndPoint is null)
+            if (!IsActive)
             {
                 try
                 {
-                    Connect(remoteEndPoint);
+                    Connect(args);
                 }
                 catch (Exception exception)
                 {
@@ -266,6 +249,8 @@ namespace NetCore
 
                     return false;
                 }
+
+                IsActive = true;
             }
 
             return true;
@@ -283,7 +268,7 @@ namespace NetCore
         /// </returns>
         public bool InvokeDisconnect()
         {
-            if (RemoteEndPoint is not null)
+            if (IsActive)
             {
                 try
                 {
@@ -298,6 +283,8 @@ namespace NetCore
                     Console.ForegroundColor = ConsoleColor.White;
                     return false;
                 }
+
+                IsActive = false;
             }
 
             return true;
@@ -310,13 +297,13 @@ namespace NetCore
         protected void Terminate(NetworkMember member);
 
         /// <inheritdoc cref="InvokeStart"/>
-        protected void Start(IPEndPoint localEndPoint);
+        protected void Start(IReadOnlyStartupArgs args);
 
         /// <inheritdoc cref="InvokeStop"/>
         protected void Stop();
 
         /// <inheritdoc cref="InvokeConnect"/>
-        protected void Connect(IPEndPoint remoteEndPoint);
+        protected void Connect(IReadOnlyConnectionArgs args);
 
         /// <inheritdoc cref="InvokeDisconnect"/>
         protected void Disconnect();

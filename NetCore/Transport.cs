@@ -30,6 +30,14 @@ namespace NetCore
             set => IsInitialized = value;
         }
 
+        /// <inheritdoc cref="ITransport.IsStarted"/>
+        public bool IsStarted { get; private set; }
+        bool ITransport.IsStarted
+        {
+            get => IsStarted;
+            set => IsStarted = value;
+        }
+
         /// <inheritdoc cref="ITransport.IsActive"/>
         public bool IsActive { get; private set; }
         bool ITransport.IsActive
@@ -40,24 +48,6 @@ namespace NetCore
 
         /// <inheritdoc/>
         public NetworkMember? Holder { get; private set; }
-
-        /// <summary>
-        /// End-point on which this transports is running.
-        /// </summary>
-        /// <remarks>
-        /// <para>DO NOT use this IPEndPoint as a key in dictionaries, as this value might mutate through-out the lifetime of the transport!</para>
-        /// Might differ from the one provided in <see cref="ITransport.Start(IPEndPoint)"/> if this transport doesn't use default port.
-        /// </remarks>
-        public IPEndPoint? LocalEndPoint { get; protected set; }
-
-        /// <summary>
-        /// Remote end-point to which transport was requested to connect to.
-        /// </summary>
-        /// <remarks>
-        /// When used with <see cref="IsServerSide"/> - represent an <see cref="IPEndPoint"/> of a relay server.
-        /// </remarks>
-        public IPEndPoint? RemoteEndPoint { get; private set; }
-
         /// <summary>
         /// <see cref="NetCore.Server"/> instance casted from <see cref="Holder"/> on <see cref="Initialize(NetworkMember)"/>.
         /// </summary>
@@ -65,7 +55,6 @@ namespace NetCore
         /// <c>null</c> when <see cref="IsServerSide"/> is <c>false</c>.
         /// </remarks>
         public Server? Server { get; private set; } = default!;
-
         /// <summary>
         /// <see cref="NetCore.Client"/> instance casted from <see cref="Holder"/> on <see cref="Initialize(NetworkMember)"/>.
         /// </summary>
@@ -91,7 +80,8 @@ namespace NetCore
         /// </remarks>
         public virtual void Initialize(NetworkMember member)
         {
-            IsServerSide = TransportHelpers.ResolveInitializer(Holder = member, out Server? server, out Client? client);
+            IsServerSide = TransportHelpers.ResolveInitializer(member, out Server? server, out Client? client);
+            Holder = member;
             Server = server;
             Client = client;
         }
@@ -102,6 +92,7 @@ namespace NetCore
         /// </remarks>
         public virtual void Terminate(NetworkMember member)
         {
+            IsServerSide = default;
             Holder = null;
             Server = null;
             Client = null;
@@ -111,9 +102,9 @@ namespace NetCore
         /// <remarks>
         /// Managed by a <c>try</c> wrapper. Feel free to return <see cref="System.Exception"/>s if you need to.
         /// </remarks>
-        public virtual void Start(IPEndPoint localEndPoint)
+        public virtual void Start(IReadOnlyStartupArgs args)
         {
-            LocalEndPoint = localEndPoint;
+            // Nothing here right now, but might be something in the future.
         }
 
         /// <inheritdoc cref="ITransport.Stop"/>
@@ -122,17 +113,16 @@ namespace NetCore
         /// </remarks>
         public virtual void Stop()
         {
-            LocalEndPoint = null;
-            RemoteEndPoint = null;
+            // Nothing here right now, but might be something in the future.
         }
 
         /// <inheritdoc cref="ITransport.Connect"/>
         /// <remarks>
         /// Managed by a <c>try</c> wrapper. Feel free to return <see cref="System.Exception"/>s if you need to.
         /// </remarks>
-        public virtual void Connect(IPEndPoint remoteEndPoint)
+        public virtual void Connect(IReadOnlyConnectionArgs args)
         {
-            RemoteEndPoint = remoteEndPoint;
+            // Nothing here right now, but might be something in the future.
         }
 
         /// <inheritdoc cref="ITransport.Disconnect"/>
@@ -141,7 +131,7 @@ namespace NetCore
         /// </remarks>
         public virtual void Disconnect()
         {
-            RemoteEndPoint = null;
+            // Nothing here right now, but might be something in the future.
         }
     }
 }

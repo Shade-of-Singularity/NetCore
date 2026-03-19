@@ -32,7 +32,7 @@ namespace NetCore.Tests
             client.RegisterUnreliableTransport(new UDPTransport());
             client.RegisterReliableTransport(new TCPTransport());
             client.RegisterTransportAsBoth(new PipeTransport());
-            client.Start(new IPEndPoint(IPAddress.Loopback, 25001));
+            client.Start(IPAddress.Loopback, 25001);
 
             Server server = new();
             server.RegisterUnreliableTransport(new UDPTransport());
@@ -40,7 +40,7 @@ namespace NetCore.Tests
             server.RegisterTransportAsBoth(new PipeTransport());
             server.Start(25000);
 
-            if (!client.Connect(new IPEndPoint(IPAddress.Loopback, 25000)))
+            if (!client.Connect(IPAddress.Loopback, 25000))
             {
                 throw new Exception("Failed to connect.");
             }

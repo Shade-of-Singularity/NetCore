@@ -1,9 +1,7 @@
-﻿using NetCore.Transports.Loopback;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -123,7 +121,7 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public override void Start(IPEndPoint localEndPoint)
+        public override void Start(IReadOnlyStartupArgs args)
         {
             // Socket.Bind to either ANY address or ANY port changes local end-point.
             // To handle this, we update registered end-point as well.
@@ -137,15 +135,15 @@ namespace NetCore.Transports.UDP
             //        return;
             //    }
             //}
-            if (localEndPoint.Address.Equals(IPAddress.Loopback) && Holder!.HasTransport<LoopbackTransport>())
+            base.Start(args);
+            if (!args.TryGet(StartupArgs.LocalIPEndPointKey, out IPEndPoint? endPoint))
             {
-                return; // Loopbacks to itself are handled by a special class in NetCore.
+                return;
             }
 
             lock (_lock)
             {
-                base.Start(localEndPoint);
-                Socket!.Bind(localEndPoint);
+                Socket!.Bind(endPoint);
                 Source = new();
                 _ = ListenForMessages(Socket, Source.Token); // TODO: Activate only if transport is used for messages (?)
             }
@@ -189,7 +187,7 @@ namespace NetCore.Transports.UDP
                         continue;
 #else
                     {
-                        Clients[new ClientID(ip)] = client = new ClientData(Holder!.CIDProvider.NextCID(), ip);
+                        Clients[new ClientID(ip)] = client = new ClientData(Holder!.ConnectionIDProvider.NextCID(), ip);
                     }
 #endif
 
@@ -209,12 +207,15 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public override void Connect(IPEndPoint remoteEndPoint)
+        public override void Connect(IReadOnlyConnectionArgs args)
         {
             lock (_lock)
             {
-                base.Connect(remoteEndPoint);
-                Socket!.Connect(remoteEndPoint);
+                base.Connect(args);
+                if (args.TryGetRemoteIPEndPoint(out IPEndPoint? endPoint))
+                {
+                    Socket!.Connect(endPoint);
+                }
             }
         }
 

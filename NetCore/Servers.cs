@@ -29,28 +29,28 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Attempts to add <paramref name="server"/> to global <see cref="Map"/>.
+        /// Attempts to add <paramref name="server"/> to global <see cref="m_ServerMap"/>.
         /// </summary>
         /// <param name="server">Server to add.</param>
         /// <returns>
         /// <c>true</c> if server was added successfully.
-        /// <c>false</c> if <paramref name="server"/> has <see cref="NetworkMember.LocalEndPoint"/> set to null,
-        /// or another <see cref="Server"/> exist under the same port in the <see cref="Map"/>.
+        /// <c>false</c> if <paramref name="server"/> has <see cref="StartupArgs.LocalIPEndPoint"/> set to null,
+        /// or another <see cref="Server"/> exist under the same port in the <see cref="m_ServerMap"/>.
         /// </returns>
         public static bool TryAdd(Server server)
         {
-            IPEndPoint? endPoint = server.LocalEndPoint;
+            IPEndPoint? endPoint = server.StartupArgs.LocalIPEndPoint;
             return endPoint is not null && m_ServerMap.TryAdd((ushort)endPoint.Port, server);
         }
 
         /// <summary>
-        /// Adds <paramref name="server"/> to global <see cref="Map"/>.
+        /// Adds <paramref name="server"/> to global <see cref="m_ServerMap"/>.
         /// </summary>
         /// <param name="server">Server to add.</param>
-        /// <exception cref="Exception"><see cref="Server"/> under the same port was already added to the <see cref="Map"/>.</exception>
+        /// <exception cref="Exception"><see cref="Server"/> under the same port was already added to the <see cref="m_ServerMap"/>.</exception>
         public static void Add(Server server)
         {
-            IPEndPoint? endPoint = server.LocalEndPoint ?? throw new Exception("Cannot add a server with a null end-point!");
+            IPEndPoint? endPoint = server.StartupArgs.LocalIPEndPoint ?? throw new Exception("Cannot add a server with a null end-point!");
             if (!m_ServerMap.TryAdd((ushort)endPoint.Port, server))
             {
                 throw new Exception("Server under the same port was already registered in a global server map!");
@@ -108,32 +108,32 @@ namespace NetCore
         }
 
         /// <summary>
-        /// Attempts to remove a <paramref name="server"/> from a global server <see cref="Map"/>.
+        /// Attempts to remove a <paramref name="server"/> from a global server <see cref="m_ServerMap"/>.
         /// </summary>
-        /// <param name="server">Server to remove from a global server <see cref="Map"/>.</param>
+        /// <param name="server">Server to remove from a global server <see cref="m_ServerMap"/>.</param>
         /// <returns>
         /// <c>true</c> if server was removed successfully.
-        /// <c>false</c> if <paramref name="server"/> has <see cref="NetworkMember.LocalEndPoint"/> set to null,
-        /// or another <see cref="Server"/> exist under the same port in the <see cref="Map"/>.
+        /// <c>false</c> if <paramref name="server"/> has <see cref="StartupArgs.LocalIPEndPoint"/> set to null,
+        /// or another <see cref="Server"/> exist under the same port in the <see cref="m_ServerMap"/>.
         /// </returns>
         public static bool TryRemove(Server server)
         {
-            IPEndPoint? endPoint = server.LocalEndPoint;
+            IPEndPoint? endPoint = server.StartupArgs.LocalIPEndPoint;
             return endPoint is not null && m_ServerMap.TryRemove((ushort)endPoint.Port, out Server _);
         }
 
         /// <summary>
-        /// Removes a <paramref name="server"/> from a global server <see cref="Map"/>.
+        /// Removes a <paramref name="server"/> from a global server <see cref="m_ServerMap"/>.
         /// </summary>
-        /// <param name="server">Server to remove from a global server <see cref="Map"/>.</param>
-        /// <exception cref="Exception"><paramref name="server"/> has <see cref="NetworkMember.LocalEndPoint"/> set to null.</exception>
+        /// <param name="server">Server to remove from a global server <see cref="m_ServerMap"/>.</param>
+        /// <exception cref="Exception"><paramref name="server"/> has <see cref="StartupArgs.LocalIPEndPoint"/> set to null.</exception>
         /// <returns>
         /// <c>true</c> if <paramref name="server"/> was removed successfully.
         /// <c>false</c> otherwise.
         /// </returns>
         public static bool Remove(Server server)
         {
-            IPEndPoint? endPoint = server.LocalEndPoint ?? throw new Exception("Tried to remove a server with a null end-point!");
+            IPEndPoint? endPoint = server.StartupArgs.LocalIPEndPoint ?? throw new Exception("Tried to remove a server with a null end-point!");
             return m_ServerMap.TryRemove((ushort)endPoint.Port, out Server _);
         }
     }

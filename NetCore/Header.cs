@@ -7,7 +7,7 @@ namespace NetCore
     /// Message header which allows writing custom data to it.
     /// </summary>
     /// <remarks>
-    /// Can be created using <see cref="NetworkMember.GetHeader"/>.
+    /// Can be created using <see cref="Get"/> or <see cref="GetLocked"/>.
     /// </remarks>
     /// TODO: Add a way to parse a beginning of the message into a valid header without using <see cref="NetworkMember"/> as a base.
     ///  This will be useful if people would want to create custom relays which does not rely on <see cref="ITransport"/>s.
@@ -43,6 +43,44 @@ namespace NetCore
         /// Amount of sources using this header in a <![CDATA[using (var header = ...) { }]]> context.
         /// </summary>
         private ushort locks;
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                               Static Methods
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <summary>
+        /// Creates <see cref="Header"/>, optimized for usage with currently registered <see cref="ITransport"/>s.
+        /// </summary>
+        /// <remarks>
+        /// Don't forget to call <see cref="Dispose"/> when you are done using it!
+        /// Or use <see cref="HeaderHelpers.Lock(ref Header)"/> and use it inside of an
+        /// <![CDATA[using (var header = Header.Get().Lock()) {}]]> block.
+        /// </remarks>
+        public static Header Get()
+        {
+            byte[] headers = ArrayPool<byte>.Shared.Rent((CustomHeaders.Amount + 7) >> 3);
+            byte[] content = ArrayPool<byte>.Shared.Rent(CustomHeaders.MaxContentSizeInBytes);
+            return new Header(headers, content);
+        }
+
+        /// <summary>
+        /// <inheritdoc cref="Get"/>
+        /// </summary>
+        /// <remarks>
+        /// Automatically locks the <see cref="Header"/> before returning it, for usage in
+        /// <![CDATA[using (var header = Header.GetLocked()) {}]]> block.
+        /// </remarks>
+        /// <returns><see cref="Header"/> locked once.</returns>
+        public static Header GetLocked()
+        {
+            Header result = Get();
+            result.IncrementLocks();
+            return result;
+        }
 
 
 
