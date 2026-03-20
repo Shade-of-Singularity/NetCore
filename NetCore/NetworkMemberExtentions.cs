@@ -55,9 +55,17 @@ namespace NetCore
             member.RegisterUnreliableTransport(transport);
         }
 
-        public static void Start(this NetworkMember member, StartupArgsHandler handler)
+        /// <summary>
+        /// Instantiates and automatically registers given <typeparamref name="TTransport"/> in a given <see cref="NetworkMember"/>.
+        /// </summary>
+        /// <remarks>
+        /// Use <see cref="NetworkMember.RegisterReliableTransport{T}(T)"/> directly if you want to assign transport to multiple transports.
+        /// </remarks>
+        /// <typeparam name="TTransport"><see cref="IReliableTransport"/> to instantiate.</typeparam>
+        /// <param name="member"><see cref="NetworkMember"/> </param>
+        public static void RegisterReliableTransport<TTransport>(this NetworkMember member) where TTransport : class, IReliableTransport, new()
         {
-
+            member.RegisterReliableTransport(new TTransport());
         }
 
 

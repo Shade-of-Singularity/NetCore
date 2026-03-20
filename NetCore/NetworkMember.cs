@@ -1,7 +1,11 @@
-﻿using NetCore.Common;
+﻿using Cysharp.Threading.Tasks;
+using NetCore.Common;
 using NetCore.Transports;
 using System;
+using System.Buffers;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
 
 namespace NetCore
 {
@@ -117,14 +121,28 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Dictionary with all <see cref="ITransport"/>s this <see cref="NetworkMember"/> can use.
+        /// Dictionary with all <see cref="IResilientTransport"/>s this <see cref="NetworkMember"/> can use.
+        /// </summary>
+        /// <remarks>
+        /// Not readonly to support mutation in registration methods.
+        /// </remarks>
+        protected HashList<IResilientTransport> ResilientTransports = new(transports);
+        /// <summary>
+        /// Dictionary with all <see cref="IReliableTransport"/>s this <see cref="NetworkMember"/> can use.
         /// </summary>
         /// <remarks>
         /// Not readonly to support mutation in registration methods.
         /// </remarks>
         protected HashList<IReliableTransport> ReliableTransports = new(transports);
         /// <summary>
-        /// Dictionary with all <see cref="ITransport"/>s this <see cref="NetworkMember"/> can use.
+        /// Dictionary with all <see cref="INotifyTransport"/>s this <see cref="NetworkMember"/> can use.
+        /// </summary>
+        /// <remarks>
+        /// Not readonly to support mutation in registration methods.
+        /// </remarks>
+        protected HashList<INotifyTransport> NotifyTransports = new(transports);
+        /// <summary>
+        /// Dictionary with all <see cref="IUnreliableTransport"/>s this <see cref="NetworkMember"/> can use.
         /// </summary>
         /// <remarks>
         /// Not readonly to support mutation in registration methods.
@@ -155,6 +173,18 @@ namespace NetCore
         /// Provider for Connection IDs.
         /// </summary>
         private readonly ConnectionIDProvider m_ConnectionIDProvider = new();
+        /// <summary>
+        /// Temporary storage for asynchronously initialized <see cref="ITransport"/>s.
+        /// </summary>
+        //private readonly List<ITransport> m_TemporaryTransports = new(transports);
+        /// <summary>
+        /// Token source for cancelling the latest async operation.
+        /// </summary>
+        private CancellationTokenSource? m_TokenSource;
+        /// <summary>
+        /// Last operation (e.g. <see cref="Start(CancellationToken)"/> or <see cref="Connect(CancellationToken)"/>).
+        /// </summary>
+        //private UniTask<bool> m_LastTask;
         /// <summary>
         /// Maximum amount of headers reported by any registered <see cref="ITransport"/>.
         /// </summary>
@@ -194,22 +224,67 @@ namespace NetCore
         /// <c>true</c> if started successfully.
         /// <c>false</c> if couldn't start (reasons: invalid end-points, custom errors from transports, etc).
         /// </returns>
-        protected virtual bool Start()
+        protected virtual async UniTask<bool> Start(CancellationToken token)
         {
-            lock (_lock)
+            var args = m_StartupArgs;
+            if (Settings.SimultaneousOperations)
             {
-                var args = StartupArgs;
-                foreach (var transport in ReliableTransports)
+                throw new NotImplementedException();
+            }
+
+            List<UniTask<bool>> temp = []; // TODO: Cache list as a static field.
+            await StartTransports(ResilientTransports, args, temp, token);
+            await StartTransports(ReliableTransports, args, temp, token);
+            await StartTransports(NotifyTransports, args, temp, token);
+            await StartTransports(UnreliableTransports, args, temp, token);
+
+            static async UniTask StartTransports<T>(HashList<T> transports, IReadOnlyStartupArgs args, List<UniTask<bool>> temp, CancellationToken token)
+                where T : class, ITransport
+            {
+                temp.Clear();
+                foreach (var transport in transports)
                 {
-                    if (!transport.InvokeStart(args))
-                        goto ResetState;
+                    if (transport.ForceSyncedStart && temp.Count > 0)
+                    {
+                        await UniTask.WhenAll(temp);
+                        temp.Clear();
+                    }
+
+                    temp.Add(transport.InvokeStart(args, token));
                 }
 
-                foreach (var transport in UnreliableTransports)
+                if (temp.Count > 0)
                 {
-                    if (!transport.InvokeStart(args))
-                        goto ResetState;
+                    await UniTask.WhenAll(temp);
+                    temp.Clear();
                 }
+            }
+
+            lock (_lock)
+            {
+                var args = m_StartupArgs;
+                var temp = m_TemporaryTransports;
+                temp.Clear();
+
+                foreach (var transport in ResilientTransports)
+                {
+                    if (transport.ForceSyncedStart)
+                    {
+                        await UniTask.WhenAll(temp);
+                    }
+                }
+
+                //foreach (var transport in ReliableTransports)
+                //{
+                //    if (!transport.InvokeStart(args))
+                //        goto ResetState;
+                //}
+
+                //foreach (var transport in UnreliableTransports)
+                //{
+                //    if (!transport.InvokeStart(args))
+                //        goto ResetState;
+                //}
 
                 NetworkMembers.IncrementActiveMembers();
                 return true;
@@ -231,15 +306,44 @@ namespace NetCore
         /// <c>true</c> if started successfully.
         /// <c>false</c> if couldn't start (reasons: invalid end-points, custom errors from transports, etc).
         /// </returns>
-        public bool Start(StartupArgsHandler handler)
+        public async UniTask<bool> Start(StartupArgsHandler handler)
         {
+            CancellationToken token;
             lock (_lock)
             {
+                if (m_TokenSource is not null)
+                {
+                    m_TokenSource.Cancel();
+                    m_TokenSource.Dispose();
+                    m_TokenSource = null;
+                }
+
                 Stop();
+                m_TokenSource = new();
+                token = m_TokenSource.Token;
                 m_StartupArgs.Clear();
                 handler(m_StartupArgs);
-                return Start();
             }
+
+            try
+            {
+                if (!await Start(token))
+                {
+                    return false;
+                }
+
+                NetworkMembers.IncrementActiveMembers();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                var color = Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                Console.WriteLine(ex); // TODO: Implement logger from ServiceCore.
+                Console.ForegroundColor = color;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -249,12 +353,20 @@ namespace NetCore
         /// <c>true</c> if started successfully.
         /// <c>false</c> if couldn't start (reasons: invalid endPoint, custom errors from transports, etc).
         /// </returns>
-        public bool Restart()
+        public UniTask<bool> Restart()
         {
             lock (_lock)
             {
+                if (m_TokenSource is not null)
+                {
+                    m_TokenSource.Cancel();
+                    m_TokenSource.Dispose();
+                    m_TokenSource = null;
+                }
+
                 Stop();
-                return Start();
+                m_TokenSource = new();
+                return Start(m_TokenSource.Token);
             }
         }
 
@@ -296,11 +408,14 @@ namespace NetCore
         /// <c>true</c> if connection began.
         /// <c>false</c> if connection couldn't start (reasons: invalid end-points, custom errors from transports, etc).
         /// </returns>
-        protected virtual bool Connect()
+        protected virtual bool Connect(CancellationToken token)
         {
             lock (_lock)
             {
                 var args = ConnectionArgs;
+                var temp = m_TemporaryTransports;
+                temp.Clear();
+
                 foreach (var transport in ReliableTransports)
                 {
                     if (!transport.InvokeConnect(args))
@@ -333,7 +448,7 @@ namespace NetCore
         /// <c>true</c> if connection began.
         /// <c>false</c> if connection couldn't start (reasons: invalid end-points, custom errors from transports, etc).
         /// </returns>
-        public bool Connect(ConnectionArgsHandler handler)
+        public UniTask<bool> Connect(ConnectionArgsHandler handler)
         {
             lock (_lock)
             {

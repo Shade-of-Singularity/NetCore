@@ -206,5 +206,15 @@ namespace NetCore.Transports.Loopback
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleUnreliable)}(sourceID: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
             Console.ForegroundColor = ConsoleColor.White;
         }
+
+        public void SendReliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SendUnreliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

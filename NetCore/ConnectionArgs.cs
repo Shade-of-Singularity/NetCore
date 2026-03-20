@@ -25,6 +25,10 @@ namespace NetCore
         /// Key for <see cref="RemoteUnixEndPoint"/>.
         /// </summary>
         public static readonly RuntimeTypeHandle RemoteUnixEndPointKey = typeof(UnixDomainSocketEndPoint).TypeHandle;
+        /// <summary>
+        /// Key for <see cref="TemporaryIdentifier"/>.
+        /// </summary>
+        public static readonly string TemporaryIdentifierKey = "TemporaryIdentifier";
 
         /// <inheritdoc/>
         public IPEndPoint? RemoteIPEndPoint
@@ -38,6 +42,13 @@ namespace NetCore
         {
             get => (UnixDomainSocketEndPoint?)this.GetValueOrDefault(RemoteUnixEndPointKey);
             set => this[RemoteUnixEndPointKey] = value;
+        }
+
+        /// <inheritdoc/>
+        public Guid TemporaryIdentifier
+        {
+            get => this.TryGet(TemporaryIdentifierKey, out Guid result) ? result : Guid.Empty;
+            set => this[TemporaryIdentifierKey] = value;
         }
     }
 }

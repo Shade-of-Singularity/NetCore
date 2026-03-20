@@ -1,4 +1,6 @@
-﻿using System.Net;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Net.Sockets;
 
 namespace NetCore
@@ -29,7 +31,7 @@ namespace NetCore
         /// <c>true</c> - if <see cref="LocalIPEndPoint"/> was found and it is not <c>null</c>.
         /// <c>false</c> - otherwise.
         /// </returns>
-        public bool TryGetLocalIPEndPoint(out IPEndPoint? endPoint)
+        public bool TryGetLocalIPEndPoint([NotNullWhen(true)] out IPEndPoint? endPoint)
         {
             return (endPoint = LocalIPEndPoint) is not null;
         }
@@ -41,7 +43,7 @@ namespace NetCore
         /// <c>true</c> - if <see cref="LocalUnixEndPoint"/> was found and it is not <c>null</c>.
         /// <c>false</c> - otherwise.
         /// </returns>
-        public bool TryGetLocalUnixEndPoint(out UnixDomainSocketEndPoint? endPoint)
+        public bool TryGetLocalUnixEndPoint([NotNullWhen(true)] out UnixDomainSocketEndPoint? endPoint)
         {
             return (endPoint = LocalUnixEndPoint) is not null;
         }
@@ -53,7 +55,7 @@ namespace NetCore
         /// <c>true</c> - if <see cref="LocalIPEndPoint"/> was found and it is not <c>null</c>.
         /// <c>false</c> - otherwise.
         /// </returns>
-        public bool TryGetServerName(out string? serverName)
+        public bool TryGetServerName([NotNullWhen(true)] out string? serverName)
         {
             return (serverName = ServerName) is not null;
         }

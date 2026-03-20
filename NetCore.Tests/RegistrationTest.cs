@@ -42,7 +42,7 @@ namespace NetCore.Tests
 
             if (!client.Connect(IPAddress.Loopback, 25000))
             {
-                throw new Exception("Failed to connect.");
+                throw new Exception("Fail to connect.");
             }
 
             server.SendReliable(MemoryMarshal.AsBytes(new string('a', ushort.MaxValue).AsSpan()));

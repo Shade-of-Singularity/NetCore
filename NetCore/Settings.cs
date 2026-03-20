@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NetCore.Transports;
+using System;
 
 namespace NetCore
 {
@@ -44,7 +45,6 @@ namespace NetCore
             get => m_MaxUnreliablePacketSize;
             set => m_MaxUnreliablePacketSize = Math.Max(MinUnreliablePacketSize, value);
         }
-
         /// <summary>
         /// <para>(Default: 1024*1024 -> 1MB)</para>
         /// Max size of an reliable package (in bytes), including 
@@ -54,7 +54,6 @@ namespace NetCore
             get => m_MaxReliablePacketSize;
             set => m_MaxReliablePacketSize = Math.Max(MinReliablePacketSize, value);
         }
-
         /// <summary>
         /// <para>[Advanced] (Default: 1024*2 -> 2KB)</para>
         /// Size increment (in bytes) to use on internal buffer resize.
@@ -72,9 +71,8 @@ namespace NetCore
             get => m_BufferSizeIncrement;
             set => m_BufferSizeIncrement = Math.Max(0, value);
         }
-
         /// <summary>
-        /// <para>(Default: false)</para>
+        /// <para>(WIP)(Default: false)</para>
         /// If enabled - during a handshake, will check which <see cref="CustomHeader{T}"/> are defined client-side and server-side.
         /// If they are different - systems will synchronize header identifiers, and exclude from writing unused ones.
         /// <para>
@@ -87,7 +85,23 @@ namespace NetCore
         /// </remarks>
         public static bool SynchronizeHeaders
         {
-            get => throw new NotImplementedException();
+            get => false;
+            set => throw new NotImplementedException();
+        }
+        /// <summary>
+        /// <para>(WIP)(Default: false)</para>
+        /// If enabled - allows <see cref="NetworkMember"/> to send connection requests using multiple <see cref="ITransport"/>s at the same time.
+        /// Connection which connected the quickest will be used.
+        /// <para>
+        /// If disabled - <see cref="ITransport"/>s will activate one-by-one.
+        /// </para>
+        /// </summary>
+        /// <remarks>
+        /// This behaviour can be overwritten using <see cref="ITransport.ForceSyncedStart"/> or <see cref="ITransport.ForceSyncedConnection"/>
+        /// </remarks>
+        public static bool SimultaneousOperations
+        {
+            get => false;
             set => throw new NotImplementedException();
         }
 

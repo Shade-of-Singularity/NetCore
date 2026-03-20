@@ -1,4 +1,6 @@
-﻿namespace NetCore
+﻿using NetCore.Transports;
+
+namespace NetCore
 {
     /// <summary>
     /// <inheritdoc cref="SendingMode"/>

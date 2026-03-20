@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetCore.Streams", "NetCore.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetCore.Packets", "NetCore.Containers\NetCore.Packets.csproj", "{1BD359A8-69B5-4E1A-A762-8DFD0C1A25BB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetCore.SteamNetworking", "NetCore.Steam\NetCore.SteamNetworking.csproj", "{92AC9D24-22E0-450B-A05C-B8E5EB236799}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,10 @@ Global
 		{1BD359A8-69B5-4E1A-A762-8DFD0C1A25BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1BD359A8-69B5-4E1A-A762-8DFD0C1A25BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1BD359A8-69B5-4E1A-A762-8DFD0C1A25BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{92AC9D24-22E0-450B-A05C-B8E5EB236799}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{92AC9D24-22E0-450B-A05C-B8E5EB236799}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{92AC9D24-22E0-450B-A05C-B8E5EB236799}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{92AC9D24-22E0-450B-A05C-B8E5EB236799}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

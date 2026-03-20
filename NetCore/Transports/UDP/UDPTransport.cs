@@ -320,5 +320,10 @@ namespace NetCore.Transports.UDP
             //  with ComputerysBitStream, try using a separate byte buffer for reading,
             //  lock specific segments of that array, and make sure that lock in a transport is released as soon as data is copied over.
         }
+
+        public void SendUnreliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

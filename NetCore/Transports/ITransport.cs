@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 
-namespace NetCore
+namespace NetCore.Transports
 {
     /// <summary>
     /// Base interface for all kinds of transports.
@@ -16,7 +18,19 @@ namespace NetCore
     public interface ITransport
     {
         /// <summary>
-        /// Whether this transport is server-side (true) or client-side (false).
+        /// Whether <see cref="InvokeStart(IReadOnlyStartupArgs)"/> is blocking async initialization.
+        /// <para>If <c>true</c> - will halt starting of other transports until this one returns.</para>
+        /// <para>If <c>false</c> - will asynchronously start all non-blocking transports until another one is found in a sequence.</para>
+        /// </summary>
+        public bool ForceSyncedStart { get; }
+        /// <summary>
+        /// Whether <see cref="InvokeConnect(IReadOnlyConnectionArgs)"/> is blocking async initialization.
+        /// <para>If <c>true</c> - will halt connecting of other transports until this one returns.</para>
+        /// <para>If <c>false</c> - will asynchronously start all non-blocking transports until another one is found in a sequence.</para>
+        /// </summary>
+        public bool ForceSyncedConnection { get; }
+        /// <summary>
+        /// Whether this transport right now used as server-side (true) or client-side (false) transport.
         /// </summary>
         /// <remarks>
         /// <see cref="ITransport"/>s that implement only server-side or only client-side logic
@@ -24,7 +38,7 @@ namespace NetCore
         /// </remarks>
         public bool IsServerSide { get; }
         /// <summary>
-        /// Whether this transport is client-side (true) or server-side (false).
+        /// Whether this transport right now used as client-side (true) or server-side (false) transport.
         /// </summary>
         /// <remarks>
         /// <see cref="ITransport"/>s that implement only server-side or only client-side logic
@@ -132,17 +146,23 @@ namespace NetCore
         /// Transports which rely on UID, like SteamNetworking UDP transport, can choose to use a different port than a provided one.
         /// </summary>
         /// <param name="args"><see cref="IReadOnlyStartupArgs"/> to use for setting up the transport.</param>
+        /// <param name="token">Token to cancel a start operation.</param>
         /// <returns>
         /// <c>true</c> if started successfully.
         /// <c>false</c> if any issues appeared at starting (see console for more info).
         /// </returns>
-        public bool InvokeStart(IReadOnlyStartupArgs args)
+        public async UniTask<bool> InvokeStart(IReadOnlyStartupArgs args, CancellationToken token = default)
         {
+            if (token.IsCancellationRequested)
+            {
+                return false;
+            }
+
             if (!IsStarted)
             {
                 try
                 {
-                    Start(args);
+                    await Start(args, token);
                 }
                 catch (Exception exception)
                 {
@@ -212,19 +232,20 @@ namespace NetCore
         /// When used with <see cref="IsServerSide"/> - connects to a remote relay and manages NAT hole if needed.
         /// </remarks>
         /// <param name="args"><see cref="IReadOnlyConnectionArgs"/> to use for connection.</param>
+        /// <param name="token">Token to cancel a connect operation.</param>
         /// <returns>
         /// <c>true</c> if connection started successfully.
         /// <c>false</c> if already connected or any issues appeared during connection attempt (see console for more info).
         /// </returns>
         /// TODO: Maybe return awaitable UniTask or a ValueTask?
         /// TODO: Add a way to specify which transport sets expect to fire (TCP+UDP, SteamUDP-only, TCP-only, UDP-only, Pipe-only, etc).
-        public bool InvokeConnect(IReadOnlyConnectionArgs args)
+        public async UniTask<bool> InvokeConnect(IReadOnlyConnectionArgs args, CancellationToken token = default)
         {
             if (!IsActive)
             {
                 try
                 {
-                    Connect(args);
+                    await Connect(args, token);
                 }
                 catch (Exception exception)
                 {
@@ -297,13 +318,13 @@ namespace NetCore
         protected void Terminate(NetworkMember member);
 
         /// <inheritdoc cref="InvokeStart"/>
-        protected void Start(IReadOnlyStartupArgs args);
+        protected UniTask Start(IReadOnlyStartupArgs args, CancellationToken token);
 
         /// <inheritdoc cref="InvokeStop"/>
         protected void Stop();
 
         /// <inheritdoc cref="InvokeConnect"/>
-        protected void Connect(IReadOnlyConnectionArgs args);
+        protected UniTask Connect(IReadOnlyConnectionArgs args, CancellationToken token);
 
         /// <inheritdoc cref="InvokeDisconnect"/>
         protected void Disconnect();

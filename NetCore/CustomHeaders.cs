@@ -1,4 +1,5 @@
 ﻿using NetCore.Common;
+using NetCore.Identity;
 using System;
 
 namespace NetCore
@@ -167,7 +168,7 @@ namespace NetCore
         {
             lock (_lock)
             {
-                // Note: You can add here built-in headers.
+                TemporaryIdentifierHeader.Register();
             }
         }
 

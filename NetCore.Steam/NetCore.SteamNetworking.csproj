@@ -5,19 +5,17 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <Title>NetCore</Title>
+    <Title>NetCore Steam Networking</Title>
     <Authors>SoG, DarkJune</Authors>
     <Company>Shade of Singularity</Company>
     <Description>
-      Very optimized networking system, introduced to support simultaneous usage of multiple
-      network transports (RawTCP, RawUDP, SteamNet(UDP), C# Pipes, etc.).
-      Standardized for easy expansion and plugin development.
+
     </Description>
     <LangVersion>12</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
+    <ProjectReference Include="..\NetCore\NetCore.csproj" />
     <PackageReference Include="UniTask" Version="2.5.10" />
   </ItemGroup>
 

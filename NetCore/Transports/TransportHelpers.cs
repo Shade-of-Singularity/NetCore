@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NetCore
+namespace NetCore.Transports
 {
     /// <summary>
     /// Helper methods for <see cref="ITransport"/>s.

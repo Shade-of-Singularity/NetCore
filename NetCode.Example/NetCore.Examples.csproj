@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NetCore\NetCore.csproj" />
+    <PackageReference Include="UniTask" Version="2.5.10" />
   </ItemGroup>
 
 </Project>

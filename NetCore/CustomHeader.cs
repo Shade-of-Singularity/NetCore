@@ -1,8 +1,11 @@
-﻿namespace NetCore
+﻿using System.Runtime.CompilerServices;
+
+namespace NetCore
 {
     /// <summary>
     /// Custom message header to apply.
     /// </summary>
+    /// TODO: initialize header data only after a request, so registration timing won't matter with inconsistent mod loading order.
     public abstract class CustomHeader<T> where T : CustomHeader<T>, new()
     {
         /// <summary>
@@ -28,7 +31,7 @@
         /// Minimal amount of bytes needed to encode this header.
         /// Useful when creating temporary buffers for <see cref="Header"/> operations.
         /// </summary>
-        public static readonly int SizeInBytes = (Instance.Size + 7) >> 3; // This is division by 8 with rounding up.
+        public static readonly int SizeInBytes = Instance.Size + 7 >> 3; // This is division by 8 with rounding up.
         /// <summary>
         /// Descriptor, telling <see cref="CustomHeaders"/> how to register this <see cref="CustomHeader{T}"/> instance.
         /// </summary>
@@ -79,7 +82,7 @@
         /// <summary>
         /// Registers this <see cref="CustomHeader{T}"/> in <see cref="CustomHeaders"/>.
         /// </summary>
-        public static void Register() => CustomHeaders.Register<T>();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void Register() => CustomHeaders.Register<T>();
 
 
 
@@ -92,7 +95,7 @@
         private static void SetupParameters(int order, int contentPosition)
         {
             Order = order;
-            Region = (order + 7) >> 3;
+            Region = order + 7 >> 3;
             RegionFlag = (byte)(1 << (order & 0b111));
             ContentPosition = contentPosition;
         }

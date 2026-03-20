@@ -1,6 +1,4 @@
-﻿using System.Net;
-
-namespace NetCore
+﻿namespace NetCore.Transports
 {
     /// <summary>
     /// Base class which implements required functionality from <see cref="ITransport"/>s.
@@ -16,6 +14,17 @@ namespace NetCore
         /// .                                              Public Properties
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <inheritdoc/>
+        /// <remarks>
+        /// Override in your transport if you want it to block starting of other transports.
+        /// </remarks>
+        public virtual bool ForceSyncedStart => false;
+        /// <inheritdoc/>
+        /// <remarks>
+        /// Override in your transport if you want it to block connection of other transports.
+        /// </remarks>
+        public virtual bool ForceSyncedConnection => false;
+
         /// <inheritdoc/>
         public bool IsServerSide { get; private set; }
 
@@ -80,7 +89,7 @@ namespace NetCore
         /// </remarks>
         public virtual void Initialize(NetworkMember member)
         {
-            IsServerSide = TransportHelpers.ResolveInitializer(member, out Server? server, out Client? client);
+            IsServerSide = member.ResolveInitializer(out Server? server, out Client? client);
             Holder = member;
             Server = server;
             Client = client;
