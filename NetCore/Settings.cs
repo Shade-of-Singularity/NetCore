@@ -88,22 +88,6 @@ namespace NetCore
             get => false;
             set => throw new NotImplementedException();
         }
-        /// <summary>
-        /// <para>(WIP)(Default: false)</para>
-        /// If enabled - allows <see cref="NetworkMember"/> to send connection requests using multiple <see cref="ITransport"/>s at the same time.
-        /// Connection which connected the quickest will be used.
-        /// <para>
-        /// If disabled - <see cref="ITransport"/>s will activate one-by-one.
-        /// </para>
-        /// </summary>
-        /// <remarks>
-        /// This behaviour can be overwritten using <see cref="ITransport.ForceSyncedStart"/> or <see cref="ITransport.ForceSyncedConnection"/>
-        /// </remarks>
-        public static bool SimultaneousOperations
-        {
-            get => false;
-            set => throw new NotImplementedException();
-        }
 
 
 

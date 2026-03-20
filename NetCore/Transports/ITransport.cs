@@ -18,17 +18,17 @@ namespace NetCore.Transports
     public interface ITransport
     {
         /// <summary>
-        /// Whether <see cref="InvokeStart(IReadOnlyStartupArgs)"/> is blocking async initialization.
+        /// Whether <see cref="InvokeStart(IReadOnlyStartupArgs, CancellationToken)"/> is blocking async initialization.
         /// <para>If <c>true</c> - will halt starting of other transports until this one returns.</para>
         /// <para>If <c>false</c> - will asynchronously start all non-blocking transports until another one is found in a sequence.</para>
         /// </summary>
         public bool ForceSyncedStart { get; }
         /// <summary>
-        /// Whether <see cref="InvokeConnect(IReadOnlyConnectionArgs)"/> is blocking async initialization.
+        /// Whether <see cref="InvokeConnect(IReadOnlyConnectionArgs, CancellationToken)"/> is blocking async initialization.
         /// <para>If <c>true</c> - will halt connecting of other transports until this one returns.</para>
         /// <para>If <c>false</c> - will asynchronously start all non-blocking transports until another one is found in a sequence.</para>
         /// </summary>
-        public bool ForceSyncedConnection { get; }
+        public bool ForceSyncedConnect { get; }
         /// <summary>
         /// Whether this transport right now used as server-side (true) or client-side (false) transport.
         /// </summary>
@@ -149,7 +149,7 @@ namespace NetCore.Transports
         /// <param name="token">Token to cancel a start operation.</param>
         /// <returns>
         /// <c>true</c> if started successfully.
-        /// <c>false</c> if any issues appeared at starting (see console for more info).
+        /// <c>false</c> if operation cancelled or any issues appeared at starting (see console for more info).
         /// </returns>
         public async UniTask<bool> InvokeStart(IReadOnlyStartupArgs args, CancellationToken token = default)
         {
@@ -235,12 +235,16 @@ namespace NetCore.Transports
         /// <param name="token">Token to cancel a connect operation.</param>
         /// <returns>
         /// <c>true</c> if connection started successfully.
-        /// <c>false</c> if already connected or any issues appeared during connection attempt (see console for more info).
+        /// <c>false</c> if operation cancelled or any issues appeared during connection attempt (see console for more info).
         /// </returns>
-        /// TODO: Maybe return awaitable UniTask or a ValueTask?
         /// TODO: Add a way to specify which transport sets expect to fire (TCP+UDP, SteamUDP-only, TCP-only, UDP-only, Pipe-only, etc).
         public async UniTask<bool> InvokeConnect(IReadOnlyConnectionArgs args, CancellationToken token = default)
         {
+            if (token.IsCancellationRequested)
+            {
+                return false;
+            }
+
             if (!IsActive)
             {
                 try

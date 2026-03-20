@@ -9,7 +9,7 @@ namespace NetCore
     /// Handler providing common arguments for a startup of an <see cref="NetworkMember"/>.
     /// </summary>
     /// <param name="args">Args to setup.</param>
-    public delegate void StartupArgsHandler(StartupArgs args);
+    public delegate void StartupArgsProvider(StartupArgs args);
 
     /// <summary>
     /// Class, storing common data for starting-up the <see cref="NetworkMember"/>.

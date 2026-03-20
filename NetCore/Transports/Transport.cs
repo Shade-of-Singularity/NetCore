@@ -1,4 +1,7 @@
-﻿namespace NetCore.Transports
+﻿using Cysharp.Threading.Tasks;
+using System.Threading;
+
+namespace NetCore.Transports
 {
     /// <summary>
     /// Base class which implements required functionality from <see cref="ITransport"/>s.
@@ -23,7 +26,7 @@
         /// <remarks>
         /// Override in your transport if you want it to block connection of other transports.
         /// </remarks>
-        public virtual bool ForceSyncedConnection => false;
+        public virtual bool ForceSyncedConnect => false;
 
         /// <inheritdoc/>
         public bool IsServerSide { get; private set; }
@@ -111,9 +114,10 @@
         /// <remarks>
         /// Managed by a <c>try</c> wrapper. Feel free to return <see cref="System.Exception"/>s if you need to.
         /// </remarks>
-        public virtual void Start(IReadOnlyStartupArgs args)
+        public virtual UniTask Start(IReadOnlyStartupArgs args, CancellationToken token)
         {
             // Nothing here right now, but might be something in the future.
+            return UniTask.CompletedTask;
         }
 
         /// <inheritdoc cref="ITransport.Stop"/>
@@ -129,9 +133,10 @@
         /// <remarks>
         /// Managed by a <c>try</c> wrapper. Feel free to return <see cref="System.Exception"/>s if you need to.
         /// </remarks>
-        public virtual void Connect(IReadOnlyConnectionArgs args)
+        public virtual UniTask Connect(IReadOnlyConnectionArgs args, CancellationToken token)
         {
             // Nothing here right now, but might be something in the future.
+            return UniTask.CompletedTask;
         }
 
         /// <inheritdoc cref="ITransport.Disconnect"/>

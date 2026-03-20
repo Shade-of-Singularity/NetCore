@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
@@ -121,7 +122,7 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public override void Start(IReadOnlyStartupArgs args)
+        public override UniTask Start(IReadOnlyStartupArgs args, CancellationToken token)
         {
             // Socket.Bind to either ANY address or ANY port changes local end-point.
             // To handle this, we update registered end-point as well.
@@ -135,10 +136,10 @@ namespace NetCore.Transports.UDP
             //        return;
             //    }
             //}
-            base.Start(args);
+            base.Start(args, token);
             if (!args.TryGet(StartupArgs.LocalIPEndPointKey, out IPEndPoint? endPoint))
             {
-                return;
+                return UniTask.CompletedTask;
             }
 
             lock (_lock)
@@ -147,6 +148,8 @@ namespace NetCore.Transports.UDP
                 Source = new();
                 _ = ListenForMessages(Socket, Source.Token); // TODO: Activate only if transport is used for messages (?)
             }
+
+            return UniTask.CompletedTask;
         }
 
         /// <inheritdoc/>
@@ -207,16 +210,18 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public override void Connect(IReadOnlyConnectionArgs args)
+        public override UniTask Connect(IReadOnlyConnectionArgs args, CancellationToken token)
         {
             lock (_lock)
             {
-                base.Connect(args);
+                base.Connect(args, token);
                 if (args.TryGetRemoteIPEndPoint(out IPEndPoint? endPoint))
                 {
                     Socket!.Connect(endPoint);
                 }
             }
+
+            return UniTask.CompletedTask;
         }
 
         /// <inheritdoc/>

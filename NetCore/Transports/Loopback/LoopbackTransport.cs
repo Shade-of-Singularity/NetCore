@@ -1,7 +1,9 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace NetCore.Transports.Loopback
 {
@@ -34,24 +36,24 @@ namespace NetCore.Transports.Loopback
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <inheritdoc/>
-        public override void Connect(IReadOnlyConnectionArgs args)
+        public override UniTask Connect(IReadOnlyConnectionArgs args, CancellationToken token)
         {
-            base.Connect(args);
+            base.Connect(args, token);
             if (IsServerSide)
             {
-                return;
+                return UniTask.CompletedTask;
             }
 
-            var ipep = args.RemoteIPEndPoint;
-            if (ipep is null) return;
-            if (!Servers.TryGet(ipep, out var server))
+            var ep = args.RemoteIPEndPoint;
+            if (ep is null) return UniTask.CompletedTask;
+            if (!Servers.TryGet(ep, out var server))
             {
-                throw new KeyNotFoundException($"ClientData-side {nameof(LoopbackTransport)} cannot find an active server under a port ({ipep.Port}).");
+                throw new KeyNotFoundException($"ClientData-side {nameof(LoopbackTransport)} cannot find an active server under a port ({ep.Port}).");
             }
 
             if (!server.TryGetReliableTransport(out LoopbackTransport? remote))
             {
-                return;
+                return UniTask.CompletedTask;
             }
 
             lock (m_Loopbacks)
@@ -64,6 +66,8 @@ namespace NetCore.Transports.Loopback
                     m_Loopbacks[sourceID] = new(remote, remoteID);
                 }
             }
+
+            return UniTask.CompletedTask;
         }
 
         /// <inheritdoc/>

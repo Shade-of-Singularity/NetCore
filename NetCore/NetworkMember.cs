@@ -3,8 +3,8 @@ using NetCore.Common;
 using NetCore.Transports;
 using System;
 using System.Buffers;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace NetCore
@@ -68,9 +68,16 @@ namespace NetCore
     /// - fork the project and modify this base class, or define the same logic in a custom <see cref="Client"/> and <see cref="Server"/> class.
     /// </remarks>
     /// TODO: Add a way to map connections, arrived from different transports
-    /// to either one connection (TCP+UDP to one)
-    /// or to multiple(UDP + SteamUDP to separate).
-    public abstract class NetworkMember(int transports)
+    ///  to either one connection (TCP+UDP to one)
+    ///  or to multiple(UDP + SteamUDP to separate).
+    /// Note: Maybe instead of declaring all <see cref="HashLists"/> we can simply use <see cref="HashList{TBase}"/> for <see cref="HashLists"/>?
+    ///  It will require rewriting <see cref="HashList{TBase}"/> to return "ref TBase" items instead of simply items,
+    ///  but besides not being sure where to declare new <see cref="HashLists"/> to then take a reference from - I don't see much issues.
+    ///  It will make code twice as slow, but will reduce memory usage.
+    ///  I'm alright with how things are right now though - allocating 6 arrays with 2 items + 24 bytes per list it's not much:
+    ///  = 240 bytes.
+    ///  It's nothing compared to other things.
+    public abstract partial class NetworkMember(int transports) : INetworkMemberStatistics
     {
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
@@ -92,13 +99,37 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Whether this <see cref="NetworkMember"/> was started using <see cref="Start()"/> method.
+        /// Whether this <see cref="NetworkMember"/> was started using <see cref="Start(CancellationToken)"/> method.
         /// </summary>
-        public bool IsStarted { get; protected set; }
+        public bool IsStarted
+        {
+            get
+            {
+                lock (_lock) return m_IsStarted;
+            }
+        }
         /// <summary>
         /// Whether this <see cref="NetworkMember"/> is attempting to connect or is connected to a remote host.
         /// </summary>
-        public bool IsActive { get; protected set; }
+        public bool IsActive
+        {
+            get
+            {
+                lock (_lock) return m_IsActive;
+            }
+        }
+        /// <summary>
+        /// Whether any <see cref="ITransport"/> of this <see cref="NetworkMember"/> is connected to the remote host.
+        /// With <see cref="Server"/> - it indicates if <see cref="Server"/> is connected to the relay point.
+        /// </summary>
+        public bool IsConnected
+        {
+            get
+            {
+                lock (_lock) return m_ConnectedTransportsCount > 0;
+            }
+        }
+
         /// <summary>
         /// Arguments that were used to start this <see cref="NetworkMember"/>, in a read-only form.
         /// </summary>
@@ -111,6 +142,34 @@ namespace NetCore
         /// Provider for all <see cref="ConnectionID"/>s managed by this <see cref="NetworkMember"/> and its transports.
         /// </summary>
         public ConnectionIDProvider ConnectionIDProvider => m_ConnectionIDProvider;
+        /// <summary>
+        /// If enabled - allows starting multiple transports at once, using async execution.
+        /// </summary>
+        /// <remarks>
+        /// Behavior can be overridden with <see cref="ITransport.ForceSyncedStart"/>.
+        /// </remarks>
+        public bool UseAsyncStart
+        {
+            get => false;
+            set
+            {
+                lock (_lock) throw new NotImplementedException();
+            }
+        }
+        /// <summary>
+        /// If enabled - allows connecting multiple transports at once, using async execution.
+        /// </summary>
+        /// <remarks>
+        /// Behavior can be overridden with <see cref="ITransport.ForceSyncedConnect"/>.
+        /// </remarks>
+        public bool UseAsyncConnect
+        {
+            get => false;
+            set
+            {
+                lock (_lock) throw new NotImplementedException();
+            }
+        }
 
 
 
@@ -149,6 +208,20 @@ namespace NetCore
         /// </remarks>
         protected HashList<IUnreliableTransport> UnreliableTransports = new(transports);
         /// <summary>
+        /// Dictionary with all <see cref="IStreamTransport"/>s this <see cref="NetworkMember"/> can use.
+        /// </summary>
+        /// <remarks>
+        /// Not readonly to support mutation in registration methods.
+        /// </remarks>
+        protected HashList<IStreamTransport> StreamTransports = new(transports);
+        /// <summary>
+        /// Dictionary with all <see cref="IStreamTransport"/>s this <see cref="NetworkMember"/> can use.
+        /// </summary>
+        /// <remarks>
+        /// Not readonly to support mutation in registration methods.
+        /// </remarks>
+        protected HashList<IFileTransport> FileTransports = new(transports);
+        /// <summary>
         /// Arguments used to start this <see cref="NetworkMember"/>.
         /// </summary>
         protected readonly StartupArgs m_StartupArgs = [];
@@ -174,28 +247,20 @@ namespace NetCore
         /// </summary>
         private readonly ConnectionIDProvider m_ConnectionIDProvider = new();
         /// <summary>
-        /// Temporary storage for asynchronously initialized <see cref="ITransport"/>s.
+        /// Cancellation token source for cancelling current startup state.
+        /// Introduced on <see cref="Start(StartupArgsProvider)"/> call.
         /// </summary>
-        //private readonly List<ITransport> m_TemporaryTransports = new(transports);
+        private CancellationTokenSource? m_StartupOperation;
         /// <summary>
-        /// Token source for cancelling the latest async operation.
+        /// Cancellation token source for cancelling current connection.
+        /// Introduced on <see cref="Connect(ConnectionArgsHandler)"/> call.
         /// </summary>
-        private CancellationTokenSource? m_TokenSource;
-        /// <summary>
-        /// Last operation (e.g. <see cref="Start(CancellationToken)"/> or <see cref="Connect(CancellationToken)"/>).
-        /// </summary>
-        //private UniTask<bool> m_LastTask;
-        /// <summary>
-        /// Maximum amount of headers reported by any registered <see cref="ITransport"/>.
-        /// </summary>
-        /// <remarks>
-        /// If client and server have different headers - they will be combined during the initial communication step.
-        /// Transports will report combined total of headers back to the <see cref="NetworkMember"/>
-        /// so we can better optimize <see cref="Header"/> and <see cref="Header"/>.
-        /// </remarks>
-        /// Note: Removed, because we should not depend on asynchronously arriving data in the internal code.
-        ///  Async data or transport-only data should only influence how one transport performs.
-        //private int m_MaxReportedHeaderAmount = 1024;
+        private CancellationTokenSource? m_ConnectionOperation;
+        /// <inheritdoc cref="IsStarted"/>
+        private bool m_IsStarted;
+        /// <inheritdoc cref="IsActive"/>
+        private bool m_IsActive;
+
 
 
 
@@ -224,116 +289,67 @@ namespace NetCore
         /// <c>true</c> if started successfully.
         /// <c>false</c> if couldn't start (reasons: invalid end-points, custom errors from transports, etc).
         /// </returns>
-        protected virtual async UniTask<bool> Start(CancellationToken token)
+        protected virtual async UniTask<bool> Start(StartupArgs args, CancellationToken token)
         {
-            var args = m_StartupArgs;
-            if (Settings.SimultaneousOperations)
+            ITransport[] transports = RentTransports();
+
+            int index = 0;
+            for (; index < transports.Length; index++)
             {
-                throw new NotImplementedException();
+                if (token.IsCancellationRequested) return false;
+                if (!await transports[index].InvokeStart(args, token))
+                    goto ResetState;
             }
 
-            List<UniTask<bool>> temp = []; // TODO: Cache list as a static field.
-            await StartTransports(ResilientTransports, args, temp, token);
-            await StartTransports(ReliableTransports, args, temp, token);
-            await StartTransports(NotifyTransports, args, temp, token);
-            await StartTransports(UnreliableTransports, args, temp, token);
+            return true;
 
-            static async UniTask StartTransports<T>(HashList<T> transports, IReadOnlyStartupArgs args, List<UniTask<bool>> temp, CancellationToken token)
-                where T : class, ITransport
+            ResetState: // Stops active transports to release resources.
+            index--; // Failed transport skipped - it will automatically stop itself.
+            for (; index >= 0; index--)
             {
-                temp.Clear();
-                foreach (var transport in transports)
-                {
-                    if (transport.ForceSyncedStart && temp.Count > 0)
-                    {
-                        await UniTask.WhenAll(temp);
-                        temp.Clear();
-                    }
-
-                    temp.Add(transport.InvokeStart(args, token));
-                }
-
-                if (temp.Count > 0)
-                {
-                    await UniTask.WhenAll(temp);
-                    temp.Clear();
-                }
+                transports[index].InvokeStop();
             }
 
-            lock (_lock)
-            {
-                var args = m_StartupArgs;
-                var temp = m_TemporaryTransports;
-                temp.Clear();
-
-                foreach (var transport in ResilientTransports)
-                {
-                    if (transport.ForceSyncedStart)
-                    {
-                        await UniTask.WhenAll(temp);
-                    }
-                }
-
-                //foreach (var transport in ReliableTransports)
-                //{
-                //    if (!transport.InvokeStart(args))
-                //        goto ResetState;
-                //}
-
-                //foreach (var transport in UnreliableTransports)
-                //{
-                //    if (!transport.InvokeStart(args))
-                //        goto ResetState;
-                //}
-
-                NetworkMembers.IncrementActiveMembers();
-                return true;
-
-                ResetState:
-                StopInternal();
-                return false;
-            }
+            return false;
         }
 
         /// <summary>
-        /// Starts this <see cref="NetworkMember"/> using args, modified by <see cref="StartupArgsHandler"/> - <paramref name="handler"/>.
+        /// Starts this <see cref="NetworkMember"/> using args, modified by <see cref="StartupArgsProvider"/> - <paramref name="provider"/>.
         /// </summary>
         /// <remarks>
         /// Binds all registered <see cref="ITransport"/>s to an <see cref="StartupArgs.LocalIPEndPoint"/> and marks instance as active.
         /// </remarks>
-        /// <param name="handler">Handler modifying provided <see cref="StartupArgs"/>.</param>
+        /// <param name="provider">Handler modifying provided <see cref="StartupArgs"/>.</param>
         /// <returns>
         /// <c>true</c> if started successfully.
         /// <c>false</c> if couldn't start (reasons: invalid end-points, custom errors from transports, etc).
         /// </returns>
-        public async UniTask<bool> Start(StartupArgsHandler handler)
+        public async UniTask<bool> Start(StartupArgsProvider provider)
         {
-            CancellationToken token;
+            UniTask<bool> start;
             lock (_lock)
             {
-                if (m_TokenSource is not null)
+                if (m_IsStarted)
                 {
-                    m_TokenSource.Cancel();
-                    m_TokenSource.Dispose();
-                    m_TokenSource = null;
+                    throw new Exception($"{GetType().Name} was already started!");
                 }
 
-                Stop();
-                m_TokenSource = new();
-                token = m_TokenSource.Token;
+                m_StartupOperation = new();
                 m_StartupArgs.Clear();
-                handler(m_StartupArgs);
+                provider(m_StartupArgs);
+                start = Start(m_StartupArgs, m_StartupOperation.Token);
             }
 
             try
             {
-                if (!await Start(token))
+                if (await start)
                 {
-                    return false;
+                    lock (_lock)
+                    {
+                        NetworkMembers.IncrementActiveMembers();
+                        return true;
+                    }
                 }
-
-                NetworkMembers.IncrementActiveMembers();
-                return true;
             }
             catch (Exception ex)
             {
@@ -357,16 +373,49 @@ namespace NetCore
         {
             lock (_lock)
             {
-                if (m_TokenSource is not null)
+                if (m_IsStarted)
                 {
-                    m_TokenSource.Cancel();
-                    m_TokenSource.Dispose();
-                    m_TokenSource = null;
+                    Stop();
                 }
 
-                Stop();
-                m_TokenSource = new();
-                return Start(m_TokenSource.Token);
+                if (m_StartupOperation is not null)
+                {
+                    m_StartupOperation.Cancel();
+                    m_StartupOperation.Dispose();
+                    m_StartupOperation = null;
+                }
+
+                m_StartupOperation = new();
+                return Start(m_StartupArgs, m_StartupOperation.Token);
+            }
+        }
+
+        /// <summary>
+        /// If not already started:
+        /// Starts this <see cref="NetworkMember"/> using args, modified by <see cref="StartupArgsProvider"/> - <paramref name="handler"/>.
+        /// </summary>
+        /// <param name="handler">Handler modifying provided <see cref="StartupArgs"/>.</param>
+        /// <param name="task">
+        /// <c>true</c> if started successfully.
+        /// <c>false</c> if couldn't start (reasons: invalid end-points, custom errors from transports, etc).
+        /// </param>
+        /// <returns>
+        /// <c>true</c> if <see cref="Start(StartupArgsProvider)"/> was run and <paramref name="task"/> was provided.
+        /// <c>false</c> if <see cref="NetworkMember"/> was already started.
+        /// </returns>
+        /// <inheritdoc cref="Start(StartupArgsProvider)"/>
+        public bool TryStart(out UniTask<bool> task, StartupArgsProvider handler)
+        {
+            lock (_lock)
+            {
+                if (m_IsStarted)
+                {
+                    task = UniTask.FromResult(false);
+                    return false;
+                }
+
+                task = Start(handler);
+                return true;
             }
         }
 
@@ -387,15 +436,23 @@ namespace NetCore
 
         private void StopInternal()
         {
-            foreach (var transport in ReliableTransports)
-            {
+            foreach (var transport in ResilientTransports)
                 transport.InvokeStop();
-            }
+
+            foreach (var transport in ReliableTransports)
+                transport.InvokeStop();
+
+            foreach (var transport in NotifyTransports)
+                transport.InvokeStop();
 
             foreach (var transport in UnreliableTransports)
-            {
                 transport.InvokeStop();
-            }
+
+            foreach (var transport in StreamTransports)
+                transport.InvokeStop();
+
+            foreach (var transport in FileTransports)
+                transport.InvokeStop();
         }
 
         /// <summary>
@@ -858,5 +915,78 @@ namespace NetCore
             }
         }
         #endregion
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                              Protected Methods
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <summary>
+        /// Counts all transports (including duplicates).
+        /// </summary>
+        protected virtual int CountTransports()
+        {
+            lock (_lock) return ResilientTransports.Count
+                    + ReliableTransports.Count
+                    + NotifyTransports.Count
+                    + UnreliableTransports.Count
+                    + StreamTransports.Count
+                    + FileTransports.Count;
+        }
+
+        /// <summary>
+        /// Lists all transports in a newly created or rented array.
+        /// </summary>
+        /// <returns>All current transports.</returns>
+        protected virtual ITransport[] RentTransports()
+        {
+            lock (_lock)
+            {
+                // We cache transports inside the lock to avoid race conditions.
+                int total = CountTransports();
+                ITransport[] transports = ArrayPool<ITransport>.Shared.Rent(NextSize(total));
+                int position = 0;
+
+                foreach (var t in ResilientTransports)
+                    transports[position++] = t;
+
+                foreach (var t in ReliableTransports)
+                    transports[position++] = t;
+
+                foreach (var t in NotifyTransports)
+                    transports[position++] = t;
+
+                foreach (var t in UnreliableTransports)
+                    transports[position++] = t;
+
+                foreach (var t in StreamTransports)
+                    transports[position++] = t;
+
+                foreach (var t in FileTransports)
+                    transports[position++] = t;
+
+                return transports;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static int NextSize(int target)
+            {
+                const int Increment = 8;
+                const int IncrementTotalBits = 3;
+                return (target + Increment - 1) >> IncrementTotalBits;
+            }
+        }
+
+        /// <summary>
+        /// Releases an array, previously returned by <see cref="RentTransports"/> method.
+        /// </summary>
+        /// <param name="transports">Transports array to return.</param>
+        protected virtual void ReturnTransports(ITransport[] transports)
+        {
+            ArrayPool<ITransport>.Shared.Return(transports, clearArray: true);
+        }
     }
 }

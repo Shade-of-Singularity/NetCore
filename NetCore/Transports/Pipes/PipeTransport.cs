@@ -1,4 +1,4 @@
-﻿using System;
+﻿/*using System;
 using System.Runtime.InteropServices;
 
 namespace NetCore.Transports.Pipes
@@ -82,3 +82,4 @@ namespace NetCore.Transports.Pipes
         }
     }
 }
+*/
