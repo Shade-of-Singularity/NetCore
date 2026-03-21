@@ -21,5 +21,6 @@ namespace NetCore
     /// </summary>
     public abstract class SendingMode
     {
+
     }
 }

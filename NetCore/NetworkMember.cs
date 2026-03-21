@@ -272,6 +272,122 @@ namespace NetCore
         /// .                                               Public Methods
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        enum Operation : byte
+        {
+            None, Start, Stop, Restart,
+        }
+
+
+
+
+        private CancellationTokenSource? lastTokenSource;
+        private Operation lastOperation;
+        private UniTask lastTask;
+
+        protected UniTask StartOperation() => UniTask.CompletedTask;
+        public UniTask Start()
+        {
+            lock (_lock)
+            {
+                switch (lastOperation)
+                {
+                    case Operation.None: break;
+                    case Operation.Start: return lastTask; // Simply awaits an existing task.
+                    case Operation.Stop:
+                        
+                        break;
+
+                    case Operation.Restart: throw new Exception("Already processing an operation.");
+                    default: throw new SwitchExpressionException(lastOperation);
+                }
+
+                
+            }
+        }
+
+        protected UniTask StopOperation() => UniTask.CompletedTask;
+        public bool TryStart(out UniTask task)
+        {
+            lock (_lock)
+            {
+                if (lastOperation == Operation.None)
+                {
+                    task = Start();
+                    return true;
+                }
+
+                task = default;
+                return false;
+            }
+        }
+
+        public UniTask Stop()
+        {
+
+        }
+
+        public bool TryStop(out UniTask task)
+        {
+
+        }
+
+        public UniTask Restart()
+        {
+
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         /// <summary>
         /// Starts this <see cref="NetworkMember"/> using current <see cref="StartupArgs"/>.
         /// </summary>
