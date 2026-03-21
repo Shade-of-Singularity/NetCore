@@ -9,7 +9,7 @@ namespace NetCore
     /// Handler providing common arguments for a connection of an <see cref="NetworkMember"/>.
     /// </summary>
     /// <param name="args">Args to setup.</param>
-    public delegate void ConnectionArgsHandler(ConnectionArgs args);
+    public delegate void ConnectionArgsProvider(ConnectionArgs args);
 
     /// <summary>
     /// Connection args provided to <see cref="NetworkMember"/> for connecting to a remote host.

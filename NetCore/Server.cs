@@ -1,6 +1,7 @@
-﻿using NetCore.Transports;
+﻿using Cysharp.Threading.Tasks;
+using NetCore.Transports;
 using System;
-using System.Net;
+using System.Threading;
 
 namespace NetCore
 {
@@ -31,12 +32,12 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Starts a server and binds all registered transports to a provided <paramref name="localEndPoint"/> <see cref="IPEndPoint"/>.
+        /// Starts a server and binds all registered transports to a provided <see cref="StartupArgs.LocalIPEndPoint"/>.
         /// </summary>
         /// <inheritdoc/>
-        protected override bool StartOperation()
+        protected override async UniTask<bool> StartOperation(StartupArgs args, CancellationToken token)
         {
-            if (base.Start())
+            if (await base.StartOperation(args, token))
             {
                 Servers.Add(this);
                 return true;
@@ -49,10 +50,10 @@ namespace NetCore
         /// Disconnects all the players, stops the server, and unbinds all transports.
         /// </summary>
         /// <inheritdoc/>
-        public override void Stop()
+        protected override UniTask<bool> StopOperation(CancellationToken token)
         {
             Servers.Remove(this);
-            base.Stop();
+            return base.StopOperation(token);
         }
 
         #region Datagram Transporting
