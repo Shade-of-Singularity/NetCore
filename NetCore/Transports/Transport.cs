@@ -26,7 +26,7 @@ namespace NetCore.Transports
         /// <remarks>
         /// Override in your transport if you want it to block connection of other transports.
         /// </remarks>
-        public virtual bool ForceSyncedConnect => false;
+        public virtual bool SupportedConnectionAsyncModes => false;
 
         /// <inheritdoc/>
         public bool IsServerSide { get; private set; }

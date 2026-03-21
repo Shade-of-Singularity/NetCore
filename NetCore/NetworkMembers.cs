@@ -1,4 +1,7 @@
-﻿using System.Threading;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace NetCore
 {
@@ -12,7 +15,7 @@ namespace NetCore
         /// .                                              Static Properties
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        public static bool IsAnyActive => Interlocked.Read(ref m_ActiveNetworkMembers) > 0;
+        public static bool IsAnyActive => m_ActiveMembers.Count > 0;
 
 
 
@@ -22,7 +25,7 @@ namespace NetCore
         /// .                                               Private Fields
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        private static long m_ActiveNetworkMembers = 0;
+        private static readonly Dictionary<NetworkMember, bool> m_ActiveMembers = [];
 
 
 
@@ -33,13 +36,13 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Increments the amount of currently active <see cref="NetworkMember"/>s.
+        /// Lists given <see cref="NetworkMember"/> in the active members hash set.
         /// </summary>
-        public static void IncrementActiveMembers() => Interlocked.Increment(ref m_ActiveNetworkMembers);
-
+        public static void ListActiveMember(NetworkMember member) => m_ActiveMembers.TryAdd(member, default);
         /// <summary>
-        /// Decrements the amount of currently active <see cref="NetworkMember"/>s.
+        /// Delists given <see cref="NetworkMember"/> from the active members hash set.
         /// </summary>
-        public static void DecrementActiveMembers() => Interlocked.Decrement(ref m_ActiveNetworkMembers);
+        /// <param name="member"></param>
+        public static void DelistActiveMember(NetworkMember member) => m_ActiveMembers.Remove(member);
     }
 }

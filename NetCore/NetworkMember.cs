@@ -99,37 +99,25 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Whether this <see cref="NetworkMember"/> was started using <see cref="Start(CancellationToken)"/> method.
+        /// Current state of the <see cref="NetworkMember"/>.
         /// </summary>
-        public bool IsStarted
+        public StartState StartState
         {
             get
             {
-                lock (_lock) return m_IsStarted;
+                lock (_lock) return m_StartState;
             }
         }
         /// <summary>
-        /// Whether this <see cref="NetworkMember"/> is attempting to connect or is connected to a remote host.
+        /// Current state of connection.
         /// </summary>
-        public bool IsActive
+        public ConnectionState ConnectionState
         {
             get
             {
-                lock (_lock) return m_IsActive;
+                lock (_lock) return m_ConnectionState;
             }
         }
-        /// <summary>
-        /// Whether any <see cref="ITransport"/> of this <see cref="NetworkMember"/> is connected to the remote host.
-        /// With <see cref="Server"/> - it indicates if <see cref="Server"/> is connected to the relay point.
-        /// </summary>
-        public bool IsConnected
-        {
-            get
-            {
-                lock (_lock) return m_ConnectedTransportsCount > 0;
-            }
-        }
-
         /// <summary>
         /// Arguments that were used to start this <see cref="NetworkMember"/>, in a read-only form.
         /// </summary>
@@ -143,28 +131,32 @@ namespace NetCore
         /// </summary>
         public ConnectionIDProvider ConnectionIDProvider => m_ConnectionIDProvider;
         /// <summary>
-        /// If enabled - allows starting multiple transports at once, using async execution.
+        /// Which async mode to use when <see cref="Start(StartupArgsProvider?, bool)"/> is called.
+        /// <see cref="AsyncMode.AsyncSingleThreaded"/> and <see cref="AsyncMode.AsyncMultiThreaded"/>
+        /// allow starting multiple transports at once.
         /// </summary>
         /// <remarks>
-        /// Behavior can be overridden with <see cref="ITransport.ForceSyncedStart"/>.
+        /// Behavior can be overridden with <see cref="ITransport.SupportedStartAsyncModes"/>.
         /// </remarks>
-        public bool UseAsyncStart
+        public AsyncMode UseAsyncStart
         {
-            get => false;
+            get => AsyncMode.Synced;
             set
             {
                 lock (_lock) throw new NotImplementedException();
             }
         }
         /// <summary>
-        /// If enabled - allows connecting multiple transports at once, using async execution.
+        /// Which async mode to use when <see cref="Connect(ConnectionArgsHandler?, bool)"/> is called.
+        /// <see cref="AsyncMode.AsyncSingleThreaded"/> and <see cref="AsyncMode.AsyncMultiThreaded"/>
+        /// allow connecting multiple transports at once.
         /// </summary>
         /// <remarks>
-        /// Behavior can be overridden with <see cref="ITransport.ForceSyncedConnect"/>.
+        /// Behavior can be overridden with <see cref="ITransport.SupportedConnectionAsyncModes"/>.
         /// </remarks>
-        public bool UseAsyncConnect
+        public AsyncMode UseAsyncConnect
         {
-            get => false;
+            get => AsyncMode.Synced;
             set
             {
                 lock (_lock) throw new NotImplementedException();
@@ -246,20 +238,18 @@ namespace NetCore
         /// Provider for Connection IDs.
         /// </summary>
         private readonly ConnectionIDProvider m_ConnectionIDProvider = new();
+        /// <inheritdoc cref="StartState"/>
+        private StartState m_StartState;
+        /// <inheritdoc cref="ConnectionState"/>
+        private ConnectionState m_ConnectionState;
         /// <summary>
-        /// Cancellation token source for cancelling current startup state.
-        /// Introduced on <see cref="Start(StartupArgsProvider)"/> call.
+        /// Token for current operation.
         /// </summary>
-        private CancellationTokenSource? m_StartupOperation;
+        private CancellationTokenSource? m_LastTokenSource;
         /// <summary>
-        /// Cancellation token source for cancelling current connection.
-        /// Introduced on <see cref="Connect(ConnectionArgsHandler)"/> call.
+        /// Handle for current operation.
         /// </summary>
-        private CancellationTokenSource? m_ConnectionOperation;
-        /// <inheritdoc cref="IsStarted"/>
-        private bool m_IsStarted;
-        /// <inheritdoc cref="IsActive"/>
-        private bool m_IsActive;
+        private UniTask<bool> m_LastOperation;
 
 
 
@@ -285,32 +275,41 @@ namespace NetCore
         /// <summary>
         /// Starts this <see cref="NetworkMember"/> using current <see cref="StartupArgs"/>.
         /// </summary>
+        /// <param name="args">Args to provide to the <see cref="ITransport"/>s.</param>
+        /// <param name="token">Token for cancelling this starting operation.</param>
         /// <returns>
         /// <c>true</c> if started successfully.
         /// <c>false</c> if couldn't start (reasons: invalid end-points, custom errors from transports, etc).
         /// </returns>
-        protected virtual async UniTask<bool> Start(StartupArgs args, CancellationToken token)
+        protected virtual async UniTask<bool> StartOperation(StartupArgs args, CancellationToken token)
         {
-            ITransport[] transports = RentTransports();
+            ITransport[] transports = RentTransports(out int total);
 
-            int index = 0;
-            for (; index < transports.Length; index++)
+            try
             {
-                if (token.IsCancellationRequested) return false;
-                if (!await transports[index].InvokeStart(args, token))
-                    goto ResetState;
+                int index = 0;
+                for (; index < total; index++)
+                {
+                    // Transports manage their own cancellation token.
+                    if (token.IsCancellationRequested || !await transports[index].InvokeStart(args))
+                        goto ResetState;
+                }
+
+                return true;
+
+                ResetState: // Stops active transports to release resources.
+                index--; // Failed transport skipped - it will automatically stop itself.
+                for (; index >= 0; index--)
+                {
+                    transports[index].InvokeStop();
+                }
+
+                return false;
             }
-
-            return true;
-
-            ResetState: // Stops active transports to release resources.
-            index--; // Failed transport skipped - it will automatically stop itself.
-            for (; index >= 0; index--)
+            finally
             {
-                transports[index].InvokeStop();
+                ReturnTransports(transports);
             }
-
-            return false;
         }
 
         /// <summary>
@@ -320,36 +319,69 @@ namespace NetCore
         /// Binds all registered <see cref="ITransport"/>s to an <see cref="StartupArgs.LocalIPEndPoint"/> and marks instance as active.
         /// </remarks>
         /// <param name="provider">Handler modifying provided <see cref="StartupArgs"/>.</param>
+        /// <param name="clear">
+        /// Whether to clear <see cref="StartupArgs"/> from a previous session
+        /// before passing them to <paramref name="provider"/>.
+        /// </param>
         /// <returns>
         /// <c>true</c> if started successfully.
         /// <c>false</c> if couldn't start (reasons: invalid end-points, custom errors from transports, etc).
         /// </returns>
-        public async UniTask<bool> Start(StartupArgsProvider provider)
+        public async UniTask<bool> Start(StartupArgsProvider? provider, bool clear = true)
         {
+            UniTask<bool> last;
+            CancellationTokenSource source;
+            lock (_lock)
+            {
+                if (m_LastTokenSource is not null)
+                {
+                    m_LastTokenSource.Cancel();
+                    m_LastTokenSource.Dispose();
+                    last = m_LastOperation;
+                }
+                else
+                {
+                    last = UniTask.FromResult(false);
+                }
+
+                m_LastTokenSource = source = new();
+            }
+
+            if (Settings.UseConcurrentProtections)
+            {
+                await UniTask.Yield();
+            }
+
             UniTask<bool> start;
             lock (_lock)
             {
-                if (m_IsStarted)
+                switch (m_StartState)
                 {
-                    throw new Exception($"{GetType().Name} was already started!");
+                    case StartState.Stopped: break;
+                    case StartState.Starting: throw new NetworkMemberStateException($"{GetType().Name} is already starting.");
+                    case StartState.Started: throw new NetworkMemberStateException($"{GetType().Name} has already started.");
+                    case StartState.Stopping: throw new NetworkMemberStateException($"{GetType().Name} cannot start - member is currently stopping.");
+                    default: throw new SwitchExpressionException(m_StartState);
                 }
 
-                m_StartupOperation = new();
-                m_StartupArgs.Clear();
-                provider(m_StartupArgs);
-                start = Start(m_StartupArgs, m_StartupOperation.Token);
+                if (clear) m_StartupArgs.Clear();
+                provider?.Invoke(m_StartupArgs);
+
+                m_StartState = StartState.Starting;
+                m_LastOperation = start = Create(this, 
+                    static (member, token) => member.StartOperation(member.m_StartupArgs, token),
+                    source.Token).Preserve();
+                NetworkMembers.ListActiveMember(this);
             }
 
+            try { await last; }
+            catch { } // Exception will be logged by the original caller.
+
+            bool result = false;
             try
             {
-                if (await start)
-                {
-                    lock (_lock)
-                    {
-                        NetworkMembers.IncrementActiveMembers();
-                        return true;
-                    }
-                }
+                result = await start && !source.IsCancellationRequested;
+                return result;
             }
             catch (Exception ex)
             {
@@ -357,9 +389,21 @@ namespace NetCore
                 Console.ForegroundColor = ConsoleColor.DarkCyan;
                 Console.WriteLine(ex); // TODO: Implement logger from ServiceCore.
                 Console.ForegroundColor = color;
+                return false;
             }
+            finally
+            {
+                lock (_lock)
+                {
+                    m_StartState = result ? StartState.Started : StartState.Stopped;
 
-            return false;
+                    if (ReferenceEquals(m_LastTokenSource, source))
+                    {
+                        m_LastTokenSource.Dispose();
+                        m_LastTokenSource = null;
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -369,25 +413,103 @@ namespace NetCore
         /// <c>true</c> if started successfully.
         /// <c>false</c> if couldn't start (reasons: invalid endPoint, custom errors from transports, etc).
         /// </returns>
-        public UniTask<bool> Restart()
+        /// TODO: Make restart more reliable under concurrency.
+        public async UniTask<bool> Restart()
         {
+            UniTask<bool> last;
+            CancellationTokenSource source;
             lock (_lock)
             {
-                if (m_IsStarted)
+                if (m_LastTokenSource is not null)
                 {
-                    Stop();
+                    m_LastTokenSource.Cancel();
+                    m_LastTokenSource.Dispose();
+                    last = m_LastOperation;
+                }
+                else
+                {
+                    last = UniTask.FromResult(false);
                 }
 
-                if (m_StartupOperation is not null)
-                {
-                    m_StartupOperation.Cancel();
-                    m_StartupOperation.Dispose();
-                    m_StartupOperation = null;
-                }
-
-                m_StartupOperation = new();
-                return Start(m_StartupArgs, m_StartupOperation.Token);
+                m_LastTokenSource = source = new();
+                m_LastOperation = default;
             }
+
+            // TODO: Move protection to the outside of a lock, and unite two lock blocks.
+            if (Settings.UseConcurrentProtections)
+            {
+                await UniTask.Yield();
+            }
+
+            bool doStop;
+            lock (_lock)
+            {
+                doStop = m_StartState switch
+                {
+                    StartState.Starting or StartState.Started => true,
+                    _ => false,
+                };
+            }
+
+            try { await last; }
+            catch { } // Exception will be logged by the original caller.
+
+            try
+            {
+                if (doStop) await Stop();
+                return await Start(null, clear: true);
+            }
+            catch (Exception ex)
+            {
+                var color = Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                Console.WriteLine(ex); // TODO: Implement logger from ServiceCore.
+                Console.ForegroundColor = color;
+                return false;
+            }
+
+            /*
+            UniTask<bool> start;
+            UniTask<bool> stop = default;
+            UniTask<bool> last = default;
+            lock (_lock)
+            {
+                switch (m_StartState)
+                {
+                    case StartState.Stopped: break;
+                    case StartState.Started: stop = Stop(); break;
+
+                    case StartState.Starting: throw new NetworkMemberStateException($"Cannot restart {GetType().Name} while it is starting.");
+                    case StartState.Stopping: throw new NetworkMemberStateException($"Cannot restart {GetType().Name} while it is stopping.");
+                    default: throw new SwitchExpressionException(m_StartState);
+                }
+
+                // Registers last operation to wait until it is stopped on cancellation.
+                if (m_OperationToken is not null)
+                {
+                    m_OperationToken.Cancel();
+                    m_OperationToken.Dispose();
+                    m_OperationToken = null;
+                }
+                last = m_OperationHandle;
+                m_OperationHandle = default;
+
+                start = Start(null, clear: false);
+            }
+
+            try
+            {
+                await last;
+                return await start;
+            }
+            catch (Exception ex)
+            {
+                var color = Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                Console.WriteLine(ex); // TODO: Implement logger from ServiceCore.
+                Console.ForegroundColor = color;
+                return false;
+            }*/
         }
 
         /// <summary>
@@ -400,42 +522,35 @@ namespace NetCore
         /// <c>false</c> if couldn't start (reasons: invalid end-points, custom errors from transports, etc).
         /// </param>
         /// <returns>
-        /// <c>true</c> if <see cref="Start(StartupArgsProvider)"/> was run and <paramref name="task"/> was provided.
+        /// <c>true</c> if <see cref="Start(StartupArgsProvider?, bool)"/> was run and <paramref name="task"/> was provided.
         /// <c>false</c> if <see cref="NetworkMember"/> was already started.
         /// </returns>
-        /// <inheritdoc cref="Start(StartupArgsProvider)"/>
+        /// <inheritdoc cref="Start(StartupArgsProvider?, bool)"/>
         public bool TryStart(out UniTask<bool> task, StartupArgsProvider handler)
         {
             lock (_lock)
             {
-                if (m_IsStarted)
+                switch (m_StartState)
                 {
-                    task = UniTask.FromResult(false);
-                    return false;
-                }
+                    case StartState.Stopped: task = Start(handler, clear: false); return true;
 
-                task = Start(handler);
-                return true;
+                    case StartState.Starting:
+                    case StartState.Started:
+                    case StartState.Stopping: task = default; return false;
+                    default: throw new SwitchExpressionException(m_StartState);
+                }
             }
         }
 
         /// <summary>
-        /// Unbinds and stops all registered <see cref="ITransport"/>s and marks instance as inactive.
+        /// Actual stop operation. Stops all registered transports.
         /// </summary>
-        public virtual void Stop()
+        /// <returns>
+        /// Always <c>true</c>, since we don't bother about success with a stop method.
+        /// </returns>
+        protected virtual UniTask<bool> StopOperation(CancellationToken token)
         {
-            lock (_lock)
-            {
-                if (IsStarted)
-                {
-                    StopInternal();
-                    NetworkMembers.DecrementActiveMembers();
-                }
-            }
-        }
-
-        private void StopInternal()
-        {
+            // Success result is ignored, as we are simply resetting the state.
             foreach (var transport in ResilientTransports)
                 transport.InvokeStop();
 
@@ -453,6 +568,99 @@ namespace NetCore
 
             foreach (var transport in FileTransports)
                 transport.InvokeStop();
+
+            return UniTask.FromResult(true);
+        }
+
+        /// <summary>
+        /// Unbinds and stops all registered <see cref="ITransport"/>s and marks instance as inactive.
+        /// </summary>
+        /// <returns>
+        /// <c>true</c> if started stopped.
+        /// <c>false</c> if couldn't stop, likely due to exceptions from transports, or if stop operation was cancelled.
+        /// </returns>
+        public virtual async UniTask<bool> Stop()
+        {
+            UniTask<bool> last;
+            CancellationTokenSource source;
+            lock (_lock)
+            {
+                if (m_LastTokenSource is not null)
+                {
+                    m_LastTokenSource.Cancel();
+                    m_LastTokenSource.Dispose();
+                    last = m_LastOperation;
+                }
+                else
+                {
+                    last = UniTask.FromResult(false);
+                }
+
+                m_LastTokenSource = source = new();
+                m_LastOperation = default;
+            }
+
+            // TODO: Move protection to the outside of a lock, and unite two lock blocks.
+            if (Settings.UseConcurrentProtections)
+            {
+                await UniTask.Yield();
+            }
+
+            UniTask<bool> stop;
+            lock (_lock)
+            {
+                switch (m_StartState)
+                {
+                    case StartState.Starting:
+                    case StartState.Started: break;
+
+                    case StartState.Stopped: throw new NetworkMemberStateException($"{GetType().Name} was already stopped.");
+                    case StartState.Stopping: throw new NetworkMemberStateException($"{GetType().Name} is already stopping.");
+                    default: throw new SwitchExpressionException(m_StartState);
+                }
+
+                // Begins stopping the member.
+                m_StartState = StartState.Stopping;
+                m_LastOperation = stop = Create(this,
+                    static (member, token) => member.StopOperation(token),
+                    source.Token).Preserve();
+            }
+
+            try { await last; }
+            catch { } // Exception will be logged by the original caller.
+
+            bool result = false;
+            try
+            {
+                result = await stop && !source.IsCancellationRequested;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                var color = Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                Console.WriteLine(ex); // TODO: Implement logger from ServiceCore.
+                Console.ForegroundColor = color;
+                return false;
+            }
+            finally
+            {
+                lock (_lock)
+                {
+                    if (result)
+                    {
+                        m_StartState = StartState.Stopped;
+                    }
+
+                    NetworkMembers.DelistActiveMember(this);
+                    if (ReferenceEquals(m_LastTokenSource, source))
+                    {
+                        m_LastTokenSource.Cancel();
+                        m_LastTokenSource.Dispose();
+                        m_LastTokenSource = null;
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -941,12 +1149,12 @@ namespace NetCore
         /// Lists all transports in a newly created or rented array.
         /// </summary>
         /// <returns>All current transports.</returns>
-        protected virtual ITransport[] RentTransports()
+        protected virtual ITransport[] RentTransports(out int total)
         {
             lock (_lock)
             {
                 // We cache transports inside the lock to avoid race conditions.
-                int total = CountTransports();
+                total = CountTransports();
                 ITransport[] transports = ArrayPool<ITransport>.Shared.Rent(NextSize(total));
                 int position = 0;
 
@@ -986,7 +1194,24 @@ namespace NetCore
         /// <param name="transports">Transports array to return.</param>
         protected virtual void ReturnTransports(ITransport[] transports)
         {
+            if (transports is null)
+                return;
+
             ArrayPool<ITransport>.Shared.Return(transports, clearArray: true);
+        }
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                               Private Methods
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        private static UniTask<TResult> Create<TState, TResult>(
+            TState state, Func<TState, CancellationToken, UniTask<TResult>> factory, CancellationToken token)
+        {
+            return factory(state, token);
         }
     }
 }

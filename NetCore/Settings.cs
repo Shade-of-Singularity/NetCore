@@ -88,6 +88,29 @@ namespace NetCore
             get => false;
             set => throw new NotImplementedException();
         }
+        /// <summary>
+        /// <para>(Default: true)</para>
+        /// Enables protections and delays, useful when <see cref="NetworkMember"/> and <see cref="ITransport"/>s
+        /// are accessed from multiple threads, or very frequently within one thread.
+        /// </summary>
+        /// <remarks>
+        /// When protections are enabled - system will use <see cref="Cysharp.Threading.Tasks.UniTask.Yield"/>
+        /// on some calls which return tasks to await (e.g. <see cref="NetworkMember.Start(StartupArgsProvider?, bool)"/>).
+        /// If another thread accesses the same <see cref="NetworkMember"/>
+        /// - small delay the yield produces make system register only the latter method.
+        /// <para>
+        /// If protections are disabled - there will be no small delays when you call those methods.
+        /// However, it will result in higher resource usage and potential instability if accessed from multiple threads,
+        /// of from a single thread but extremely frequently.
+        /// </para>
+        /// Delays yield methods introduce are very small (usually at max ~0.017s),
+        /// so it is recommended to always keep this option enabled.
+        /// </remarks>
+        public static bool UseConcurrentProtections
+        {
+            get => m_ConcurrentProtections;
+            set => m_ConcurrentProtections = false;
+        }
 
 
 
@@ -97,9 +120,10 @@ namespace NetCore
         /// .                                               Private Fields
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        static int m_MaxUnreliablePacketSize = 1024 * 16; // 16 KB.
-        static int m_MaxReliablePacketSize = 1024 * 1024; // 1 MB
-        static int m_BufferSizeIncrement = 2048; // 2 KB.
+        static volatile int m_MaxUnreliablePacketSize = 1024 * 16; // 16 KB.
+        static volatile int m_MaxReliablePacketSize = 1024 * 1024; // 1 MB
+        static volatile int m_BufferSizeIncrement = 2048; // 2 KB.
+        static volatile bool m_ConcurrentProtections = true;
         //static bool m_SynchronizeHeaders = false;
     }
 }

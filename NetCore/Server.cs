@@ -34,7 +34,7 @@ namespace NetCore
         /// Starts a server and binds all registered transports to a provided <paramref name="localEndPoint"/> <see cref="IPEndPoint"/>.
         /// </summary>
         /// <inheritdoc/>
-        protected override bool Start()
+        protected override bool StartOperation()
         {
             if (base.Start())
             {

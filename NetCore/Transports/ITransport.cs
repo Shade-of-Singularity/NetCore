@@ -18,17 +18,19 @@ namespace NetCore.Transports
     public interface ITransport
     {
         /// <summary>
-        /// Whether <see cref="InvokeStart(IReadOnlyStartupArgs, CancellationToken)"/> is blocking async initialization.
-        /// <para>If <c>true</c> - will halt starting of other transports until this one returns.</para>
-        /// <para>If <c>false</c> - will asynchronously start all non-blocking transports until another one is found in a sequence.</para>
+        /// Which <see cref="AsyncMode"/>s does <see cref="InvokeStart"/> supports.
         /// </summary>
-        public bool ForceSyncedStart { get; }
+        /// <remarks>
+        /// <see cref="AsyncMode.Synced"/> assumed to be always supported.
+        /// </remarks>
+        public AsyncMode SupportedStartAsyncModes { get; }
         /// <summary>
-        /// Whether <see cref="InvokeConnect(IReadOnlyConnectionArgs, CancellationToken)"/> is blocking async initialization.
-        /// <para>If <c>true</c> - will halt connecting of other transports until this one returns.</para>
-        /// <para>If <c>false</c> - will asynchronously start all non-blocking transports until another one is found in a sequence.</para>
+        /// Which <see cref="AsyncMode"/>s does <see cref="InvokeConnect"/> supports.
         /// </summary>
-        public bool ForceSyncedConnect { get; }
+        /// <remarks>
+        /// <see cref="AsyncMode.Synced"/> assumed to be always supported.
+        /// </remarks>
+        public AsyncMode SupportedConnectionAsyncModes { get; }
         /// <summary>
         /// Whether this transport right now used as server-side (true) or client-side (false) transport.
         /// </summary>
@@ -54,13 +56,25 @@ namespace NetCore.Transports
         /// </summary>
         public bool IsInitialized { get; protected set; }
         /// <summary>
-        /// Whether this <see cref="ITransport"/> was activated with <see cref="Start"/> or not.
+        /// Current activation state of this instance.
         /// </summary>
-        public bool IsStarted { get; protected set; }
+        public StartState StartState { get; protected set; }
         /// <summary>
-        /// Whether this <see cref="ITransport"/> was requested to connect to anything with <see cref="Connect"/> or not.
+        /// Current connection state of this instance.
         /// </summary>
-        public bool IsActive { get; protected set; }
+        public ConnectionState ConnectionState { get; protected set; }
+        /// <summary>
+        /// Lock object used in case of concurrent interactions with this <see cref="ITransport"/>.
+        /// </summary>
+        protected object Lock { get; }
+        /// <summary>
+        /// Token source used to cancel currently running <see cref="InvokeStart"/> or <see cref="InvokeConnect"/> operations.
+        /// </summary>
+        protected CancellationTokenSource? LastTokenSource { get; set; }
+        /// <summary>
+        /// Last operation - either <see cref="InvokeStart"/> or <see cref="InvokeConnect"/> which is currently running.
+        /// </summary>
+        protected UniTask LastOperation { get; set; }
         /// <summary>
         /// Initializes the <see cref="ITransport"/>.
         /// Called when transport is registered in a <see cref="NetworkMember"/>.
@@ -72,40 +86,51 @@ namespace NetCore.Transports
         /// </returns>
         public bool InvokeInitialize(NetworkMember member)
         {
-            if (!IsInitialized)
+            lock (Lock)
             {
-                try
+                if (!IsInitialized)
                 {
-                    Initialize(member);
-                }
-                catch (Exception exception)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    if (exception is SocketException se)
-                        Console.WriteLine($"SocketException Code: {se.ErrorCode}");
-                    Console.WriteLine(exception);
-                    Console.ForegroundColor = ConsoleColor.White;
+                    if (LastTokenSource is not null)
+                    {
+                        LastTokenSource.Cancel();
+                        LastTokenSource.Dispose();
+                        LastTokenSource = null;
+                        LastOperation = default;
+                    }
 
                     try
                     {
-                        Terminate(member);
+                        Initialize(member);
                     }
-                    catch (Exception inner)
+                    catch (Exception exception)
                     {
-                        Console.ForegroundColor = ConsoleColor.DarkRed;
-                        if (exception is SocketException se2)
-                            Console.WriteLine($"SocketException Code: {se2.ErrorCode}");
-                        Console.WriteLine(inner);
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        if (exception is SocketException se)
+                            Console.WriteLine($"SocketException Code: {se.ErrorCode}");
+                        Console.WriteLine(exception);
                         Console.ForegroundColor = ConsoleColor.White;
+
+                        try
+                        {
+                            Terminate(member);
+                        }
+                        catch (Exception inner)
+                        {
+                            Console.ForegroundColor = ConsoleColor.DarkRed;
+                            if (exception is SocketException se2)
+                                Console.WriteLine($"SocketException Code: {se2.ErrorCode}");
+                            Console.WriteLine(inner);
+                            Console.ForegroundColor = ConsoleColor.White;
+                        }
+
+                        return false;
                     }
 
-                    return false;
+                    IsInitialized = true;
                 }
 
-                IsInitialized = true;
+                return true;
             }
-
-            return true;
         }
 
         /// <summary>
@@ -119,26 +144,37 @@ namespace NetCore.Transports
         /// </returns>
         public bool InvokeTerminate(NetworkMember member)
         {
-            if (IsInitialized && Holder == member)
+            lock (Lock)
             {
-                try
+                if (IsInitialized && Holder == member)
                 {
-                    Terminate(member);
-                }
-                catch (Exception exception)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    if (exception is SocketException se)
-                        Console.WriteLine($"SocketException Code: {se.ErrorCode}");
-                    Console.WriteLine(exception);
-                    Console.ForegroundColor = ConsoleColor.White;
-                    return false;
+                    if (LastTokenSource is not null)
+                    {
+                        LastTokenSource.Cancel();
+                        LastTokenSource.Dispose();
+                        LastTokenSource = null;
+                        LastOperation = default;
+                    }
+
+                    try
+                    {
+                        Terminate(member);
+                    }
+                    catch (Exception exception)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        if (exception is SocketException se)
+                            Console.WriteLine($"SocketException Code: {se.ErrorCode}");
+                        Console.WriteLine(exception);
+                        Console.ForegroundColor = ConsoleColor.White;
+                        return false;
+                    }
+
+                    IsInitialized = false;
                 }
 
-                IsInitialized = false;
+                return true;
             }
-
-            return true;
         }
 
         /// <summary>
@@ -146,52 +182,57 @@ namespace NetCore.Transports
         /// Transports which rely on UID, like SteamNetworking UDP transport, can choose to use a different port than a provided one.
         /// </summary>
         /// <param name="args"><see cref="IReadOnlyStartupArgs"/> to use for setting up the transport.</param>
-        /// <param name="token">Token to cancel a start operation.</param>
         /// <returns>
         /// <c>true</c> if started successfully.
         /// <c>false</c> if operation cancelled or any issues appeared at starting (see console for more info).
         /// </returns>
-        public async UniTask<bool> InvokeStart(IReadOnlyStartupArgs args, CancellationToken token = default)
+        public async UniTask<bool> InvokeStart(IReadOnlyStartupArgs args)
         {
-            if (token.IsCancellationRequested)
+            lock (Lock)
             {
-                return false;
-            }
-
-            if (!IsStarted)
-            {
-                try
+                switch (StartState)
                 {
-                    await Start(args, token);
+                    case StartState.Stopped: break;
+                    case StartState.Starting: throw new Exception($"Cannot start ({GetType().Name}) transport while it is starting.");
+                    case StartState.Started: throw new Exception($"Cannot start ({GetType().Name}) transport since it is already started.");
+                    case StartState.Stopping: throw new Exception($"Cannot start ({GetType().Name}) transport while it is stopping.");
                 }
-                catch (Exception exception)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    if (exception is SocketException se)
-                        Console.WriteLine($"SocketException Code: {se.ErrorCode}");
-                    Console.WriteLine(exception);
-                    Console.ForegroundColor = ConsoleColor.White;
 
+                if (!IsStarted)
+                {
                     try
                     {
-                        Stop();
+                        await Start(args, token);
                     }
-                    catch (Exception inner)
+                    catch (Exception exception)
                     {
-                        Console.ForegroundColor = ConsoleColor.DarkRed;
-                        if (exception is SocketException se2)
-                            Console.WriteLine($"SocketException Code: {se2.ErrorCode}");
-                        Console.WriteLine(inner);
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        if (exception is SocketException se)
+                            Console.WriteLine($"SocketException Code: {se.ErrorCode}");
+                        Console.WriteLine(exception);
                         Console.ForegroundColor = ConsoleColor.White;
+
+                        try
+                        {
+                            Stop();
+                        }
+                        catch (Exception inner)
+                        {
+                            Console.ForegroundColor = ConsoleColor.DarkRed;
+                            if (exception is SocketException se2)
+                                Console.WriteLine($"SocketException Code: {se2.ErrorCode}");
+                            Console.WriteLine(inner);
+                            Console.ForegroundColor = ConsoleColor.White;
+                        }
+
+                        return false;
                     }
 
-                    return false;
+                    IsStarted = true;
                 }
 
-                IsStarted = true;
+                return true;
             }
-
-            return true;
         }
 
         /// <summary>

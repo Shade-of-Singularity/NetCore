@@ -188,14 +188,14 @@ namespace NetCore
         {
             if (NetworkMembers.IsAnyActive)
             {
-                throw new Exception($"Cannot define new headers after any {nameof(NetworkMember)} were started! HeaderHelpers: {typeof(T).Name}");
+                throw new Exception($"Cannot define new headers after any {nameof(NetworkMember)} were started! Header: {typeof(T).Name}");
             }
 
             lock (_lock)
             {
                 if (Registrar<T>.IsRegistered)
                 {
-                    throw new Exception($"Cannot register a header twice! HeaderHelpers: {typeof(T).Name}");
+                    throw new Exception($"Cannot register a header twice! Header: {typeof(T).Name}");
                 }
 
                 // Fetches info about header position in flags and content.

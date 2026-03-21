@@ -31,7 +31,7 @@ namespace NetCore
         /// </summary>
         protected virtual void IncrementConnectedTransports()
         {
-            checked { m_ConnectedTransportsCount++; }
+            lock (_lock) checked { m_ConnectedTransportsCount++; }
         }
 
         void INetworkMemberStatistics.DecrementConnectedTransports() => DecrementConnectedTransports();
@@ -41,7 +41,7 @@ namespace NetCore
         /// </summary>
         protected virtual void DecrementConnectedTransports()
         {
-            checked { m_ConnectedTransportsCount--; }
+            lock (_lock) checked { m_ConnectedTransportsCount--; }
         }
     }
 }
