@@ -70,9 +70,9 @@ namespace NetCore
     /// TODO: Add a way to map connections, arrived from different transports
     ///  to either one connection (TCP+UDP to one)
     ///  or to multiple(UDP + SteamUDP to separate).
-    /// Note: Maybe instead of declaring all <see cref="HashLists"/> we can simply use <see cref="HashList{TBase}"/> for <see cref="HashLists"/>?
-    ///  It will require rewriting <see cref="HashList{TBase}"/> to return "ref TBase" items instead of simply items,
-    ///  but besides not being sure where to declare new <see cref="HashLists"/> to then take a reference from - I don't see much issues.
+    /// Note: Maybe instead of declaring all <see cref="QuickLists"/> we can simply use <see cref="QuickList{TBase}"/> for <see cref="QuickLists"/>?
+    ///  It will require rewriting <see cref="QuickList{TBase}"/> to return "ref TBase" items instead of simply items,
+    ///  but besides not being sure where to declare new <see cref="QuickLists"/> to then take a reference from - I don't see much issues.
     ///  It will make code twice as slow, but will reduce memory usage.
     ///  I'm alright with how things are right now though - allocating 6 arrays with 2 items + 24 bytes per list it's not much:
     ///  = 240 bytes.
@@ -89,7 +89,7 @@ namespace NetCore
         /// <see cref="Transports.Unix.UnixTransport"/> and <see cref="Transports.Special.TCPUDPTransport"/>s (or others).
         /// </summary>
         public const int DefaultInitialTransportCapacity = 2;
-
+        readonly Client client;
 
 
 
@@ -177,42 +177,42 @@ namespace NetCore
         /// <remarks>
         /// Not readonly to support mutation in registration methods.
         /// </remarks>
-        protected HashList<IResilientTransport> ResilientTransports = new(transports);
+        protected QuickList<IResilientTransport> ResilientTransports = new(transports);
         /// <summary>
         /// Dictionary with all <see cref="IReliableTransport"/>s this <see cref="NetworkMember"/> can use.
         /// </summary>
         /// <remarks>
         /// Not readonly to support mutation in registration methods.
         /// </remarks>
-        protected HashList<IReliableTransport> ReliableTransports = new(transports);
+        protected QuickList<IReliableTransport> ReliableTransports = new(transports);
         /// <summary>
-        /// Dictionary with all <see cref="INotifyTransport"/>s this <see cref="NetworkMember"/> can use.
+        /// Dictionary with all <see cref="ISequentialTransport"/>s this <see cref="NetworkMember"/> can use.
         /// </summary>
         /// <remarks>
         /// Not readonly to support mutation in registration methods.
         /// </remarks>
-        protected HashList<INotifyTransport> NotifyTransports = new(transports);
+        protected QuickList<ISequentialTransport> SequentialTransports = new(transports);
         /// <summary>
         /// Dictionary with all <see cref="IUnreliableTransport"/>s this <see cref="NetworkMember"/> can use.
         /// </summary>
         /// <remarks>
         /// Not readonly to support mutation in registration methods.
         /// </remarks>
-        protected HashList<IUnreliableTransport> UnreliableTransports = new(transports);
+        protected QuickList<IUnreliableTransport> UnreliableTransports = new(transports);
         /// <summary>
         /// Dictionary with all <see cref="IStreamTransport"/>s this <see cref="NetworkMember"/> can use.
         /// </summary>
         /// <remarks>
         /// Not readonly to support mutation in registration methods.
         /// </remarks>
-        protected HashList<IStreamTransport> StreamTransports = new(transports);
+        protected QuickList<IStreamTransport> StreamTransports = new(transports);
         /// <summary>
         /// Dictionary with all <see cref="IStreamTransport"/>s this <see cref="NetworkMember"/> can use.
         /// </summary>
         /// <remarks>
         /// Not readonly to support mutation in registration methods.
         /// </remarks>
-        protected HashList<IFileTransport> FileTransports = new(transports);
+        protected QuickList<IFileTransport> FileTransports = new(transports);
         /// <summary>
         /// Arguments used to start this <see cref="NetworkMember"/>.
         /// </summary>
@@ -272,7 +272,6 @@ namespace NetCore
         /// .                                               Public Methods
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        
 
 
 
@@ -290,6 +289,7 @@ namespace NetCore
 
 
 
+        /*
 
 
         enum Operation : byte
@@ -364,7 +364,7 @@ namespace NetCore
 
 
 
-
+        */
 
 
 
@@ -733,7 +733,7 @@ namespace NetCore
                 foreach (var transport in ReliableTransports)
                     transport.InvokeStop();
 
-                foreach (var transport in NotifyTransports)
+                foreach (var transport in SequentialTransports)
                     transport.InvokeStop();
 
                 foreach (var transport in UnreliableTransports)
@@ -1241,7 +1241,7 @@ namespace NetCore
                 foreach (var transport in ReliableTransports)
                     transport.InvokeStop();
 
-                foreach (var transport in NotifyTransports)
+                foreach (var transport in SequentialTransports)
                     transport.InvokeStop();
 
                 foreach (var transport in UnreliableTransports)
@@ -1365,57 +1365,48 @@ namespace NetCore
             }
         }
 
-        #region Reliable transport registration/removal.
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                            Transport Management
+        /// .                  TODO: Only terminate transport if it was removed from ALL other storages.
+        /// .       Note: this might be easier to resolve if we provide custom storage solution, allowing for filtering.
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        #region General transport management
         /// <summary>
-        /// Registers reliable transport.
+        /// Registers transport under all <see cref="SendingMode"/>s.
         /// </summary>
-        /// Note: Consider adding explicitly reliable-ordered and reliable-unordered.
-        ///  Those can be already provided using TCP and UDP transport, but they will need a specific flag to differentiate which mode to use.
-        public void RegisterReliableTransport<T>(T transport) where T : class, IReliableTransport
+        public void RegisterGeneralTransport<TTransport>(TTransport transport) where TTransport : class,
+            IResilientTransport, ISequentialTransport, IUnreliableTransport, IReliableTransport
         {
-            if (typeof(T) == typeof(IReliableTransport))
+            if (typeof(TTransport) == typeof(IUnreliableTransport))
             {
                 throw new ArgumentException($"You should only register transports with explicitly defined end-type - do not rely on the base.");
             }
 
             lock (_lock)
             {
-                if (ReliableTransports.Remove(out T? removed))
-                {
-                    removed.InvokeTerminate(this);
-                }
-
-                ReliableTransports.Add(transport);
-                transport.InvokeInitialize(this);
+                // TODO: Terminate only if transport is removed from all types.
+                RegisterResilientTransport(transport);
+                RegisterSequentialTransport(transport);
+                RegisterUnreliableTransport(transport);
+                RegisterReliableTransport(transport);
             }
         }
 
         /// <summary>
-        /// Tries to remove <see cref="IReliableTransport"/> from the map of active transports.
+        /// Tries to remove <typeparamref name="TTransport"/> association with all <see cref="SendingMode"/>s.
         /// </summary>
-        /// <typeparam name="T">Type of transport to remove.</typeparam>
+        /// <typeparam name="TTransport">Type of transport to remove.</typeparam>
         /// <param name="transport">Transport which was removed just a moment ago.</param>
         /// <returns>
         /// <c>true</c> if transport was present, was removed and the instance is provided as <paramref name="transport"/>.
         /// <c>false</c> if transport was not present and thus - was not removed.
         /// </returns>
-        public bool RemoveReliableTransport<T>([NotNullWhen(true)] out T? transport) where T : class, IReliableTransport
+        public bool RemoveGeneralTransport<TTransport>([NotNullWhen(true)] out TTransport? transport) where TTransport : class,
+            IResilientTransport, ISequentialTransport, IUnreliableTransport, IReliableTransport
         {
-            if (typeof(T) == typeof(IReliableTransport))
-            {
-                throw new ArgumentException($"You should only remove transports with explicitly defined end-type - do not rely on the base.");
-            }
-
-            lock (_lock)
-            {
-                if (ReliableTransports.Remove(out transport))
-                {
-                    transport.InvokeTerminate(this);
-                    return true;
-                }
-
-                return false;
-            }
+            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -1427,43 +1418,21 @@ namespace NetCore
         /// <c>true</c> if transport was present and it was removed.
         /// <c>false</c> if transport was not present and thus - was not removed.
         /// </returns>
-        public bool RemoveReliableTransport<T>(T transport) where T : class, IReliableTransport
+        public bool RemoveGeneralTransport<T>(T transport) where T : class, IUnreliableTransport
         {
-            if (typeof(T) == typeof(IReliableTransport))
-            {
-                throw new ArgumentException($"You should only remove transports with explicitly defined end-type - do not rely on the base.");
-            }
-
-            lock (_lock)
-            {
-                if (ReliableTransports.Remove(transport))
-                {
-                    transport.InvokeTerminate(this);
-                    return true;
-                }
-
-                return false;
-            }
+            throw new NotImplementedException();
         }
 
         /// <summary>
         /// Checks whether this <see cref="NetworkMember"/> manages a specific reliable transport.
         /// </summary>
-        public bool HasReliableTransport<T>() where T : class, IReliableTransport
+        public bool HasGeneralTransport<T>() where T : class, IUnreliableTransport
         {
-            if (typeof(T) == typeof(IReliableTransport))
-            {
-                throw new ArgumentException($"You should only check transports with explicitly defined end-type - do not rely on the base.");
-            }
-
-            lock (_lock)
-            {
-                return ReliableTransports.Has<T>();
-            }
+            throw new NotImplementedException();
         }
 
         /// <summary>
-        /// Tries to retrieve <see cref="IReliableTransport"/> under a given <typeparamref name="T"/> type.
+        /// Tries to retrieve <see cref="IUnreliableTransport"/> under a given <typeparamref name="T"/> type.
         /// </summary>
         /// <typeparam name="T">Type of transport to look for.</typeparam>
         /// <param name="transport">Transport instance or <c>null</c> when not found.</param>
@@ -1471,72 +1440,41 @@ namespace NetCore
         /// <c>true</c> if found and <paramref name="transport"/> was provided.
         /// <c>false</c> if not found and <paramref name="transport"/> is null.
         /// </returns>
-        public bool TryGetReliableTransport<T>([NotNullWhen(true)] out T? transport) where T : class, IReliableTransport
+        public bool TryGetGeneralTransport<T>([NotNullWhen(true)] out T? transport) where T : class, IUnreliableTransport
         {
-            if (typeof(T) == typeof(IReliableTransport))
-            {
-                throw new ArgumentException($"You should only retrieve transports with explicitly defined end-type - do not rely on the base.");
-            }
-
-            lock (_lock)
-            {
-                return ReliableTransports.TryGet(out transport);
-            }
+            throw new NotImplementedException();
         }
 
         /// <summary>
-        /// Retrieves <see cref="IReliableTransport"/> under a given <typeparamref name="T"/> type.
+        /// Retrieves <see cref="IUnreliableTransport"/> under a given <typeparamref name="T"/> type.
         /// </summary>
         /// <typeparam name="T">Type of transport to look for.</typeparam>
         /// <returns>Transport instance or <c>null</c> when not found.</returns>
-        public T? GetReliableTransport<T>() where T : class, IReliableTransport
+        public T GetGeneralTransport<T>() where T : class, IUnreliableTransport
         {
-            if (typeof(T) == typeof(IReliableTransport))
-            {
-                throw new ArgumentException($"You should only retrieve transports with explicitly defined end-type - do not rely on the base.");
-            }
-
-            lock (_lock)
-            {
-                return ReliableTransports.Get<T>();
-            }
+            throw new NotImplementedException();
         }
 
         /// <summary>
-        /// Iterates over all reliable transports using a given <paramref name="action"/>.
+        /// Iterates over all <see cref="IUnreliableTransport"/>s using a given <paramref name="action"/>.
         /// </summary>
-        /// <param name="action">Action to use on all registered <see cref="IReliableTransport"/>s.</param>
-        public void ForEachReliableTransport(TransportConsumer<IReliableTransport> action)
+        /// <param name="action">Action to use on all registered <see cref="IUnreliableTransport"/>s.</param>
+        public void ForEachGeneralTransport(TransportConsumer<IUnreliableTransport> action)
         {
-            lock (_lock)
-            {
-                foreach (var transport in ReliableTransports)
-                {
-                    action(transport);
-                }
-            }
+            throw new NotImplementedException();
         }
 
         /// <summary>
-        /// Removes all <see cref="IReliableTransport"/>s
+        /// Removes all <see cref="IUnreliableTransport"/>s
         /// and calls <see cref="ITransport.Terminate(NetworkMember)"/> of all of them.
         /// </summary>
         /// <returns>
         /// <c>true</c> - all transports were removed successfully.
         /// <c>false</c> - some transports had issues executing <see cref="ITransport.Terminate(NetworkMember)"/>.
         /// </returns>
-        public bool ClearReliableTransports()
+        public bool ClearGeneralTransports()
         {
-            lock (_lock)
-            {
-                bool anyFailed = false;
-                foreach (var transport in ReliableTransports)
-                {
-                    anyFailed = !transport.InvokeTerminate(this);
-                }
-
-                return !anyFailed;
-            }
+            throw new NotImplementedException();
         }
         #endregion
 
@@ -1664,7 +1602,7 @@ namespace NetCore
         /// </summary>
         /// <typeparam name="T">Type of transport to look for.</typeparam>
         /// <returns>Transport instance or <c>null</c> when not found.</returns>
-        public T? GetUnreliableTransport<T>() where T : class, IUnreliableTransport
+        public T GetUnreliableTransport<T>() where T : class, IUnreliableTransport
         {
             if (typeof(T) == typeof(IUnreliableTransport))
             {
@@ -1678,7 +1616,7 @@ namespace NetCore
         }
 
         /// <summary>
-        /// Iterates over all reliable transports using a given <paramref name="action"/>.
+        /// Iterates over all <see cref="IUnreliableTransport"/>s using a given <paramref name="action"/>.
         /// </summary>
         /// <param name="action">Action to use on all registered <see cref="IUnreliableTransport"/>s.</param>
         public void ForEachUnreliableTransport(TransportConsumer<IUnreliableTransport> action)
@@ -1715,6 +1653,527 @@ namespace NetCore
         }
         #endregion
 
+        #region Reliable transport registration/removal.
+        /// <summary>
+        /// Registers reliable transport.
+        /// </summary>
+        /// Note: Consider adding explicitly reliable-ordered and reliable-unordered.
+        ///  Those can be already provided using TCP and UDP transport, but they will need a specific flag to differentiate which mode to use.
+        public void RegisterReliableTransport<T>(T transport) where T : class, IReliableTransport
+        {
+            if (typeof(T) == typeof(IReliableTransport))
+            {
+                throw new ArgumentException($"You should only register transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                if (ReliableTransports.Remove(out T? removed))
+                {
+                    removed.InvokeTerminate(this);
+                }
+
+                ReliableTransports.Add(transport);
+                transport.InvokeInitialize(this);
+            }
+        }
+
+        /// <summary>
+        /// Tries to remove <see cref="IReliableTransport"/> from the map of active transports.
+        /// </summary>
+        /// <typeparam name="T">Type of transport to remove.</typeparam>
+        /// <param name="transport">Transport which was removed just a moment ago.</param>
+        /// <returns>
+        /// <c>true</c> if transport was present, was removed and the instance is provided as <paramref name="transport"/>.
+        /// <c>false</c> if transport was not present and thus - was not removed.
+        /// </returns>
+        public bool RemoveReliableTransport<T>([NotNullWhen(true)] out T? transport) where T : class, IReliableTransport
+        {
+            if (typeof(T) == typeof(IReliableTransport))
+            {
+                throw new ArgumentException($"You should only remove transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                if (ReliableTransports.Remove(out transport))
+                {
+                    transport.InvokeTerminate(this);
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Tries to remove specific <paramref name="transport"/> from the map of active transports.
+        /// </summary>
+        /// <typeparam name="T">Type of transport to remove.</typeparam>
+        /// <param name="transport">Transport to remove.</param>
+        /// <returns>
+        /// <c>true</c> if transport was present and it was removed.
+        /// <c>false</c> if transport was not present and thus - was not removed.
+        /// </returns>
+        public bool RemoveReliableTransport<T>(T transport) where T : class, IReliableTransport
+        {
+            if (typeof(T) == typeof(IReliableTransport))
+            {
+                throw new ArgumentException($"You should only remove transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                if (ReliableTransports.Remove(transport))
+                {
+                    transport.InvokeTerminate(this);
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Checks whether this <see cref="NetworkMember"/> manages a specific reliable transport.
+        /// </summary>
+        public bool HasReliableTransport<T>() where T : class, IReliableTransport
+        {
+            if (typeof(T) == typeof(IReliableTransport))
+            {
+                throw new ArgumentException($"You should only check transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                return ReliableTransports.Has<T>();
+            }
+        }
+
+        /// <summary>
+        /// Tries to retrieve <see cref="IReliableTransport"/> under a given <typeparamref name="T"/> type.
+        /// </summary>
+        /// <typeparam name="T">Type of transport to look for.</typeparam>
+        /// <param name="transport">Transport instance or <c>null</c> when not found.</param>
+        /// <returns>
+        /// <c>true</c> if found and <paramref name="transport"/> was provided.
+        /// <c>false</c> if not found and <paramref name="transport"/> is null.
+        /// </returns>
+        public bool TryGetReliableTransport<T>([NotNullWhen(true)] out T? transport) where T : class, IReliableTransport
+        {
+            if (typeof(T) == typeof(IReliableTransport))
+            {
+                throw new ArgumentException($"You should only retrieve transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                return ReliableTransports.TryGet(out transport);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves <see cref="IReliableTransport"/> under a given <typeparamref name="T"/> type.
+        /// </summary>
+        /// <typeparam name="T">Type of transport to look for.</typeparam>
+        /// <returns>Transport instance or <c>null</c> when not found.</returns>
+        public T GetReliableTransport<T>() where T : class, IReliableTransport
+        {
+            if (typeof(T) == typeof(IReliableTransport))
+            {
+                throw new ArgumentException($"You should only retrieve transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                return ReliableTransports.Get<T>();
+            }
+        }
+
+        /// <summary>
+        /// Iterates over all <see cref="IReliableTransport"/>s using a given <paramref name="action"/>.
+        /// </summary>
+        /// <param name="action">Action to use on all registered <see cref="IReliableTransport"/>s.</param>
+        public void ForEachReliableTransport(TransportConsumer<IReliableTransport> action)
+        {
+            lock (_lock)
+            {
+                foreach (var transport in ReliableTransports)
+                {
+                    action(transport);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Removes all <see cref="IReliableTransport"/>s
+        /// and calls <see cref="ITransport.Terminate(NetworkMember)"/> of all of them.
+        /// </summary>
+        /// <returns>
+        /// <c>true</c> - all transports were removed successfully.
+        /// <c>false</c> - some transports had issues executing <see cref="ITransport.Terminate(NetworkMember)"/>.
+        /// </returns>
+        public bool ClearReliableTransports()
+        {
+            lock (_lock)
+            {
+                bool anyFailed = false;
+                foreach (var transport in ReliableTransports)
+                {
+                    anyFailed = !transport.InvokeTerminate(this);
+                }
+
+                return !anyFailed;
+            }
+        }
+        #endregion
+
+        #region Sequential transport registration/removal.
+        /// <summary>
+        /// Registers <see cref="ISequentialTransport"/>.
+        /// </summary>
+        public void RegisterSequentialTransport<T>(T transport) where T : class, ISequentialTransport
+        {
+            if (typeof(T) == typeof(ISequentialTransport))
+            {
+                throw new ArgumentException($"You should only register transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                if (SequentialTransports.Remove(out T? removed))
+                {
+                    removed.InvokeTerminate(this);
+                }
+
+                SequentialTransports.Add(transport);
+                transport.InvokeInitialize(this);
+            }
+        }
+
+        /// <summary>
+        /// Tries to remove <see cref="ISequentialTransport"/> from the map of active transports.
+        /// </summary>
+        /// <typeparam name="T">Type of transport to remove.</typeparam>
+        /// <param name="transport">Transport which was removed just a moment ago.</param>
+        /// <returns>
+        /// <c>true</c> if transport was present, was removed and the instance is provided as <paramref name="transport"/>.
+        /// <c>false</c> if transport was not present and thus - was not removed.
+        /// </returns>
+        public bool RemoveNotifyTransport<T>([NotNullWhen(true)] out T? transport) where T : class, ISequentialTransport
+        {
+            if (typeof(T) == typeof(ISequentialTransport))
+            {
+                throw new ArgumentException($"You should only remove transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                if (SequentialTransports.Remove(out transport))
+                {
+                    transport.InvokeTerminate(this);
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Tries to remove specific <paramref name="transport"/> from the map of active transports.
+        /// </summary>
+        /// <typeparam name="T">Type of transport to remove.</typeparam>
+        /// <param name="transport">Transport to remove.</param>
+        /// <returns>
+        /// <c>true</c> if transport was present and it was removed.
+        /// <c>false</c> if transport was not present and thus - was not removed.
+        /// </returns>
+        public bool RemoveSequentialTransport<T>(T transport) where T : class, ISequentialTransport
+        {
+            if (typeof(T) == typeof(ISequentialTransport))
+            {
+                throw new ArgumentException($"You should only remove transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                if (SequentialTransports.Remove(transport))
+                {
+                    transport.InvokeTerminate(this);
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Checks whether this <see cref="NetworkMember"/> manages a specific reliable transport.
+        /// </summary>
+        public bool HasNotifyTransport<T>() where T : class, ISequentialTransport
+        {
+            if (typeof(T) == typeof(ISequentialTransport))
+            {
+                throw new ArgumentException($"You should only check transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                return SequentialTransports.Has<T>();
+            }
+        }
+
+        /// <summary>
+        /// Tries to retrieve <see cref="ISequentialTransport"/> under a given <typeparamref name="T"/> type.
+        /// </summary>
+        /// <typeparam name="T">Type of transport to look for.</typeparam>
+        /// <param name="transport">Transport instance or <c>null</c> when not found.</param>
+        /// <returns>
+        /// <c>true</c> if found and <paramref name="transport"/> was provided.
+        /// <c>false</c> if not found and <paramref name="transport"/> is null.
+        /// </returns>
+        public bool TryGetNotifyTransport<T>([NotNullWhen(true)] out T? transport) where T : class, ISequentialTransport
+        {
+            if (typeof(T) == typeof(ISequentialTransport))
+            {
+                throw new ArgumentException($"You should only retrieve transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                return SequentialTransports.TryGet(out transport);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves <see cref="ISequentialTransport"/> under a given <typeparamref name="T"/> type.
+        /// </summary>
+        /// <typeparam name="T">Type of transport to look for.</typeparam>
+        /// <returns>Transport instance or <c>null</c> when not found.</returns>
+        public T GetSequentialTransport<T>() where T : class, ISequentialTransport
+        {
+            if (typeof(T) == typeof(ISequentialTransport))
+            {
+                throw new ArgumentException($"You should only retrieve transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                return SequentialTransports.Get<T>();
+            }
+        }
+
+        /// <summary>
+        /// Iterates over all <see cref="ISequentialTransport"/>s using a given <paramref name="action"/>.
+        /// </summary>
+        /// <param name="action">Action to use on all registered <see cref="ISequentialTransport"/>s.</param>
+        public void ForEachNotifyTransport(TransportConsumer<ISequentialTransport> action)
+        {
+            lock (_lock)
+            {
+                foreach (var transport in SequentialTransports)
+                {
+                    action(transport);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Removes all <see cref="ISequentialTransport"/>s
+        /// and calls <see cref="ITransport.Terminate(NetworkMember)"/> of all of them.
+        /// </summary>
+        /// <returns>
+        /// <c>true</c> - all transports were removed successfully.
+        /// <c>false</c> - some transports had issues executing <see cref="ITransport.Terminate(NetworkMember)"/>.
+        /// </returns>
+        public bool ClearNotifyTransports()
+        {
+            lock (_lock)
+            {
+                bool anyFailed = false;
+                foreach (var transport in SequentialTransports)
+                {
+                    anyFailed = !transport.InvokeTerminate(this);
+                }
+
+                return !anyFailed;
+            }
+        }
+        #endregion
+
+        #region Resilient transport registration/removal.
+        /// <summary>
+        /// Registers <see cref="IResilientTransport"/>.
+        /// </summary>
+        public void RegisterResilientTransport<T>(T transport) where T : class, IResilientTransport
+        {
+            if (typeof(T) == typeof(IResilientTransport))
+            {
+                throw new ArgumentException($"You should only register transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                if (ResilientTransports.Remove(out T? removed))
+                {
+                    removed.InvokeTerminate(this);
+                }
+
+                ResilientTransports.Add(transport);
+                transport.InvokeInitialize(this);
+            }
+        }
+
+        /// <summary>
+        /// Tries to remove <see cref="IResilientTransport"/> from the map of active transports.
+        /// </summary>
+        /// <typeparam name="T">Type of transport to remove.</typeparam>
+        /// <param name="transport">Transport which was removed just a moment ago.</param>
+        /// <returns>
+        /// <c>true</c> if transport was present, was removed and the instance is provided as <paramref name="transport"/>.
+        /// <c>false</c> if transport was not present and thus - was not removed.
+        /// </returns>
+        public bool RemoveResilientTransport<T>([NotNullWhen(true)] out T? transport) where T : class, IResilientTransport
+        {
+            if (typeof(T) == typeof(IResilientTransport))
+            {
+                throw new ArgumentException($"You should only remove transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                if (ResilientTransports.Remove(out transport))
+                {
+                    transport.InvokeTerminate(this);
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Tries to remove specific <paramref name="transport"/> from the map of active transports.
+        /// </summary>
+        /// <typeparam name="T">Type of transport to remove.</typeparam>
+        /// <param name="transport">Transport to remove.</param>
+        /// <returns>
+        /// <c>true</c> if transport was present and it was removed.
+        /// <c>false</c> if transport was not present and thus - was not removed.
+        /// </returns>
+        public bool RemoveResilientTransport<T>(T transport) where T : class, IResilientTransport
+        {
+            if (typeof(T) == typeof(IResilientTransport))
+            {
+                throw new ArgumentException($"You should only remove transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                if (ResilientTransports.Remove(transport))
+                {
+                    transport.InvokeTerminate(this);
+                    return true;
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Checks whether this <see cref="NetworkMember"/> manages a specific reliable transport.
+        /// </summary>
+        public bool HasResilientTransport<T>() where T : class, IResilientTransport
+        {
+            if (typeof(T) == typeof(IResilientTransport))
+            {
+                throw new ArgumentException($"You should only check transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                return ResilientTransports.Has<T>();
+            }
+        }
+
+        /// <summary>
+        /// Tries to retrieve <see cref="IResilientTransport"/> under a given <typeparamref name="T"/> type.
+        /// </summary>
+        /// <typeparam name="T">Type of transport to look for.</typeparam>
+        /// <param name="transport">Transport instance or <c>null</c> when not found.</param>
+        /// <returns>
+        /// <c>true</c> if found and <paramref name="transport"/> was provided.
+        /// <c>false</c> if not found and <paramref name="transport"/> is null.
+        /// </returns>
+        public bool TryGetResilientTransport<T>([NotNullWhen(true)] out T? transport) where T : class, IResilientTransport
+        {
+            if (typeof(T) == typeof(IResilientTransport))
+            {
+                throw new ArgumentException($"You should only retrieve transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                return ResilientTransports.TryGet(out transport);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves <see cref="IResilientTransport"/> under a given <typeparamref name="T"/> type.
+        /// </summary>
+        /// <typeparam name="T">Type of transport to look for.</typeparam>
+        /// <returns>Transport instance or <c>null</c> when not found.</returns>
+        public T GetResilientTransport<T>() where T : class, IResilientTransport
+        {
+            if (typeof(T) == typeof(IResilientTransport))
+            {
+                throw new ArgumentException($"You should only retrieve transports with explicitly defined end-type - do not rely on the base.");
+            }
+
+            lock (_lock)
+            {
+                return ResilientTransports.Get<T>();
+            }
+        }
+
+        /// <summary>
+        /// Iterates over all <see cref="IResilientTransport"/>s using a given <paramref name="action"/>.
+        /// </summary>
+        /// <param name="action">Action to use on all registered <see cref="IResilientTransport"/>s.</param>
+        public void ForEachResilientTransport(TransportConsumer<IResilientTransport> action)
+        {
+            lock (_lock)
+            {
+                foreach (var transport in ResilientTransports)
+                {
+                    action(transport);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Removes all <see cref="IResilientTransport"/>s
+        /// and calls <see cref="ITransport.Terminate(NetworkMember)"/> of all of them.
+        /// </summary>
+        /// <returns>
+        /// <c>true</c> - all transports were removed successfully.
+        /// <c>false</c> - some transports had issues executing <see cref="ITransport.Terminate(NetworkMember)"/>.
+        /// </returns>
+        public bool ClearResilientTransports()
+        {
+            lock (_lock)
+            {
+                bool anyFailed = false;
+                foreach (var transport in ResilientTransports)
+                {
+                    anyFailed = !transport.InvokeTerminate(this);
+                }
+
+                return !anyFailed;
+            }
+        }
+        #endregion
+
 
 
 
@@ -1731,7 +2190,7 @@ namespace NetCore
             lock (_lock)
                 return ResilientTransports.Count
                     + ReliableTransports.Count
-                    + NotifyTransports.Count
+                    + SequentialTransports.Count
                     + UnreliableTransports.Count
                     + StreamTransports.Count
                     + FileTransports.Count;
@@ -1756,7 +2215,7 @@ namespace NetCore
                 foreach (var t in ReliableTransports)
                     transports[position++] = t;
 
-                foreach (var t in NotifyTransports)
+                foreach (var t in SequentialTransports)
                     transports[position++] = t;
 
                 foreach (var t in UnreliableTransports)

@@ -3,53 +3,53 @@
 namespace NetCore.Transports
 {
     /// <summary>
-    /// (Reliable, Ordered) Transport for sending messages.
+    /// (Unreliable, Ordered) Transport for sending messages.
     /// </summary>
-    public interface IResilientTransport : ITransport
+    public interface ISequentialTransport : ITransport
     {
         /// <summary>
-        /// Resiliently sends <paramref name="datagram"/> to all connections this <see cref="ITransport"/> manages.
+        /// Sequentially sends <paramref name="datagram"/> this <see cref="ITransport"/> manages.
         /// </summary>
         /// <param name="header">Header of the message.</param>
         /// <param name="datagram">Datagram to send.</param>
-        public void SendResilient(in Header header, ReadOnlySpan<byte> datagram);
+        public void SendSequential(in Header header, ReadOnlySpan<byte> datagram);
         /// <summary>
-        /// Resiliently sends <paramref name="datagram"/> to all connections this <see cref="ITransport"/> manages, excluding <paramref name="toExclude"/>.
+        /// Sequentially sends <paramref name="datagram"/> to this <see cref="ITransport"/> manages, excluding <paramref name="toExclude"/>.
         /// </summary>
         /// <param name="header">Header of the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="toExclude">Connection to avoid sending a <paramref name="datagram"/> to.</param>
-        public void SendResilientExcluding(in Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude);
+        public void SendSequentialExcluding(in Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude);
         /// <summary>
-        /// Resiliently sends <paramref name="datagram"/> to a target connection.
+        /// Sequentially sends <paramref name="datagram"/> to the <paramref name="target"/> connection.
         /// </summary>
         /// <param name="header">Header of the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="target">Connection to send a <paramref name="datagram"/> to. Nothing should be sent if transport doesn't manage this connection.</param>
-        public void SendResilientTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionID target);
+        public void SendSequentialTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionID target);
         /// <summary>
-        /// Handles raw <paramref name="datagram"/> of a reliable message.
+        /// Handles raw <paramref name="datagram"/> of a sequential message.
         /// </summary>
         /// <param name="header">Header of the message.</param>
         /// <param name="datagram">Datagram from a remote connection.</param>
         /// <param name="source">Connection ID from which <paramref name="datagram"/> has arrived.</param>
-        public void HandleResilient(in Header header, ReadOnlySpan<byte> datagram, ConnectionID source);
+        public void HandleSequential(in Header header, ReadOnlySpan<byte> datagram, ConnectionID source);
 
 
 
         /// <summary>
-        /// Resiliently sends <paramref name="datagram"/> to a remote host, specified with <paramref name="args"/>.
+        /// Sequentially sends <paramref name="datagram"/> to a remote host, specified with <paramref name="args"/>.
         /// </summary>
         /// <param name="header">Header of the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="args">Temporary connection args used for this connection in particular.</param>
-        public void SendResilientTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args);
+        public void SendSequentialTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args);
         /// <summary>
-        /// Handles raw <paramref name="datagram"/> of a reliable message.
+        /// Handles raw <paramref name="datagram"/> of a sequential message.
         /// </summary>
         /// <param name="header">Header of the message.</param>
         /// <param name="datagram">Datagram from a remote connection.</param>
         /// <param name="source">Temporary connection args from which <paramref name="datagram"/> has arrived.</param>
-        public void HandleResilient(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs source);
+        public void HandleSequential(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs source);
     }
 }

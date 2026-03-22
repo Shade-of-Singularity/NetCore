@@ -18,15 +18,10 @@ namespace NetCore.Transports
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <inheritdoc/>
-        /// <remarks>
-        /// Override in your transport if you want it to block starting of other transports.
-        /// </remarks>
-        public virtual bool ForceSyncedStart => false;
+        public virtual AsyncMode SupportedStartAsyncModes => AsyncMode.Synced;
+
         /// <inheritdoc/>
-        /// <remarks>
-        /// Override in your transport if you want it to block connection of other transports.
-        /// </remarks>
-        public virtual bool SupportedConnectionAsyncModes => false;
+        public virtual AsyncMode SupportedConnectionAsyncModes => AsyncMode.Synced;
 
         /// <inheritdoc/>
         public bool IsServerSide { get; private set; }

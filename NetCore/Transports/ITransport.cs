@@ -197,7 +197,7 @@ namespace NetCore.Transports
                     case StartState.Started: throw new Exception($"Cannot start ({GetType().Name}) transport since it is already started.");
                     case StartState.Stopping: throw new Exception($"Cannot start ({GetType().Name}) transport while it is stopping.");
                 }
-
+                /*
                 if (!IsStarted)
                 {
                     try
@@ -229,7 +229,7 @@ namespace NetCore.Transports
                     }
 
                     IsStarted = true;
-                }
+                }*/
 
                 return true;
             }
@@ -243,7 +243,7 @@ namespace NetCore.Transports
         /// <c>false</c> if any issues appeared at stopping (see console for more info).
         /// </returns>
         public bool InvokeStop()
-        {
+        {/*
             if (IsStarted)
             {
                 try
@@ -261,7 +261,7 @@ namespace NetCore.Transports
                 }
 
                 IsStarted = false;
-            }
+            }*/
 
             return true;
         }
@@ -285,7 +285,7 @@ namespace NetCore.Transports
             {
                 return false;
             }
-
+            /*
             if (!IsActive)
             {
                 try
@@ -317,7 +317,7 @@ namespace NetCore.Transports
                 }
 
                 IsActive = true;
-            }
+            }*/
 
             return true;
         }
@@ -333,7 +333,7 @@ namespace NetCore.Transports
         /// <c>false</c> if any issues appeared during disconnection (see console for more info).
         /// </returns>
         public bool InvokeDisconnect()
-        {
+        {/*
             if (IsActive)
             {
                 try
@@ -351,7 +351,7 @@ namespace NetCore.Transports
                 }
 
                 IsActive = false;
-            }
+            }*/
 
             return true;
         }

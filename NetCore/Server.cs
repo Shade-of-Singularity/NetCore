@@ -60,7 +60,7 @@ namespace NetCore
         /// <summary>
         /// Unreliably sends <paramref name="datagram"/> to the server.
         /// </summary>
-        /// <param name="header"></param>
+        /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         public virtual void SendUnreliable(ref Header header, ReadOnlySpan<byte> datagram)
         {
@@ -80,7 +80,7 @@ namespace NetCore
         /// Unreliably sends <paramref name="datagram"/> to the server using specified <typeparamref name="TTransport"/> (if it exist).
         /// </summary>
         /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
-        /// <param name="header"></param>
+        /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         public virtual void SendUnreliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram)
             where TTransport : class, IUnreliableTransport
@@ -97,7 +97,7 @@ namespace NetCore
         /// <summary>
         /// Unreliably sends <paramref name="datagram"/> to a all connections, excluding specific <paramref name="connection"/>.
         /// </summary>
-        /// <param name="header"></param>
+        /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to avoid sending a <paramref name="datagram"/> to.</param>
         public virtual void SendUnreliableExcluding(ref Header header, ReadOnlySpan<byte> datagram, ConnectionID connection)
@@ -127,7 +127,7 @@ namespace NetCore
         /// using specified <typeparamref name="TTransport"/> (if it exist).
         /// </summary>
         /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
-        /// <param name="header"></param>
+        /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to avoid sending a <paramref name="datagram"/> to.</param>
         public virtual void SendUnreliableExcluding<TTransport>(ref Header header, ReadOnlySpan<byte> datagram, ConnectionID connection)
@@ -145,7 +145,7 @@ namespace NetCore
         /// <summary>
         /// Unreliably sends <paramref name="datagram"/> to a specific connection.
         /// </summary>
-        /// <param name="header"></param>
+        /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to send a <paramref name="datagram"/> to.</param>
         public virtual void SendUnreliableTo(ref Header header, ReadOnlySpan<byte> datagram, ConnectionID connection)
@@ -166,7 +166,7 @@ namespace NetCore
         /// Unreliably sends <paramref name="datagram"/> to a specific connection using specified <typeparamref name="TTransport"/> (if it exist).
         /// </summary>
         /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
-        /// <param name="header"></param>
+        /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to send a <paramref name="datagram"/> to.</param>
         public virtual void SendUnreliableTo<TTransport>(ref Header header, ReadOnlySpan<byte> datagram, ConnectionID connection)
@@ -184,7 +184,7 @@ namespace NetCore
         /// <summary>
         /// Reliably sends <paramref name="datagram"/> to the server.
         /// </summary>
-        /// <param name="header"></param>
+        /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         public virtual void SendReliable(ref Header header, ReadOnlySpan<byte> datagram)
         {
@@ -204,7 +204,7 @@ namespace NetCore
         /// Reliably sends <paramref name="datagram"/> to the server using specified <typeparamref name="TTransport"/> (if it exist).
         /// </summary>
         /// <typeparam name="TTransport"><see cref="IReliableTransport"/> to use for sending of a message.</typeparam>
-        /// <param name="header"></param>
+        /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         public virtual void SendReliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram)
             where TTransport : class, IReliableTransport
@@ -221,7 +221,7 @@ namespace NetCore
         /// <summary>
         /// Reliably sends <paramref name="datagram"/> to a all connections, excluding specific <paramref name="connection"/>.
         /// </summary>
-        /// <param name="header"></param>
+        /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to avoid sending a <paramref name="datagram"/> to.</param>
         public virtual void SendReliableExcluding(ref Header header, ReadOnlySpan<byte> datagram, ConnectionID connection)
@@ -251,7 +251,7 @@ namespace NetCore
         /// using specified <typeparamref name="TTransport"/> (if it exist).
         /// </summary>
         /// <typeparam name="TTransport"><see cref="IReliableTransport"/> to use for sending of a message.</typeparam>
-        /// <param name="header"></param>
+        /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to avoid sending a <paramref name="datagram"/> to.</param>
         public virtual void SendReliableExcluding<TTransport>(ref Header header, ReadOnlySpan<byte> datagram, ConnectionID connection)
@@ -269,7 +269,7 @@ namespace NetCore
         /// <summary>
         /// Reliably sends <paramref name="datagram"/> to a specific connection.
         /// </summary>
-        /// <param name="header"></param>
+        /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to send a <paramref name="datagram"/> to.</param>
         public virtual void SendReliableTo(ref Header header, ReadOnlySpan<byte> datagram, ConnectionID connection)
@@ -290,7 +290,7 @@ namespace NetCore
         /// Reliably sends <paramref name="datagram"/> to a specific connection using specified <typeparamref name="TTransport"/> (if it exist).
         /// </summary>
         /// <typeparam name="TTransport"><see cref="IReliableTransport"/> to use for sending of a message.</typeparam>
-        /// <param name="header"></param>
+        /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="connection">Connection to send a <paramref name="datagram"/> to.</param>
         public virtual void SendReliableTo<TTransport>(ref Header header, ReadOnlySpan<byte> datagram, ConnectionID connection)

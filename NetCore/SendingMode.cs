@@ -1,26 +1,25 @@
-﻿using NetCore.Transports;
-
-namespace NetCore
+﻿namespace NetCore
 {
     /// <summary>
-    /// <inheritdoc cref="SendingMode"/>
+    /// Describes target message sending mode.
     /// </summary>
-    /// <remarks>
-    /// Uses CRTP. Inherit to specify a custom mode.
-    /// </remarks>
-    /// <typeparam name="T"></typeparam>
-    public abstract class SendingMode<T> where T : SendingMode<T>
+    public enum SendingMode : byte
     {
-
-    }
-
-    /// <summary>
-    /// Message sending mode (think: Reliable, Unreliable, Ordered, etc.)
-    /// Sending mode is not synchronized when <see cref="Settings.SynchronizeHeaders"/> is enabled.
-    /// It's only used to see which <see cref="ITransport"/>s support a specific sending mode.
-    /// </summary>
-    public abstract class SendingMode
-    {
-
+        /// <summary>
+        /// (Unreliable, Unordered) message sending mode.
+        /// </summary>
+        Unreliable = 0b00, // -> 0
+        /// <summary>
+        /// (Reliable, Unordered) message sending mode.
+        /// </summary>
+        Reliable = 0b01, // -> 1
+        /// <summary>
+        /// (Unreliable, Ordered) message sending mode.
+        /// </summary>
+        Sequential = 0b10, // -> 2
+        /// <summary>
+        /// (Reliable, Ordered) message sending mode.
+        /// </summary>
+        Resilient = 0b11, // -> 3
     }
 }

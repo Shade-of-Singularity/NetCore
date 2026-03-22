@@ -246,7 +246,7 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public void SendUnreliable(Header header, ReadOnlySpan<byte> datagram)
+        public void SendUnreliable(in Header header, ReadOnlySpan<byte> datagram)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliable)}(datagram: {Encoding.UTF8.GetString(datagram)})");
@@ -270,7 +270,7 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableExcluding(Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
+        public void SendUnreliableExcluding(in Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableExcluding)}(exclude: ({toExclude}) datagram: {Encoding.UTF8.GetString(datagram)})");
@@ -293,7 +293,7 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
+        public void SendUnreliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableTo)}(target: ({target}) datagram: {Encoding.UTF8.GetString(datagram)})");
@@ -315,7 +315,29 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public void HandleUnreliable(Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
+        public void SendUnreliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args)
+        {
+#if DEBUG
+            Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableTo)}(datagram: {Encoding.UTF8.GetString(datagram)}, args: {args})");
+#endif
+            lock (_lock)
+            {
+                if (!Socket!.Connected)
+                {
+                    return;
+                }
+
+                //if (Clients.TryGetValue(new ClientID(target), out ClientData client))
+                //{
+                //    ResizeIfNeeded(ref Buffer, datagram.Length, BufferSizeIncrement);
+                //    datagram.CopyTo(Buffer.AsSpan());
+                //    Socket.SendTo(Buffer, client.RemoteEndPoint);
+                //}
+            }
+        }
+
+        /// <inheritdoc/>
+        public void HandleUnreliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(HandleUnreliable)}(source: ({source}) datagram: {Encoding.UTF8.GetString(datagram)})");

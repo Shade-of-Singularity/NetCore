@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 
 namespace NetCore
 {
@@ -15,7 +16,7 @@ namespace NetCore
     /// Connection args provided to <see cref="NetworkMember"/> for connecting to a remote host.
     /// </summary>
     /// TODO: Revisit and decide whether using <see cref="object"/> as a key is good enough performance-wise and flexibility-wise.
-    public sealed class ConnectionArgs : Dictionary<object, object?>, IReadOnlyConnectionArgs
+    public sealed partial class ConnectionArgs : Dictionary<object, object?>, IReadOnlyConnectionArgs
     {
         /// <summary>
         /// Key for <see cref="RemoteIPEndPoint"/>
@@ -36,7 +37,7 @@ namespace NetCore
             get => (IPEndPoint?)this.GetValueOrDefault(RemoteIPEndPointKey);
             set => this[RemoteIPEndPointKey] = value;
         }
-        
+
         /// <inheritdoc/>
         public UnixDomainSocketEndPoint? RemoteUnixEndPoint
         {
@@ -49,6 +50,45 @@ namespace NetCore
         {
             get => this.TryGet(TemporaryIdentifierKey, out Guid result) ? result : Guid.Empty;
             set => this[TemporaryIdentifierKey] = value;
+        }
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                              Implementations
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        public override string ToString()
+        {
+            StringBuilder builder = new(256);
+            builder.Append($"Connection args ({Count}):");
+            if (Count == 0)
+            {
+                builder.Append(" {}");
+                return builder.ToString();
+            }
+
+            int count = Count;
+            builder.AppendLine("{");
+            foreach (var pair in this)
+            {
+                builder.Append(pair.Key);
+                builder.Append(": ");
+                builder.Append(pair.Value);
+                if (count > 0)
+                {
+                    builder.AppendLine(",");
+                    count--;
+                }
+                else
+                {
+                    builder.AppendLine();
+                }
+            }
+            builder.Append("}");
+            return base.ToString();
         }
     }
 }

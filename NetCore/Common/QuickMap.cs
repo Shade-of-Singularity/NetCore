@@ -4,12 +4,12 @@ using System.Diagnostics.CodeAnalysis;
 namespace NetCore.Common
 {
     /// <summary>
-    /// Stores trivia about all <see cref="HashList{TBase}"/> instances.
+    /// Stores trivia about all <see cref="QuickList{TBase}"/> instances.
     /// </summary>
     public readonly struct QuickMaps
     {
         /// <summary>
-        /// Maximum amount of items an <see cref="HashList{TBase}"/> can hold.
+        /// Maximum amount of items an <see cref="QuickList{TBase}"/> can hold.
         /// </summary>
         public const int ItemLimit = 19; // Technical limitation.
     }
@@ -85,7 +85,7 @@ namespace NetCore.Common
             {
                 if (inUse >= QuickMaps.ItemLimit)
                 {
-                    throw new Exception($"{nameof(HashList<TBase>)} - exhausted all item IDs ({inUse}/{QuickMaps.ItemLimit})");
+                    throw new Exception($"{nameof(QuickList<TBase>)} - exhausted all item IDs ({inUse}/{QuickMaps.ItemLimit})");
                 }
 
                 int index = inUse;
@@ -455,7 +455,7 @@ namespace NetCore.Common
         /// </summary>
         private static int PopCount(uint x)
         {
-            x = x - ((x >> 1) & 0x55555555u);
+            x -= (x >> 1) & 0x55555555u;
             x = (x & 0x33333333u) + ((x >> 2) & 0x33333333u);
             return (int)((((x + (x >> 4)) & 0x0F0F0F0Fu) * 0x01010101u) >> 24);
         }

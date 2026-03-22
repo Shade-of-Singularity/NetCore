@@ -15,7 +15,7 @@ namespace NetCore.Benchmarks
         private readonly Dictionary<Type, ITransport> Native = [];
         private ITransport? NativeConsumer;
 
-        private HashList<ITransport> Quick;
+        private QuickList<ITransport> Quick;
         private LoopbackTransport? LoopbackConsumer;
         private UDPTransport? UDPConsumer;
 

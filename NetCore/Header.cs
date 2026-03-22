@@ -39,11 +39,11 @@ namespace NetCore
         /// <summary>
         /// Whether instance is disposed or not.
         /// </summary>
-        private bool disposed;
+        private volatile bool disposed;
         /// <summary>
         /// Amount of sources using this header in a <![CDATA[using (var header = ...) { }]]> context.
         /// </summary>
-        private ushort locks;
+        private volatile ushort locks;
 
 
 
