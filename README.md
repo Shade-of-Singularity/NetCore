@@ -5,7 +5,7 @@ NetCore - is a message-based, all-in-one highly optimized networking utility, al
 Right now is **not** ready for usage in production - please wait for a month or so.
 
 ## Integration
-If integrating will be of any difficulty - ypu can contact us and we will help.
+If integrating will be of any difficulty - you can contact us and we will help.
 Large queries might demand a small fee. It will directly support the organization.
 
 ## Design goals
