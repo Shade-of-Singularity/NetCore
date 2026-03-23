@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -10,66 +11,78 @@ namespace NetCore.Common
     /// </summary>
     /// <param name="type">Target item type.</param>
     public sealed class InvalidLookupTypeException(Type type)
-        : Exception($"Cannot use ({type.Name}) as a type for a Lookup, as it matches the type of a HashList. Use HashList directly instead.")
-    { }
+        : Exception($"Cannot use ({type.Name}) as a type for a Lookup, as it matches the type of a HashList. Use HashList directly instead.");
+
+    /// <summary>
+    /// Thrown when you try to register a type, which does not inherit a base type, used for <see cref="HashList{TBase}"/>.
+    /// </summary>
+    /// <param name="itemType">Type of an item.</param>
+    /// <param name="baseType">Base type from <see cref="HashList{TBase}"/>.</param>
+    public sealed class InvalidIndexingTypeException(Type itemType, Type baseType)
+        : Exception($"Provided type ({itemType.Name}) does not inherit a base type ({baseType.Name}), and cannot be stored in a HashList.");
+
+    /// <summary>
+    /// Thrown when a specific item you were looking for was not found in the <see cref="HashList{TBase}"/>.
+    /// </summary>
+    /// <param name="itemType">Type of an item.</param>
+    public sealed class ItemNotFoundException(Type itemType)
+        : Exception($"Item of a type ({itemType.Name}) is not found in a HashList.");
 
     /// <summary>
     /// (Not thread-safe! Used must ensure safety)
     /// Struct-based hash list, for storing unique strong-typed items.
-    /// Optimized to be a lot faster than <see cref="System.Collections.Generic.Dictionary{TKey, TValue}"/> using CRTP.
+    /// Optimized to be a lot faster than <see cref="Dictionary{TKey, TValue}"/> using CRTP.
     /// </summary>
     /// <remarks>
+    /// <para>Supports up to 65535 items. Throws an <see cref="OverflowException"/> on attempt to register more.</para>
     /// Internally, encodes invalid indexes as '0' instead of '-1' and such.
     /// Because of that, mapping resizing will not happen when adding 17th item, but a 16th instead.
     /// Another resize will happen when adding 256th item instead of 257th.
     /// </remarks>
     /// <typeparam name="TBase">Base type of an item.</typeparam>
-    /// TODO: Support trimming/resizing down.
+    /// Note: Implementation is x86 compatible.
     /// TODO: Use Dictionary as a fallback for weak-type indexing.
-    /// Note: There are two technologies that can be used - flag-based and index-based.
-    ///  > In the first case - we split one entry in two parts:
-    ///  - left describing how many items are stored in entries before that one.
-    ///  - right storing flags, describing which items are stored in the list.
-    ///  With uint being used as a base, you can store up to <see cref="ushort.MaxValue"/> of items.
-    ///  And with ulong as a base - <see cref="uint.MaxValue"/> is a realistic limit.
-    ///  And with that, each entry will be able to store up to 16 items (with uint) or up to 32 (with ulong).
-    ///  = Downsides:
-    ///    - A bit slower lookups:
-    ///      - Exist: (IL: 1 array get + 1 bit-masking + 1 branch)
-    ///      - TryGet: (IL: 1 array get + 1 bit-masking + 1 branch)(+IL: 1 bit-masking + 1 bit-shift + 1 jump-table + 1 addition)
-    ///      - Get: (IL: 1 array get + 1 bit-masking + 1 bit-shift + 1 jump-table + 1 addition)
-    ///    - when you add an item, you need to update all left sides entries.
-    ///  = Upsides:
-    ///    - you can iterate over them by marshaling the collection to a lower type (uint -> ushort, etc) and iterating over each 2nd value.
-    ///    - Flags processing can be simplified with a very large jump-table, if needed.16
-    ///    - Constant overhead of 2 bits per item.
-    ///    - Minimal lag-spikes (only for array resize).
-    ///  > In the second case we can store the index (where item is stored) and its flag (if it is stored at all) in one entry.
-    ///  Entries themselves can be of a different size. Most optimal are:
-    ///  - 4 bits (allows up to 8 items),
-    ///  - 8 bits (allows up to 128 items),
-    ///  - 16 bits (allows up to 32768 items),
-    ///  - 32 bits (allows up to 2147483647 items)
-    ///  Entry is allocated *per-item*.
-    ///  > Downsides:
-    ///    - When crossing a "size threshold" (8 -> 9, 128 -> 129, etc.) you need to upscale the map.
-    ///      - Similarly, on trimming, you might need to downscale it, depending on the implementation.
-    ///      - This requires rebuilding the entire map, creating a lag spike once.
-    ///    - Need to update the indexes everywhere on each item addition.
-    ///    - When working with up to 128 items (most likely scenario), memory usage - 1 byte per item (aligned to a size of uint).
-    ///  > Upsides:
-    ///    - Fast index lookups:
-    ///      - Exist: (IL: 1 array get + 1 bit-masking + 1 branch)
-    ///      - TryGet: (IL: 1 array get + 1 bit-masking + 1 branch)(+IL: 1 bit-masking + 1 bit-shift)
-    ///      - Get: (IL: 1 array get + 1 bit-masking + 1 bit-shift)
-    ///    - Fast and intuitive lookups (since entries are aligned)
-    ///      - Generally - data is stored directly as-is, ignoring a leading bit-flag.
+    /// TODO: Use remaining 4 bytes the struct can hold without resizing, to encode a load factor.
     public struct HashList<TBase>
     {
         static class Indexing
         {
-            static uint index = 0;
-            public static uint NextIndex() => index++;
+            // TODO: Consider implementing a custom data structure for weakly-typed indexing as well, instead of a dictionary.
+            static readonly Dictionary<RuntimeTypeHandle, ushort> Indexes = [];
+            static ushort Iterator = 0;
+            /// <remarks>
+            /// Doesn't check if <paramref name="type"/> inherits <typeparamref name="TBase"/>.
+            /// Use <see cref="TryGetOrder(Type, out ushort)"/> to check if it inherits <typeparamref name="TBase"/>.
+            /// </remarks>
+            public static ushort GetOrderUnchecked(Type type)
+            {
+                var handle = type.TypeHandle;
+                if (!Indexes.TryGetValue(type.TypeHandle, out ushort order))
+                {
+                    Indexes[handle] = order = checked(Iterator++);
+                }
+
+                return order;
+            }
+            /// <returns>
+            /// <c>false</c> if <paramref name="type"/> does not inherit <typeparamref name="TBase"/>.
+            /// <c>true</c> if it does, and an <paramref name="order"/> was provided.
+            /// </returns>
+            public static bool TryGetOrder(Type type, out ushort order)
+            {
+                var handle = type.TypeHandle;
+                if (!Indexes.TryGetValue(type.TypeHandle, out order))
+                {
+                    if (!typeof(TBase).IsAssignableFrom(type))
+                    {
+                        return false;
+                    }
+
+                    Indexes[handle] = order = checked(Indexing.Iterator++);
+                }
+
+                return true;
+            }
         }
 
         static class ID<TItem> where TItem : TBase
@@ -77,125 +90,35 @@ namespace NetCore.Common
             /// <summary>
             /// Initialization order of this item.
             /// </summary>
-            public static readonly uint Index = Indexing.NextIndex();
-        }
-
-        enum PackingMode : byte
-        {
+            public static readonly ushort Order = Indexing.GetOrderUnchecked(typeof(TItem));
             /// <summary>
-            /// Completely empty list. Does not store or encode any values.
+            /// Flag region describing this item.
             /// </summary>
-            Size0,
-            /// <summary>
-            /// Uses 4bits per entry. <see cref="uint"/> encodes up to 8 such entries.
-            /// </summary>
-            Size1to8,
-            /// <summary>
-            /// Uses 8bits per entry. <see cref="uint"/> encodes up to 4 such entries.
-            /// </summary>
-            Size9to128,
-            /// <summary>
-            /// Uses 16bits per entry. <see cref="uint"/> encodes up to 2 such entries.
-            /// </summary>
-            Size129to32768,
-            /// <summary>
-            /// Uses 32bits per entry. <see cref="uint"/> encodes only one such entry.
-            /// </summary>
-            /// <remarks>
-            /// If you ever reach this point - let us know. You will be the first, LoL :D
-            /// </remarks>
-            Size32769to2147483647,
-        }
-
-        static class Packing1to8
-        {
-            public const int Capacity = 8;
-
-            public const uint ItemMask1 = 0b0000_0000_0000_0000_0000_0000_0000_1111u;
-            public const uint ItemMask2 = 0b0000_0000_0000_0000_0000_0000_1111_0000u;
-            public const uint ItemMask3 = 0b0000_0000_0000_0000_0000_1111_0000_0000u;
-            public const uint ItemMask4 = 0b0000_0000_0000_0000_1111_0000_0000_0000u;
-            public const uint ItemMask5 = 0b0000_0000_0000_1111_0000_0000_0000_0000u;
-            public const uint ItemMask6 = 0b0000_0000_1111_0000_0000_0000_0000_0000u;
-            public const uint ItemMask7 = 0b0000_1111_0000_0000_0000_0000_0000_0000u;
-            public const uint ItemMask8 = 0b1111_0000_0000_0000_0000_0000_0000_0000u;
-
-            public const uint ItemFlag1 = 0b0000_0000_0000_0000_0000_0000_0000_1000u;
-            public const uint ItemFlag2 = 0b0000_0000_0000_0000_0000_0000_1000_0000u;
-            public const uint ItemFlag3 = 0b0000_0000_0000_0000_0000_1000_0000_0000u;
-            public const uint ItemFlag4 = 0b0000_0000_0000_0000_1000_0000_0000_0000u;
-            public const uint ItemFlag5 = 0b0000_0000_0000_1000_0000_0000_0000_0000u;
-            public const uint ItemFlag6 = 0b0000_0000_1000_0000_0000_0000_0000_0000u;
-            public const uint ItemFlag7 = 0b0000_1000_0000_0000_0000_0000_0000_0000u;
-            public const uint ItemFlag8 = 0b1000_0000_0000_0000_0000_0000_0000_0000u;
-
-            public const uint ItemValue1 = 0b0000_0000_0000_0000_0000_0000_0000_0111u;
-            public const uint ItemValue2 = 0b0000_0000_0000_0000_0000_0000_0111_0000u;
-            public const uint ItemValue3 = 0b0000_0000_0000_0000_0000_0111_0000_0000u;
-            public const uint ItemValue4 = 0b0000_0000_0000_0000_0111_0000_0000_0000u;
-            public const uint ItemValue5 = 0b0000_0000_0000_0111_0000_0000_0000_0000u;
-            public const uint ItemValue6 = 0b0000_0000_0111_0000_0000_0000_0000_0000u;
-            public const uint ItemValue7 = 0b0000_0111_0000_0000_0000_0000_0000_0000u;
-            public const uint ItemValue8 = 0b0111_0000_0000_0000_0000_0000_0000_0000u;
-
-            public const int ItemShift1 = 0;
-            public const int ItemShift2 = 4;
-            public const int ItemShift3 = 8;
-            public const int ItemShift4 = 12;
-            public const int ItemShift5 = 16;
-            public const int ItemShift6 = 20;
-            public const int ItemShift7 = 24;
-            public const int ItemShift8 = 28;
-        }
-
-        static class Packing9to128
-        {
-            public const int Capacity = sbyte.MaxValue + 1;
-
-            public const uint ItemMask1 = 0b00000000_00000000_00000000_11111111u;
-            public const uint ItemMask2 = 0b00000000_00000000_11111111_00000000u;
-            public const uint ItemMask3 = 0b00000000_11111111_00000000_00000000u;
-            public const uint ItemMask4 = 0b11111111_00000000_00000000_00000000u;
-
-            public const uint ItemFlag1 = 0b00000000_00000000_00000000_10000000u;
-            public const uint ItemFlag2 = 0b00000000_00000000_10000000_00000000u;
-            public const uint ItemFlag3 = 0b00000000_10000000_00000000_00000000u;
-            public const uint ItemFlag4 = 0b10000000_00000000_00000000_00000000u;
-
-            public const uint ItemValue1 = 0b00000000_00000000_00000000_01111111u;
-            public const uint ItemValue2 = 0b00000000_00000000_01111111_00000000u;
-            public const uint ItemValue3 = 0b00000000_01111111_00000000_00000000u;
-            public const uint ItemValue4 = 0b01111111_00000000_00000000_00000000u;
-
-            public const int ItemShift1 = 0;
-            public const int ItemShift2 = 8;
-            public const int ItemShift3 = 16;
-            public const int ItemShift4 = 24;
-        }
-
-        static class Packing129to32768
-        {
-            public const int Capacity = short.MaxValue + 1;
-            public const uint ItemMask1 = 0b0000000000000000_1111111111111111u;
-            public const uint ItemMask2 = 0b1111111111111111_0000000000000000u;
-
-            public const uint ItemFlag1 = 0b0000000000000000_1000000000000000u;
-            public const uint ItemFlag2 = 0b1000000000000000_0000000000000000u;
-
-            public const uint ItemValue1 = 0b0000000000000000_0111111111111111u;
-            public const uint ItemValue2 = 0b0111111111111111_0000000000000000u;
-
-            public const int ItemShift1 = 0;
-            public const int ItemShift2 = 16;
-        }
-
-        static class Packing32769to2147483647
-        {
-            public const int Capacity = int.MaxValue;
-            public const uint ItemMask1 = 0b11111111111111111111111111111111u;
-            public const uint ItemFlag1 = 0b10000000000000000000000000000000u;
-            public const uint ItemValue1 = 0b01111111111111111111111111111111u;
-            public const int ItemShift1 = 0;
+            public static readonly ushort Region = (ushort)(Order >> 2);
+            public static readonly uint Mask = (Order & 0b11) switch
+            {
+                0 => ItemMask1,
+                1 => ItemMask2,
+                2 => ItemMask3,
+                3 => ItemMask4,
+                _ => throw new SwitchExpressionException(),
+            };
+            public static readonly uint Flag = (Order & 0b11) switch
+            {
+                0 => ItemFlag1,
+                1 => ItemFlag2,
+                2 => ItemFlag3,
+                3 => ItemFlag4,
+                _ => throw new SwitchExpressionException(),
+            };
+            public static readonly int Shift = (Order & 0b11) switch
+            {
+                0 => ItemShift1,
+                1 => ItemShift2,
+                2 => ItemShift3,
+                3 => ItemShift4,
+                _ => throw new SwitchExpressionException(),
+            };
         }
 
         /// <summary>
@@ -214,11 +137,41 @@ namespace NetCore.Common
 
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
+        /// .                                                 Constants
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// Note (for the future): By using ulong it's possible to change the structure:
+        /// Layout: [Offset - 32 bits][flag+position - 4 bits][f+p][f+p][f+p][f+p][f+p][f+p][f+p]
+        /// Size:   [32bits][4bits][4bits][4bits][4bits][4bits][4bits][4bits][4bits]
+        /// Features: Max item amount - 4294967296 (<seealso cref="uint.MaxValue"/> + 1).
+        /// 
+        /// Current system (uint-based):
+        /// Layout: [Offset - 16 bits][unused - 4 bits][flag+position - 3 bits][flag+position][flag+position][flag+position]
+        /// Size:   [16bits][4bits][3bits][3bits][3bits][3bits] = 32bits (7bits per item)(technically 8bits per item).
+        /// Features: Max item amount - 65536 (<seealso cref="ushort.MaxValue"/> + 1).
+        const uint ItemMask1 = 0b000_000_000_011u; // shift: 0
+        const uint ItemMask2 = 0b000_000_011_000u; // shift: 3
+        const uint ItemMask3 = 0b000_011_000_000u; // shift: 6
+        const uint ItemMask4 = 0b011_000_000_000u; // shift: 9
+        const uint ItemFlag1 = 0b000_000_000_100u;
+        const uint ItemFlag2 = 0b000_000_100_000u;
+        const uint ItemFlag3 = 0b000_100_000_000u;
+        const uint ItemFlag4 = 0b100_000_000_000u;
+        const int ShiftToOrigin = 16;
+        const int ItemShift1 = 0;
+        const int ItemShift2 = 3;
+        const int ItemShift3 = 6;
+        const int ItemShift4 = 9;
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
         /// .                                               Private Fields
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         private uint stored;
-        private PackingMode mode;
         private uint[] flags;
         private TBase[] items;
 
@@ -235,264 +188,222 @@ namespace NetCore.Common
         /// </summary>
         public readonly bool Has<TItem>() where TItem : TBase
         {
-            uint flagsIndex;
-            switch (mode)
+            if (ID<TItem>.Region >= flags.Length)
             {
-                case PackingMode.Size0: return false;
-                case PackingMode.Size1to8:
-                    flagsIndex = ID<TItem>.Index >> 3;
-                    if (flagsIndex >= flags.Length)
-                    {
-                        return false; // Handles out-of-bounds.
-                    }
-
-                    return (ID<TItem>.Index & 0b111) switch
-                    {
-                        0 => (flags[flagsIndex] & Packing1to8.ItemFlag1) != 0,
-                        1 => (flags[flagsIndex] & Packing1to8.ItemFlag2) != 0,
-                        2 => (flags[flagsIndex] & Packing1to8.ItemFlag3) != 0,
-                        3 => (flags[flagsIndex] & Packing1to8.ItemFlag4) != 0,
-                        4 => (flags[flagsIndex] & Packing1to8.ItemFlag5) != 0,
-                        5 => (flags[flagsIndex] & Packing1to8.ItemFlag6) != 0,
-                        6 => (flags[flagsIndex] & Packing1to8.ItemFlag7) != 0,
-                        _ => (flags[flagsIndex] & Packing1to8.ItemFlag8) != 0,
-                    };
-
-                case PackingMode.Size9to128:
-                    flagsIndex = ID<TItem>.Index >> 2;
-                    if (flagsIndex >= flags.Length)
-                    {
-                        return false; // Handles out-of-bounds.
-                    }
-
-                    return (ID<TItem>.Index & 0b11) switch
-                    {
-                        0 => (flags[flagsIndex] & Packing9to128.ItemFlag1) != 0,
-                        1 => (flags[flagsIndex] & Packing9to128.ItemFlag2) != 0,
-                        2 => (flags[flagsIndex] & Packing9to128.ItemFlag3) != 0,
-                        _ => (flags[flagsIndex] & Packing9to128.ItemFlag4) != 0,
-                    };
-
-                case PackingMode.Size129to32768:
-                    flagsIndex = ID<TItem>.Index >> 1;
-                    if (flagsIndex >= flags.Length)
-                    {
-                        return false; // Handles out-of-bounds.
-                    }
-
-                    return (ID<TItem>.Index & 0b1) switch
-                    {
-                        0 => (flags[flagsIndex] & Packing129to32768.ItemFlag1) != 0,
-                        _ => (flags[flagsIndex] & Packing129to32768.ItemFlag2) != 0,
-                    };
-
-                case PackingMode.Size32769to2147483647:
-                default:
-                    return ID<TItem>.Index < flags.Length // Handles out-of-bounds.
-                        && (flags[ID<TItem>.Index] & Packing32769to2147483647.ItemFlag1) != 0;
+                return false; // Handles out-of-range.
             }
+
+            return (flags[ID<TItem>.Region] & ID<TItem>.Flag) != 0;
         }
 
+        /// <summary>
+        /// Checks if a given item type is defined in a list.
+        /// </summary>
+        /// <param name="itemType">Type of an target item to check for.</param>
+        /// <remarks>
+        /// Less performant than <see cref="TryGet{TItem}(out TItem)"/> (as it doesn't use pre-computed masks),
+        /// but instead - it supports weak types.
+        /// </remarks>
+        public readonly bool Has(Type itemType)
+        {
+            if (Indexing.TryGetOrder(itemType, out ushort order))
+            {
+                return Has(order);
+            }
+
+            return false;
+        }
+
+        /// <inheritdoc cref="Has(Type)"/>
+        readonly bool Has(int order)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Attempts to retrieve an <typeparamref name="TItem"/> from this <see cref="HashList{TBase}"/>
+        /// </summary>
+        /// <typeparam name="TItem">Item, inheriting <typeparamref name="TBase"/> to look for.</typeparam>
+        /// <returns>
+        /// <c>true</c> if <paramref name="item"/> was found and was provided.
+        /// <c>false</c> otherwise.
+        /// </returns>
+        public readonly bool TryGet<TItem>([NotNullWhen(true)] out TItem? item) where TItem : TBase
+        {
+            if (ID<TItem>.Region >= this.flags.Length)
+            {
+                item = default;
+                return false; // Handles out-of-range.
+            }
+
+            uint flags = this.flags[ID<TItem>.Region];
+            if ((flags & ID<TItem>.Flag) == 0)
+            {
+                item = default;
+                return false; // Item is not defined.
+            }
+
+            item = (TItem)items[(flags >> ShiftToOrigin) + ((flags & ID<TItem>.Mask) >> ID<TItem>.Shift)]!;
+            return true;
+        }
+
+        /// <summary>
+        /// Attempts to retrieve an <paramref name="item"/> of a given <paramref name="itemType"/> from this <see cref="HashList{TBase}"/>
+        /// </summary>
+        /// <remarks>
+        /// Less performant than <see cref="TryGet{TItem}(out TItem)"/> (as it doesn't use pre-computed masks),
+        /// but instead - it supports weak types.
+        /// </remarks>
+        /// <returns>
+        /// <c>true</c> if <paramref name="item"/> was found and was provided.
+        /// <c>false</c> otherwise.
+        /// </returns>
+        public readonly bool TryGet(Type itemType, [NotNullWhen(true)] out TBase? item)
+        {
+            if (Indexing.TryGetOrder(itemType, out ushort order))
+            {
+                return TryGet(order, out item);
+            }
+
+            item = default;
+            return false;
+        }
+
+        /// <inheritdoc cref="TryGet(Type, out TBase)"/>.
+        readonly bool TryGet(int order, [NotNullWhen(true)] out TBase? item)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Retrieves an item of a type <typeparamref name="TItem"/> from this <see cref="HashList{TBase}"/>.
+        /// Throws a <see cref="KeyNotFoundException"/> if not defined.
+        /// </summary>
+        /// <typeparam name="TItem">Item type to look for.</typeparam>
+        /// <exception cref="KeyNotFoundException"><typeparamref name="TItem"/> is not defined in this list.</exception>
+        public readonly TItem Get<TItem>() where TItem : TBase
+        {
+            if (ID<TItem>.Region >= this.flags.Length)
+            {
+                throw new ItemNotFoundException(typeof(TItem));
+            }
+
+            uint flags = this.flags[ID<TItem>.Region];
+            if ((flags & ID<TItem>.Flag) == 0)
+            {
+                throw new ItemNotFoundException(typeof(TItem));
+            }
+
+            return (TItem)items[(flags >> ShiftToOrigin) + ((flags & ID<TItem>.Mask) >> ID<TItem>.Shift)]!;
+        }
+
+        /// <summary>
+        /// Retrieves an item of a given <paramref name="itemType"/> from this <see cref="HashList{TBase}"/>.
+        /// Throws a <see cref="KeyNotFoundException"/> if not defined.
+        /// </summary>
+        /// <remarks>
+        /// Less performant than <see cref="TryGet{TItem}(out TItem)"/> (as it doesn't use pre-computed masks),
+        /// but instead - it supports weak types.
+        /// </remarks>
+        /// <param name="itemType">Item type to look for.</param>
+        /// <exception cref="KeyNotFoundException">Item of a given <paramref name="itemType"/> is not defined in this list.</exception>
+        public readonly TBase Get(Type itemType)
+        {
+            if (Indexing.TryGetOrder(itemType, out ushort order))
+            {
+                return Get(order);
+            }
+
+            throw new ItemNotFoundException(itemType);
+        }
+
+        /// <inheritdoc cref="Get(Type)"/>
+        readonly TBase Get(int order)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Retrieves an item of a type <typeparamref name="TItem"/> from this <see cref="HashList{TBase}"/>.
+        /// Throws a <see cref="KeyNotFoundException"/> if not defined.
+        /// </summary>
+        /// <typeparam name="TItem">Item type to look for.</typeparam>
+        /// <exception cref="KeyNotFoundException"><typeparamref name="TItem"/> is not defined in this list.</exception>
+        public readonly TItem? GetSafe<TItem>() where TItem : TBase
+        {
+            if (ID<TItem>.Region >= this.flags.Length)
+            {
+                return default;
+            }
+
+            uint flags = this.flags[ID<TItem>.Region];
+            if ((flags & ID<TItem>.Flag) == 0)
+            {
+                return default;
+            }
+
+            return (TItem)items[(flags >> ShiftToOrigin) + ((flags & ID<TItem>.Mask) >> ID<TItem>.Shift)]!;
+        }
+
+        /// <summary>
+        /// Retrieves an item of a given <paramref name="itemType"/> from this <see cref="HashList{TBase}"/>.
+        /// Throws a <see cref="KeyNotFoundException"/> if not defined.
+        /// </summary>
+        /// <remarks>
+        /// Less performant than <see cref="TryGet{TItem}(out TItem)"/> (as it doesn't use pre-computed masks),
+        /// but instead - it supports weak types.
+        /// </remarks>
+        /// <param name="itemType">Item type to look for.</param>
+        /// <exception cref="KeyNotFoundException">Item of a given <paramref name="itemType"/> is not defined in this list.</exception>
+        public readonly TBase? GetSafe(Type itemType)
+        {
+            if (Indexing.TryGetOrder(itemType, out ushort order))
+            {
+                return GetSafe(order);
+            }
+
+            return default;
+        }
+
+        /// <inheritdoc cref="GetSafe(Type)"/>
+        readonly TBase? GetSafe(int order)
+        {
+            throw new NotImplementedException();
+        }
+
+
+
+
+        /// <summary>
+        /// Attempts to add an item to the list.
+        /// </summary>
+        /// <typeparam name="TItem">Item type to register.</typeparam>
+        /// <param name="item">Item to add in the end of the list.</param>
+        /// <returns>
+        /// <c>true</c> if added successfully.
+        /// <c>false</c> if item already exist.
+        /// </returns>
+        /// <exception cref="ArgumentNullException"><paramref name="item"/> is <see langword="null"/></exception>
         public bool Add<TItem>(TItem item) where TItem : TBase
         {
-            uint flagsIndex;
-            int capacity = GetModeCapacity(mode);
-            if (stored + 1 > capacity)
-            {
-                flagsIndex = (mode += 1) switch
-                {
-                    PackingMode.Size0 => 0,
-                    PackingMode.Size1to8 => ID<TItem>.Index >> 3,
-                    PackingMode.Size9to128 => ID<TItem>.Index >> 2,
-                    PackingMode.Size129to32768 => ID<TItem>.Index >> 1,
-                    _ => ID<TItem>.Index,
-                };
+            if (item is null)
+                throw new ArgumentNullException(nameof(item));
 
-                // Remap & Resize to a requires size.
-                throw new NotImplementedException();
-            }
-            else
+            if (ID<TItem>.Region >= this.flags.Length)
             {
-                flagsIndex = mode switch
-                {
-                    PackingMode.Size0 => 0,
-                    PackingMode.Size1to8 => ID<TItem>.Index >> 3,
-                    PackingMode.Size9to128 => ID<TItem>.Index >> 2,
-                    PackingMode.Size129to32768 => ID<TItem>.Index >> 1,
-                    _ => ID<TItem>.Index,
-                };
-
-                // Resize if needed.
+                // Too small - resize:
+                Array.Resize(ref items, ID<TItem>.Region + 1);
             }
 
-            switch (mode)
+            ref uint flags = ref this.flags[ID<TItem>.Region];
+            if ((flags & ID<TItem>.Flag) != 0)
             {
-                case PackingMode.Size0: return false;
-                case PackingMode.Size1to8:
-                    ref uint flagsRef1 = ref flags[flagsIndex];
-                    if ((flagsRef1 & (ID<TItem>.Index & 0b111) switch
-                    {
-                        0 => Packing1to8.ItemFlag1,
-                        1 => Packing1to8.ItemFlag2,
-                        2 => Packing1to8.ItemFlag3,
-                        3 => Packing1to8.ItemFlag4,
-                        4 => Packing1to8.ItemFlag5,
-                        5 => Packing1to8.ItemFlag6,
-                        6 => Packing1to8.ItemFlag7,
-                        _ => Packing1to8.ItemFlag8,
-                    }) != 0)
-                    {
-                        return false; // Item already stored.
-                    }
-
-                    items[stored++] = item;
-                    flagsRef1 |= (ID<TItem>.Index & 0b111) switch
-                    {
-                        0 => Packing1to8.ItemFlag1 | (ID<TItem>.Index << Packing1to8.ItemShift1),
-                        1 => Packing1to8.ItemFlag2 | (ID<TItem>.Index << Packing1to8.ItemShift2),
-                        2 => Packing1to8.ItemFlag3 | (ID<TItem>.Index << Packing1to8.ItemShift3),
-                        3 => Packing1to8.ItemFlag4 | (ID<TItem>.Index << Packing1to8.ItemShift4),
-                        4 => Packing1to8.ItemFlag5 | (ID<TItem>.Index << Packing1to8.ItemShift5),
-                        5 => Packing1to8.ItemFlag6 | (ID<TItem>.Index << Packing1to8.ItemShift6),
-                        6 => Packing1to8.ItemFlag7 | (ID<TItem>.Index << Packing1to8.ItemShift7),
-                        _ => Packing1to8.ItemFlag8 | (ID<TItem>.Index << Packing1to8.ItemShift8),
-                    };
-                    return true;
-
-                case PackingMode.Size9to128:
-                    ref uint flagsRef2 = ref flags[flagsIndex];
-                    if ((flagsRef2 & (ID<TItem>.Index & 0b11) switch
-                    {
-                        0 => Packing9to128.ItemFlag1,
-                        1 => Packing9to128.ItemFlag2,
-                        2 => Packing9to128.ItemFlag3,
-                        _ => Packing9to128.ItemFlag4,
-                    }) != 0)
-                    {
-                        return false; // Item already stored.
-                    }
-
-                    items[stored++] = item;
-                    flagsRef2 |= (ID<TItem>.Index & 0b11) switch
-                    {
-                        0 => Packing1to8.ItemFlag1 | (ID<TItem>.Index << Packing1to8.ItemShift1),
-                        1 => Packing1to8.ItemFlag2 | (ID<TItem>.Index << Packing1to8.ItemShift2),
-                        2 => Packing1to8.ItemFlag3 | (ID<TItem>.Index << Packing1to8.ItemShift3),
-                        _ => Packing1to8.ItemFlag4 | (ID<TItem>.Index << Packing1to8.ItemShift4),
-                    };
-                    return true;
-
-                case PackingMode.Size129to32768:
-                    ref uint flagsRef3 = ref flags[flagsIndex];
-                    if ((flagsRef3 & (ID<TItem>.Index & 0b1) switch
-                    {
-                        0 => Packing129to32768.ItemFlag1,
-                        _ => Packing129to32768.ItemFlag2,
-                    }) != 0)
-                    {
-                        return false; // Item already stored.
-                    }
-
-                    items[stored++] = item;
-                    flagsRef3 |= (ID<TItem>.Index & 0b1) switch
-                    {
-                        0 => Packing129to32768.ItemFlag1 | (ID<TItem>.Index << Packing129to32768.ItemShift1),
-                        _ => Packing129to32768.ItemFlag2 | (ID<TItem>.Index << Packing129to32768.ItemShift2),
-                    };
-                    return true;
-
-                case PackingMode.Size32769to2147483647:
-                default:
-                    ref uint flagsRef4 = ref flags[flagsIndex];
-                    if ((flagsRef4 & Packing32769to2147483647.ItemFlag1) != 0)
-                    {
-                        return false; // Item already stored.
-                    }
-
-                    items[stored++] = item;
-                    flagsRef4 |= Packing32769to2147483647.ItemFlag1 | (ID<TItem>.Index << Packing32769to2147483647.ItemShift1);
-                    return true;
+                return false; // Item already exist.
             }
+
+            throw new NotImplementedException();
         }
 
-
-
-
-        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
-        /// .
-        /// .                                                 Experiments
-        /// .
-        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        sealed class Experiments
-        {
-            const uint ItemMask1 = 0b0000_0000_0000_0111u;
-            const uint ItemMask2 = 0b0000_0000_0111_0000u;
-            const uint ItemMask3 = 0b0000_0111_0000_0000u;
-            const uint ItemMask4 = 0b0111_0000_0000_0000u;
-            const uint ItemFlag1 = 0b0000_0000_0000_1000u;
-            const uint ItemFlag2 = 0b0000_0000_1000_0000u;
-            const uint ItemFlag3 = 0b0000_1000_0000_0000u;
-            const uint ItemFlag4 = 0b1000_0000_0000_0000u;
-            const int ShiftToOrigin = 16;
-            const int ItemShift1 = 0;
-            const int ItemShift2 = 4;
-            const int ItemShift3 = 8;
-            const int ItemShift4 = 12;
-
-            readonly uint[] flags = [];
-            readonly object[] items = [];
-            public bool Has(int id)
-            {
-                int region = id >> 2;
-                if (region >= flags.Length)
-                {
-                    return false; // Handles out-of-range.
-                }
-
-                return (flags[region] & (id & 0b11u) switch
-                {
-                    0 => ItemFlag1,
-                    1 => ItemFlag2,
-                    2 => ItemFlag3,
-                    3 => ItemFlag4,
-                    _ => throw new SwitchExpressionException(id & 0b11u),
-                }) != 0;
-            }
-
-            public bool TryGet(int id, [NotNullWhen(true)] out object? item)
-            {
-                int region = id >> 2;
-                if (region >= this.flags.Length)
-                {
-                    item = default!;
-                    return false; // Handles out-of-range.
-                }
-
-                uint flags = this.flags[region];
-                if ((this.flags[region] & (id & 0b11u) switch
-                {
-                    0 => ItemFlag1,
-                    1 => ItemFlag2,
-                    2 => ItemFlag3,
-                    3 => ItemFlag4,
-                    _ => throw new SwitchExpressionException(id & 0b11u),
-                }) == 0)
-                {
-                    item = default!;
-                    return false; // Item does not exist.
-                }
-
-                item = items[(flags >> ShiftToOrigin) + (id & 0b11) switch
-                {
-                    0 => (flags & ItemMask1) >> ItemShift1,
-                    1 => (flags & ItemMask2) >> ItemShift2,
-                    2 => (flags & ItemMask3) >> ItemShift3,
-                    3 => (flags & ItemMask4) >> ItemShift4,
-                    _ => throw new SwitchExpressionException(id & 0b11),
-                }];
-                return true;
-            }
-        }
 
 
 
@@ -507,11 +418,11 @@ namespace NetCore.Common
 
 
 
-        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
-        /// .
-        /// .                                               Static Methods
-        /// .
-        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+            /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+            /// .
+            /// .                                               Static Methods
+            /// .
+            /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         public static Lookup<TItem> GetLookup<TItem>(ref HashList<TBase> list) where TItem : TBase
         {
             if (typeof(TItem) == typeof(TBase))
