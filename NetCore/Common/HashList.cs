@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace NetCore.Common
@@ -411,6 +412,85 @@ namespace NetCore.Common
                     items[stored++] = item;
                     flagsRef4 |= Packing32769to2147483647.ItemFlag1 | (ID<TItem>.Index << Packing32769to2147483647.ItemShift1);
                     return true;
+            }
+        }
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                                 Experiments
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        sealed class Experiments
+        {
+            const uint ItemMask1 = 0b0000_0000_0000_0111u;
+            const uint ItemMask2 = 0b0000_0000_0111_0000u;
+            const uint ItemMask3 = 0b0000_0111_0000_0000u;
+            const uint ItemMask4 = 0b0111_0000_0000_0000u;
+            const uint ItemFlag1 = 0b0000_0000_0000_1000u;
+            const uint ItemFlag2 = 0b0000_0000_1000_0000u;
+            const uint ItemFlag3 = 0b0000_1000_0000_0000u;
+            const uint ItemFlag4 = 0b1000_0000_0000_0000u;
+            const int ShiftToOrigin = 16;
+            const int ItemShift1 = 0;
+            const int ItemShift2 = 4;
+            const int ItemShift3 = 8;
+            const int ItemShift4 = 12;
+
+            readonly uint[] flags = [];
+            readonly object[] items = [];
+            public bool Has(int id)
+            {
+                int region = id >> 2;
+                if (region >= flags.Length)
+                {
+                    return false; // Handles out-of-range.
+                }
+
+                return (flags[region] & (id & 0b11u) switch
+                {
+                    0 => ItemFlag1,
+                    1 => ItemFlag2,
+                    2 => ItemFlag3,
+                    3 => ItemFlag4,
+                    _ => throw new SwitchExpressionException(id & 0b11u),
+                }) != 0;
+            }
+
+            public bool TryGet(int id, [NotNullWhen(true)] out object? item)
+            {
+                int region = id >> 2;
+                if (region >= this.flags.Length)
+                {
+                    item = default!;
+                    return false; // Handles out-of-range.
+                }
+
+                uint flags = this.flags[region];
+                if ((this.flags[region] & (id & 0b11u) switch
+                {
+                    0 => ItemFlag1,
+                    1 => ItemFlag2,
+                    2 => ItemFlag3,
+                    3 => ItemFlag4,
+                    _ => throw new SwitchExpressionException(id & 0b11u),
+                }) == 0)
+                {
+                    item = default!;
+                    return false; // Item does not exist.
+                }
+
+                item = items[(flags >> ShiftToOrigin) + (id & 0b11) switch
+                {
+                    0 => (flags & ItemMask1) >> ItemShift1,
+                    1 => (flags & ItemMask2) >> ItemShift2,
+                    2 => (flags & ItemMask3) >> ItemShift3,
+                    3 => (flags & ItemMask4) >> ItemShift4,
+                    _ => throw new SwitchExpressionException(id & 0b11),
+                }];
+                return true;
             }
         }
 
