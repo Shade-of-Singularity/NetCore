@@ -19,3 +19,4 @@ Supports:
 - UDP+TCP.
 - Unix.
 - SteamNetworking.
+Enything else - with community plugins.
