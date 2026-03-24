@@ -91,6 +91,7 @@ namespace NetCore.Common
     /// TODO: Consider providing a thread-safe alternative around v1 release.
     /// TODO: Test for edge-cases: <see cref="sbyte.MaxValue"/>, <see cref="short.MaxValue"/> and <see cref="int.MaxValue"/>, and update the constants.
     /// TODO: Add IndexOf methods.
+    /// TODO: Rework growth strategy by introducing a load factor.
     public sealed partial class CRTPList<TBase> where TBase : class
     {
         /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="CRTPListExtensions"/>.
@@ -151,6 +152,14 @@ namespace NetCore.Common
             /// Assume that this value is never guaranteed to be either equal or different from the one on a remote host.
             /// </remarks>
             public static readonly int Order = Indexing.GetOrderUnchecked(typeof(TItem));
+            /// <summary>
+            /// Region in which <see cref="Flag"/> resides.
+            /// </summary>
+            public static readonly int FlagRegion = Order >> 5;
+            /// <summary>
+            /// Flag used for encoding in <see cref="Lookup{TFilter}"/>.
+            /// </summary>
+            public static readonly uint Flag = 1u << (Order & 0b11111);
         }
 
         /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="Lookup{TFilter}.Enumerator"/>.
@@ -261,6 +270,28 @@ namespace NetCore.Common
 
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
+        /// .                                                 Delegates
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <param name="item">If <see langword="null"/> - all items were removed.</param>
+        /// <param name="added">When <paramref name="item"/> is not null - either item that was added or removed.</param>
+        private delegate void OnItemChangedHandler(TBase? item, int order, bool added);
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                                   Events
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        private event OnItemChangedHandler? ItemChanged;
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
         /// .                                               Private Fields
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
@@ -354,7 +385,8 @@ namespace NetCore.Common
         }
 
         /// <inheritdoc cref="Has(Type)"/>
-        /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="CRTPListExtensions"/>.
+        /// Note (for maintainers): exposed as <see langword="internal"/>
+        /// for usage in <see cref="CRTPListExtensions"/> and <see cref="Lookup{TFilter}"/>.
         internal bool HasInternal(int order)
         {
             int flagsIndex;
@@ -432,7 +464,8 @@ namespace NetCore.Common
         }
 
         /// <inheritdoc cref="TryGet(Type, out TBase)"/>.
-        /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="CRTPListExtensions"/>.
+        /// Note (for maintainers): exposed as <see langword="internal"/>
+        /// for usage in <see cref="CRTPListExtensions"/> and <see cref="Lookup{TFilter}"/>.
         internal bool TryGetInternal<TItem>(int order, [NotNullWhen(true)] out TItem? item) where TItem : TBase
         {
             int flagsIndex;
@@ -462,21 +495,7 @@ namespace NetCore.Common
                         return false; // Item not found.
                     }
 
-                    if (items[(order & 0b11) switch
-                    {
-                        0 => (flags & PackingByte.ItemValue1) >> PackingByte.ItemShift1,
-                        1 => (flags & PackingByte.ItemValue2) >> PackingByte.ItemShift2,
-                        2 => (flags & PackingByte.ItemValue3) >> PackingByte.ItemShift3,
-                        3 => (flags & PackingByte.ItemValue4) >> PackingByte.ItemShift4,
-                        _ => throw new SwitchExpressionException(order & 0b11),
-                    }] is TItem result1)
-                    {
-                        item = result1;
-                        return true;
-                    }
-
-                    item = default;
-                    return false;
+                    return TryGetInternalUnsafeByte(order, out item, flags);
 
                 case PackingMode.SizeUShort:
                     flagsIndex = order >> 1;
@@ -498,19 +517,7 @@ namespace NetCore.Common
                         return false; // Item not found.
                     }
 
-                    if (items[(order & 0b1) switch
-                    {
-                        0 => (flags & PackingUShort.ItemValue1) >> PackingUShort.ItemShift1,
-                        1 => (flags & PackingUShort.ItemValue2) >> PackingUShort.ItemShift2,
-                        _ => throw new SwitchExpressionException(order & 0b1),
-                    }] is TItem result2)
-                    {
-                        item = result2;
-                        return true;
-                    }
-
-                    item = default;
-                    return false;
+                    return TryGetInternalUnsafeUShort(order, out item, flags);
 
                 case PackingMode.SizeUInt:
                     flagsIndex = order;
@@ -527,17 +534,61 @@ namespace NetCore.Common
                         return false; // Item not found.
                     }
 
-                    if (items[(flags & PackingUInt.ItemValue) >> PackingUInt.ItemShift] is TItem result3)
-                    {
-                        item = result3;
-                        return true;
-                    }
-
-                    item = default;
-                    return false;
+                    return TryGetInternalUnsafeUInt(out item, flags);
 
                 default: throw new SwitchExpressionException(mode);
             }
+        }
+
+        /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="Lookup{TFilter}"/>.
+        internal bool TryGetInternalUnsafeByte<TItem>(int order, out TItem? item, uint flags) where TItem : TBase
+        {
+            if (items[(order & 0b11) switch
+            {
+                0 => (flags & PackingByte.ItemValue1) >> PackingByte.ItemShift1,
+                1 => (flags & PackingByte.ItemValue2) >> PackingByte.ItemShift2,
+                2 => (flags & PackingByte.ItemValue3) >> PackingByte.ItemShift3,
+                3 => (flags & PackingByte.ItemValue4) >> PackingByte.ItemShift4,
+                _ => throw new SwitchExpressionException(order & 0b11),
+            }] is TItem result1)
+            {
+                item = result1;
+                return true;
+            }
+
+            item = default;
+            return false;
+        }
+
+        /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="Lookup{TFilter}"/>.
+        internal bool TryGetInternalUnsafeUShort<TItem>(int order, out TItem? item, uint flags) where TItem : TBase
+        {
+            if (items[(order & 0b1) switch
+            {
+                0 => (flags & PackingUShort.ItemValue1) >> PackingUShort.ItemShift1,
+                1 => (flags & PackingUShort.ItemValue2) >> PackingUShort.ItemShift2,
+                _ => throw new SwitchExpressionException(order & 0b1),
+            }] is TItem result2)
+            {
+                item = result2;
+                return true;
+            }
+
+            item = default;
+            return false;
+        }
+
+        /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="Lookup{TFilter}"/>.
+        internal bool TryGetInternalUnsafeUInt<TItem>(out TItem? item, uint flags) where TItem : TBase
+        {
+            if (items[(flags & PackingUInt.ItemValue) >> PackingUInt.ItemShift] is TItem result3)
+            {
+                item = result3;
+                return true;
+            }
+
+            item = default;
+            return false;
         }
 
         /// <summary>
@@ -572,7 +623,8 @@ namespace NetCore.Common
         }
 
         /// <inheritdoc cref="Get(Type)"/>
-        /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="CRTPListExtensions"/>.
+        /// Note (for maintainers): exposed as <see langword="internal"/>
+        /// for usage in <see cref="CRTPListExtensions"/> and <see cref="Lookup{TFilter}"/>.
         internal TItem GetInternal<TItem>(int order) where TItem : TBase
         {
             int flagsIndex;
@@ -683,7 +735,8 @@ namespace NetCore.Common
         }
 
         /// <inheritdoc cref="SafeGet(Type)"/>
-        /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="CRTPListExtensions"/>.
+        /// Note (for maintainers): exposed as <see langword="internal"/>
+        /// for usage in <see cref="CRTPListExtensions"/> and <see cref="Lookup{TFilter}"/>.
         internal TItem? SafeGetInternal<TItem>(int order) where TItem : class, TBase
         {
             int flagsIndex;
@@ -805,7 +858,7 @@ namespace NetCore.Common
         /// <c>true</c> if added successfully.
         /// <c>false</c> if item already exist.
         /// </returns>
-        public bool SafeAdd<TItem>(TItem item) where TItem : TBase
+        public bool SafeAdd<TItem>(TItem? item) where TItem : TBase
         {
             if (item is null || typeof(TItem) != item.GetType())
                 return false;
@@ -814,7 +867,8 @@ namespace NetCore.Common
         }
 
         /// <inheritdoc cref="Add{TItem}(TItem)"/>.
-        /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="CRTPListExtensions"/>.
+        /// Note (for maintainers): exposed as <see langword="internal"/>
+        /// for usage in <see cref="CRTPListExtensions"/> and <see cref="Lookup{TFilter}"/>.
         internal bool AddInternal(int order, TBase item)
         {
             int flagsIndex;
@@ -822,10 +876,32 @@ namespace NetCore.Common
             switch (mode)
             {
                 case PackingMode.Size0:
-                    mode = PackingMode.SizeByte;
-                    flags = [PackingByte.ItemFlag1 | 0];
-                    items = [item];
+                    EnsureFlagsCapacity(order);
+                    EnsureItemsCapacity(1);
+                    switch (mode)
+                    {
+                        case PackingMode.Size0: throw new SwitchExpressionException(mode);
+                        case PackingMode.SizeByte:
+                            flags[order >> 2] = 
+                            break;
+                        case PackingMode.SizeUShort:
+                            break;
+                        case PackingMode.SizeUInt:
+                            break;
+                        default: throw new SwitchExpressionException(mode);
+                    }
+                    ref uint flags1 = ref flags[flagsIndex];
+                    flags[mode switch
+                    {
+                        PackingMode.Size0 => throw new SwitchExpressionException(mode),
+                        PackingMode.SizeByte => order >> 2,
+                        PackingMode.SizeUShort => order >> 1,
+                        PackingMode.SizeUInt => order
+                        _ => throw new NotImplementedException(),
+                    }]
+                    items[0] = item;
                     stored = 1;
+                    ItemChanged?.Invoke(item, order, added: true);
                     return true;
 
                 case PackingMode.SizeByte:
@@ -836,8 +912,8 @@ namespace NetCore.Common
                         throw new NotImplementedException();
                     }
 
-                    ref uint flags1 = ref flags[flagsIndex];
-                    if ((flags1 & (order & 0b11) switch
+                    ref uint flags2 = ref flags[flagsIndex];
+                    if ((flags2 & (order & 0b11) switch
                     {
                         0 => PackingByte.ItemFlag1,
                         1 => PackingByte.ItemFlag2,
@@ -851,7 +927,7 @@ namespace NetCore.Common
 
                     index = (uint)stored++; // TODO: Resize array to account for "stored + 1"
                     items[index] = item;
-                    flags1 |= (order & 0b11) switch
+                    flags2 |= (order & 0b11) switch
                     {
                         0 => PackingByte.ItemFlag1 | (index << PackingByte.ItemShift1),
                         1 => PackingByte.ItemFlag2 | (index << PackingByte.ItemShift2),
@@ -859,6 +935,7 @@ namespace NetCore.Common
                         3 => PackingByte.ItemFlag4 | (index << PackingByte.ItemShift4),
                         _ => throw new SwitchExpressionException(order & 0b11),
                     };
+                    ItemChanged?.Invoke(item, order, added: true);
                     return true;
 
                 case PackingMode.SizeUShort:
@@ -869,8 +946,8 @@ namespace NetCore.Common
                         throw new NotImplementedException();
                     }
 
-                    ref uint flags2 = ref flags[flagsIndex];
-                    if ((flags2 & (order & 0b1) switch
+                    ref uint flags3 = ref flags[flagsIndex];
+                    if ((flags3 & (order & 0b1) switch
                     {
                         0 => PackingUShort.ItemFlag1,
                         1 => PackingUShort.ItemFlag2,
@@ -882,12 +959,13 @@ namespace NetCore.Common
 
                     index = (uint)stored++; // TODO: Resize array to account for "stored + 1"
                     items[index] = item;
-                    flags2 |= (order & 0b1) switch
+                    flags3 |= (order & 0b1) switch
                     {
                         0 => PackingUShort.ItemFlag1 | (index << PackingUShort.ItemShift1),
                         1 => PackingUShort.ItemFlag2 | (index << PackingUShort.ItemShift2),
                         _ => throw new SwitchExpressionException(order & 0b11),
                     };
+                    ItemChanged?.Invoke(item, order, added: true);
                     return true;
 
                 case PackingMode.SizeUInt:
@@ -898,15 +976,16 @@ namespace NetCore.Common
                         throw new NotImplementedException();
                     }
 
-                    ref uint flags3 = ref flags[flagsIndex];
-                    if ((flags3 & PackingUInt.ItemFlag) != 0)
+                    ref uint flags4 = ref flags[flagsIndex];
+                    if ((flags4 & PackingUInt.ItemFlag) != 0)
                     {
                         return false; // Item already exist.
                     }
 
                     index = (uint)stored++; // TODO: Resize array to account for "stored + 1"
                     items[index] = item;
-                    flags3 |= PackingUInt.ItemFlag | (index << PackingUInt.ItemShift);
+                    flags4 |= PackingUInt.ItemFlag | (index << PackingUInt.ItemShift);
+                    ItemChanged?.Invoke(item, order, added: true);
                     return true;
 
                 default: throw new SwitchExpressionException(mode);
@@ -962,7 +1041,7 @@ namespace NetCore.Common
         /// <see langword="true"/> if item was successfully inserted.
         /// <see langword="false"/> if item under the same type is already on the list.
         /// </returns>
-        public bool SafeInsert<TItem>(TItem item, int index) where TItem : TBase
+        public bool SafeInsert<TItem>(TItem? item, int index) where TItem : TBase
         {
             if (item is null || index < 0 || index > stored || typeof(TItem) != item.GetType() || Has<TItem>())
                 return false;
@@ -976,7 +1055,8 @@ namespace NetCore.Common
         /// and doesn't check if item already exist or not - you need to handle it externally.
         /// </remarks>
         /// <inheritdoc cref="Insert{TItem}(TItem, int)"/>.
-        /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="CRTPListExtensions"/>.
+        /// Note (for maintainers): exposed as <see langword="internal"/>
+        /// for usage in <see cref="CRTPListExtensions"/> and <see cref="Lookup{TFilter}"/>.
         internal void InsertInternalUnchecked(int order, TBase item, int index)
         {
             if (index == stored)
@@ -1021,6 +1101,7 @@ namespace NetCore.Common
                         }
                     }
 
+                    ItemChanged?.Invoke(item, order, added: true);
                     bytes[order] = (byte)(PackingByte.ByteFlag | index);
                     stored++;
                     return;
@@ -1057,6 +1138,7 @@ namespace NetCore.Common
                         }
                     }
 
+                    ItemChanged?.Invoke(item, order, added: true);
                     ushorts[order] = (ushort)(PackingUShort.UShortFlag | index);
                     stored++;
                     return;
@@ -1092,6 +1174,7 @@ namespace NetCore.Common
                         }
                     }
 
+                    ItemChanged?.Invoke(item, order, added: true);
                     flags[order] = (uint)(PackingUInt.ItemFlag | index);
                     stored++;
                     return;
@@ -1147,7 +1230,7 @@ namespace NetCore.Common
         /// <see langword="true"/> if item was successfully removed.
         /// <see langword="false"/> if item was not defined in this list in a first place.
         /// </returns>
-        public bool SafeRemove<TItem>(TItem item) where TItem : TBase
+        public bool SafeRemove<TItem>(TItem? item) where TItem : TBase
         {
             if (item is null || typeof(TItem) != item.GetType())
                 return false;
@@ -1156,7 +1239,8 @@ namespace NetCore.Common
         }
 
         /// <inheritdoc cref="Remove{TItem}()"/>.
-        /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="CRTPListExtensions"/>.
+        /// Note (for maintainers): exposed as <see langword="internal"/>
+        /// for usage in <see cref="CRTPListExtensions"/> and <see cref="Lookup{TFilter}"/>.
         internal bool RemoveInternal<TItem>(int order, TItem? criteria, [NotNullWhen(true)] out TItem? item) where TItem : TBase
         {
             int index;
@@ -1197,7 +1281,8 @@ namespace NetCore.Common
                     if (items[index] is TItem result1 && (criteria is null || EqualityComparer<TItem>.Default.Equals(result1, criteria)))
                     {
                         item = result1;
-                        RemoveAtInternalUnchecked(index);
+                        RemoveAtInternalUnchecked(index, out var _);
+                        ItemChanged?.Invoke(item, order, added: false);
                         return true;
                     }
 
@@ -1233,7 +1318,8 @@ namespace NetCore.Common
                     if (items[index] is TItem result2 && (criteria is null || EqualityComparer<TItem>.Default.Equals(result2, criteria)))
                     {
                         item = result2;
-                        RemoveAtInternalUnchecked(index);
+                        RemoveAtInternalUnchecked(index, out var _);
+                        ItemChanged?.Invoke(item, order, added: false);
                         return true;
                     }
 
@@ -1258,7 +1344,8 @@ namespace NetCore.Common
                     if (items[index] is TItem result3 && (criteria is null || EqualityComparer<TItem>.Default.Equals(result3, criteria)))
                     {
                         item = result3;
-                        RemoveAtInternalUnchecked(index);
+                        RemoveAtInternalUnchecked(index, out var _);
+                        ItemChanged?.Invoke(item, order, added: false);
                         return true;
                     }
 
@@ -1283,7 +1370,25 @@ namespace NetCore.Common
             if (index < 0 || index >= stored)
                 throw new ArgumentOutOfRangeException(nameof(index));
 
-            RemoveAtInternalUnchecked(index);
+            RemoveAtInternalUnchecked(index, out var _);
+        }
+
+        /// <summary>
+        /// Attempts to remove an item at a given <paramref name="index"/>, and returns it as <paramref name="item"/> variable.
+        /// </summary>
+        /// <remarks>
+        /// <para>Throws if <paramref name="index"/> is beyond a current set of items (i.e. larger or equal to <see cref="Count"/>).</para>
+        /// <para>Complexity: O(n) (In large lists can be very expensive)</para>
+        /// </remarks>
+        /// <param name="index">Index at which to remove an item.</param>
+        /// <param name="item">Item that was under a given <paramref name="index"/>.</param>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is larger than <see cref="Count"/>.</exception>
+        public bool RemoveAt(int index, [NotNullWhen(true)] out TBase? item)
+        {
+            if (index < 0 || index >= stored)
+                throw new ArgumentOutOfRangeException(nameof(index));
+
+            return RemoveAtInternalUnchecked(index, out item);
         }
 
         /// <summary>
@@ -1302,8 +1407,25 @@ namespace NetCore.Common
             if (index < 0 || index >= stored)
                 return false;
 
-            RemoveAtInternalUnchecked(index);
-            return true;
+            return RemoveAtInternalUnchecked(index, out var _);
+        }
+
+        /// <summary>
+        /// Attempts to remove an item at a given <paramref name="index"/>, and returns it as <paramref name="item"/> variable.
+        /// </summary>
+        /// <remarks>
+        /// <para>Throws if <paramref name="index"/> is beyond a current set of items (i.e. larger or equal to <see cref="Count"/>).</para>
+        /// <para>Complexity: O(n) (In large lists can be very expensive)</para>
+        /// </remarks>
+        /// <param name="index">Index at which to remove an item.</param>
+        /// <param name="item">Item that was under a given <paramref name="index"/>.</param>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is larger than <see cref="Count"/>.</exception>
+        public bool SafeRemoveAt(int index, [NotNullWhen(true)] out TBase? item)
+        {
+            if (index < 0 || index >= stored)
+                throw new ArgumentOutOfRangeException(nameof(index));
+
+            return RemoveAtInternalUnchecked(index, out item);
         }
 
         /// <remarks>
@@ -1311,13 +1433,15 @@ namespace NetCore.Common
         /// and doesn't check if item actually exist or not - you need to handle it externally.
         /// </remarks>
         /// <inheritdoc cref="Insert{TItem}(TItem, int)"/>.
-        /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="CRTPListExtensions"/>.
-        internal void RemoveAtInternalUnchecked(int index)
+        /// Note (for maintainers): exposed as <see langword="internal"/>
+        /// for usage in <see cref="CRTPListExtensions"/> and <see cref="Lookup{TFilter}"/>.
+        internal bool RemoveAtInternalUnchecked(int index, [NotNullWhen(true)] out TBase? item)
         {
             switch (mode)
             {
-                case PackingMode.Size0: return;
+                case PackingMode.Size0: item = default; return false;
                 case PackingMode.SizeByte:
+                    item = items[index];
                     Array.Copy(items, index + 1, items, index, items.Length - index - 1);
                     items[stored - 1] = default!;
                     Span<byte> bytes = MemoryMarshal.AsBytes(flags.AsSpan());
@@ -1334,9 +1458,10 @@ namespace NetCore.Common
                         }
                     }
                     stored--;
-                    return;
+                    return true;
 
                 case PackingMode.SizeUShort:
+                    item = items[index];
                     Array.Copy(items, index + 1, items, index, items.Length - index - 1);
                     items[stored - 1] = default!;
                     Span<ushort> ushorts = MemoryMarshal.Cast<uint, ushort>(flags.AsSpan());
@@ -1353,9 +1478,10 @@ namespace NetCore.Common
                         }
                     }
                     stored--;
-                    return;
+                    return true;
 
                 case PackingMode.SizeUInt:
+                    item = items[index];
                     Array.Copy(items, index + 1, items, index, items.Length - index - 1);
                     items[stored - 1] = default!;
                     foreach (ref uint flags in flags.AsSpan())
@@ -1371,7 +1497,7 @@ namespace NetCore.Common
                         }
                     }
                     stored--;
-                    return;
+                    return true;
 
                 default: throw new SwitchExpressionException(mode);
             }
@@ -1410,6 +1536,58 @@ namespace NetCore.Common
         /// .                                               Private Methods
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        private void EnsureFlagsCapacity(int entries)
+        {
+            int size = mode switch
+            {
+                PackingMode.Size0 => 0,
+                PackingMode.SizeByte => flags.Length << 2,
+                PackingMode.SizeUShort => flags.Length << 1,
+                PackingMode.SizeUInt => flags.Length,
+                _ => throw new SwitchExpressionException(mode),
+            };
+
+            if (entries > size)
+            {
+                switch (mode = GetPackingMode(entries))
+                {
+                    case PackingMode.Size0: break;
+                    case PackingMode.SizeByte: entries = (entries + 3) >> 2; break;
+                    case PackingMode.SizeUShort: entries = (entries + 1) >> 1; break;
+                    case PackingMode.SizeUInt: break;
+
+                    default: throw new SwitchExpressionException(mode);
+                }
+
+                Array.Resize(ref flags, entries);
+            }
+        }
+
+        private void EnsureItemsCapacity(int amount)
+        {
+            if (amount > items.Length)
+            {
+                Array.Resize(ref items, amount);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static int GetModeCapacity(PackingMode mode) => mode switch
+        {
+            PackingMode.Size0 => 0,
+            PackingMode.SizeByte => PackingByte.Capacity,
+            PackingMode.SizeUShort => PackingUShort.Capacity,
+            PackingMode.SizeUInt => PackingUInt.Capacity,
+            _ => throw new SwitchExpressionException(mode),
+        };
+
+        static PackingMode GetPackingMode(int capacity) => capacity switch
+        {
+            0 => PackingMode.Size0,
+            <= PackingByte.Capacity => PackingMode.SizeByte,
+            <= PackingUShort.Capacity => PackingMode.SizeUShort,
+            _ => PackingMode.SizeUInt,
+        };
 
 
 
@@ -1437,16 +1615,6 @@ namespace NetCore.Common
 
             return new Lookup<TFilter>(this);
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static int GetModeCapacity(PackingMode mode) => mode switch
-        {
-            PackingMode.Size0 => 0,
-            PackingMode.SizeByte => PackingByte.Capacity,
-            PackingMode.SizeUShort => PackingUShort.Capacity,
-            PackingMode.SizeUInt => PackingUInt.Capacity,
-            _ => throw new SwitchExpressionException(mode),
-        };
     }
 
     /// <summary>

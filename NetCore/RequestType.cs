@@ -2,7 +2,7 @@
 {
     /// <summary>
     /// Describes whether message is a request or response.
-    /// Both will also define <see cref=""/>
+    /// Both will also define a <see cref="RequestIDHeader"/> in <see cref="Header"/>.
     /// </summary>
     public enum RequestType : byte
     {
