@@ -9,42 +9,62 @@ namespace NetCore.Transports.Unix
             throw new NotImplementedException();
         }
 
-        public void HandleReliable(Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
+        public void HandleReliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             throw new NotImplementedException();
         }
 
-        public void HandleUnreliable(Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
+        public void HandleUnreliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             throw new NotImplementedException();
         }
 
-        public void SendReliable(Header header, ReadOnlySpan<byte> datagram)
+        public void SendReliable(in Header header, ReadOnlySpan<byte> datagram)
         {
             throw new NotImplementedException();
         }
 
-        public void SendReliableExcluding(Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
+        public void SendReliableExcluding(in Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
             throw new NotImplementedException();
         }
 
-        public void SendReliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
+        public void SendReliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
         {
             throw new NotImplementedException();
         }
 
-        public void SendUnreliable(Header header, ReadOnlySpan<byte> datagram)
+        public void SendUnreliable(in Header header, ReadOnlySpan<byte> datagram)
         {
             throw new NotImplementedException();
         }
 
-        public void SendUnreliableExcluding(Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
+        public void SendUnreliableExcluding(in Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
             throw new NotImplementedException();
         }
 
-        public void SendUnreliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
+        public void SendUnreliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SendReliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void HandleReliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs source)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SendUnreliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void HandleUnreliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs source)
         {
             throw new NotImplementedException();
         }

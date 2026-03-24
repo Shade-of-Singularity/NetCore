@@ -70,7 +70,7 @@ namespace NetCore.Transports.TCP
         }
 
         /// <inheritdoc/>
-        public void SendReliable(Header header, ReadOnlySpan<byte> datagram)
+        public void SendReliable(in Header header, ReadOnlySpan<byte> datagram)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(TCPTransport)}.{nameof(SendReliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -78,7 +78,7 @@ namespace NetCore.Transports.TCP
         }
 
         /// <inheritdoc/>
-        public void SendReliableExcluding(Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
+        public void SendReliableExcluding(in Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(TCPTransport)}.{nameof(SendReliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -86,7 +86,7 @@ namespace NetCore.Transports.TCP
         }
 
         /// <inheritdoc/>
-        public void SendReliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
+        public void SendReliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(TCPTransport)}.{nameof(SendReliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -94,11 +94,23 @@ namespace NetCore.Transports.TCP
         }
 
         /// <inheritdoc/>
-        public void HandleReliable(Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
+        public void HandleReliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"{nameof(TCPTransport)}.{nameof(HandleReliable)}(source: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
             Console.ForegroundColor = ConsoleColor.White;
+        }
+
+        /// <inheritdoc/>
+        public void SendReliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <inheritdoc/>
+        public void HandleReliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs source)
+        {
+            throw new NotImplementedException();
         }
     }
 }

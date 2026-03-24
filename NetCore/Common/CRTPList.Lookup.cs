@@ -14,6 +14,10 @@ namespace NetCore.Common
         /// </summary>
         /// <typeparam name="TFilter">Type for which to filter.</typeparam>
         /// <param name="list"></param>
+        /// Note: RemoveAt and IndexOf was not implemented, because it is hard to decide whether index
+        ///  from <see cref="CRTPList{TBase}"/> should be used, or custom indexing system should be provided for <see cref="Lookup{TFilter}"/>.
+        ///  (Probably the latter though - simply map indexes back to flags, and then to <see cref="CRTPList{TBase}"/> positions)
+        ///  (Even approach like this should still be faster than <see cref="System.Collections.Generic.Dictionary{TKey, TValue}"/>).
         public struct Lookup<TFilter>(CRTPList<TBase> list) where TFilter : TBase
         {
             /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
@@ -51,32 +55,32 @@ namespace NetCore.Common
             /// <inheritdoc cref="CRTPList{TBase}.Get{TItem}()"/>
             public readonly TItem Get<TItem>() where TItem : TFilter => list.Get<TItem>();
 
-            /// <inheritdoc cref="CRTPList{TBase}.GetSafe{TItem}()"/>
-            public readonly TItem? GetSafe<TItem>() where TItem : class, TFilter => list.GetSafe<TItem>();
+            /// <inheritdoc cref="CRTPList{TBase}.SafeGet{TItem}()"/>
+            public readonly TItem? SafeGet<TItem>() where TItem : class, TFilter => list.SafeGet<TItem>();
 
             /// <inheritdoc cref="CRTPList{TBase}.Add{TItem}(TItem)"/>
             public readonly bool Add<TItem>(TItem item) where TItem : TFilter => list.Add(item);
 
+            /// <inheritdoc cref="CRTPList{TBase}.Add{TItem}(TItem)"/>
+            public readonly bool SafeAdd<TItem>(TItem item) where TItem : TFilter => list.SafeAdd(item);
+
             /// <inheritdoc cref="CRTPList{TBase}.Insert{TItem}(TItem, int)"/>
             public readonly void Insert<TItem>(TItem item, int index) where TItem : TFilter => list.Insert(item, index);
 
+            /// <inheritdoc cref="CRTPList{TBase}.SafeInsert{TItem}(TItem, int)"/>
+            public readonly void SafeInsert<TItem>(TItem item, int index) where TItem : TFilter => list.SafeInsert(item, index);
+
             /// <inheritdoc cref="CRTPList{TBase}.Remove{TItem}()"/>
-            public readonly bool Remove<TItem>() where TItem : TFilter
-            {
-                throw new NotImplementedException();
-            }
+            public readonly bool Remove<TItem>() where TItem : TFilter => list.Remove<TItem>();
 
             /// <inheritdoc cref="CRTPList{TBase}.Remove{TItem}(out TItem)"/>
-            public readonly bool Remove<TItem>([NotNullWhen(true)] out TItem? item) where TItem : TFilter
-            {
-                throw new NotImplementedException();
-            }
+            public readonly bool Remove<TItem>([NotNullWhen(true)] out TItem? item) where TItem : TFilter => list.Remove(out item);
 
             /// <inheritdoc cref="CRTPList{TBase}.Remove{TItem}(TItem)"/>
-            public readonly bool Remove<TItem>(TItem item) where TItem : TFilter
-            {
-                throw new NotImplementedException();
-            }
+            public readonly bool Remove<TItem>(TItem item) where TItem : TFilter => list.Remove(item);
+
+            /// <inheritdoc cref="CRTPList{TBase}.SafeRemove{TItem}(TItem)"/>
+            public readonly bool SafeRemove<TItem>(TItem item) where TItem : TFilter => list.SafeRemove(item);
 
             // TODO: Add the rest of the methods, including an enumerator.
             /// <summary>

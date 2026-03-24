@@ -88,10 +88,9 @@ namespace NetCore.Common
     ///  TL;DR: If you use default case with *any other value* in a switch statement - it creates unpredictable jump-table (if at all).
     ///   That's why we define default cases separately, and will them with garbage (<see cref="SwitchExpressionException"/>s, in this case). 
     ///  
-    /// TODO: Use Dictionary as a fallback for weak-type indexing.
-    /// TODO: Use remaining 3 bytes the struct can hold without resizing, to encode a load factor.
     /// TODO: Consider providing a thread-safe alternative around v1 release.
     /// TODO: Test for edge-cases: <see cref="sbyte.MaxValue"/>, <see cref="short.MaxValue"/> and <see cref="int.MaxValue"/>, and update the constants.
+    /// TODO: Add IndexOf methods.
     public sealed partial class CRTPList<TBase> where TBase : class
     {
         /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="CRTPListExtensions"/>.
@@ -661,7 +660,7 @@ namespace NetCore.Common
         /// </summary>
         /// <typeparam name="TItem">Item type to look for.</typeparam>
         /// <exception cref="KeyNotFoundException"><typeparamref name="TItem"/> is not defined in this list.</exception>
-        public TItem? GetSafe<TItem>() where TItem : class, TBase => GetSafeInternal<TItem>(ID<TItem>.Order);
+        public TItem? SafeGet<TItem>() where TItem : class, TBase => SafeGetInternal<TItem>(ID<TItem>.Order);
         /// <summary>
         /// Retrieves an item of a given <paramref name="itemType"/> from this <see cref="CRTPList{TBase}"/>.
         /// Throws a <see cref="KeyNotFoundException"/> if not defined.
@@ -673,19 +672,19 @@ namespace NetCore.Common
         /// </remarks>
         /// <param name="itemType">Item type to look for.</param>
         /// <exception cref="KeyNotFoundException">Item of a given <paramref name="itemType"/> is not defined in this list.</exception>
-        public TBase? GetSafe(Type itemType)
+        public TBase? SafeGet(Type itemType)
         {
             if (Indexing.TryGetOrder(itemType, out int order))
             {
-                return GetSafeInternal<TBase>(order);
+                return SafeGetInternal<TBase>(order);
             }
 
             return default;
         }
 
-        /// <inheritdoc cref="GetSafe(Type)"/>
+        /// <inheritdoc cref="SafeGet(Type)"/>
         /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="CRTPListExtensions"/>.
-        internal TItem? GetSafeInternal<TItem>(int order) where TItem : class, TBase
+        internal TItem? SafeGetInternal<TItem>(int order) where TItem : class, TBase
         {
             int flagsIndex;
             uint flags;
@@ -963,7 +962,7 @@ namespace NetCore.Common
         /// <see langword="true"/> if item was successfully inserted.
         /// <see langword="false"/> if item under the same type is already on the list.
         /// </returns>
-        public bool TryInsert<TItem>(TItem item, int index) where TItem : TBase
+        public bool SafeInsert<TItem>(TItem item, int index) where TItem : TBase
         {
             if (item is null || index < 0 || index > stored || typeof(TItem) != item.GetType() || Has<TItem>())
                 return false;
@@ -1577,7 +1576,7 @@ namespace NetCore.Common
         /// <see langword="true"/> if item was successfully inserted.
         /// <see langword="false"/> if item under the same type is already on the list.
         /// </returns>
-        /// <seealso cref="CRTPList{TBase}.TryInsert{TItem}(TItem, int)"/>
+        /// <seealso cref="CRTPList{TBase}.SafeInsert{TItem}(TItem, int)"/>
         public static bool SafeInsert<TBase>(this CRTPList<TBase> list, TBase item, int index) where TBase : class
         {
             if (list is null || item is null || index > list.Count || typeof(TBase) != item.GetType())
