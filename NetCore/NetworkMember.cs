@@ -26,6 +26,37 @@ namespace NetCore
     public abstract class NetworkMember<T>(int transports) : NetworkMember(transports) where T : NetworkMember<T>
     {
         /// <summary>
+        /// Iterates over all resilient transports using a given <paramref name="consumer"/> delegate.
+        /// </summary>
+        /// <param name="consumer">Action to use on all registered <see cref="IResilientTransport"/>s.</param>
+        public void ForEachResilientTransport(MemberTransportConsumer<T, IResilientTransport> consumer)
+        {
+            lock (_lock)
+            {
+                T self = (T)this;
+                foreach (var transport in ResilientTransports)
+                {
+                    consumer(self, transport);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Iterates over all sequential transports using a given <paramref name="consumer"/> delegate.
+        /// </summary>
+        /// <param name="consumer">Action to use on all registered <see cref="ISequentialTransport"/>s.</param>
+        public void ForEachSequentialTransport(MemberTransportConsumer<T, ISequentialTransport> consumer)
+        {
+            lock (_lock)
+            {
+                T self = (T)this;
+                foreach (var transport in SequentialTransports)
+                {
+                    consumer(self, transport);
+                }
+            }
+        }
+        /// <summary>
         /// Iterates over all reliable transports using a given <paramref name="consumer"/> delegate.
         /// </summary>
         /// <param name="consumer">Action to use on all registered <see cref="IReliableTransport"/>s.</param>
@@ -62,7 +93,6 @@ namespace NetCore
     /// <summary>
     /// Base class for <see cref="Server"/> and <see cref="Client"/>.
     /// </summary>
-    /// <param name="transports">Initial capacity for transports to pre-initialize.</param>
     /// <remarks>
     /// If you need something other than <see cref="IReliableTransport"/> or <see cref="IUnreliableTransport"/>
     /// - fork the project and modify this base class, or define the same logic in a custom <see cref="Client"/> and <see cref="Server"/> class.
@@ -77,7 +107,7 @@ namespace NetCore
     ///  I'm alright with how things are right now though - allocating 6 arrays with 2 items + 24 bytes per list it's not much:
     ///  = 240 bytes.
     ///  It's nothing compared to other things.
-    public abstract partial class NetworkMember(int transports) : INetworkMemberStatistics
+    public abstract partial class NetworkMember : INetworkMemberStatistics
     {
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
@@ -89,7 +119,7 @@ namespace NetCore
         /// <see cref="Transports.Unix.UnixTransport"/> and <see cref="Transports.Special.TCPUDPTransport"/>s (or others).
         /// </summary>
         public const int DefaultInitialTransportCapacity = 2;
-        readonly Client client;
+
 
 
 
@@ -172,47 +202,51 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Dictionary with all <see cref="IResilientTransport"/>s this <see cref="NetworkMember"/> can use.
+        /// CRTP-based list (similar to dictionary), which stores references to all transports this <see cref="NetworkMember"/> manages. 
         /// </summary>
-        /// <remarks>
-        /// Not readonly to support mutation in registration methods.
-        /// </remarks>
-        protected QuickList<IResilientTransport> ResilientTransports = new(transports);
+        protected readonly CRTPList<ITransport> Transports;
         /// <summary>
-        /// Dictionary with all <see cref="IReliableTransport"/>s this <see cref="NetworkMember"/> can use.
+        /// Lookup for all <see cref="IResilientTransport"/>s this <see cref="NetworkMember"/> manages.
         /// </summary>
         /// <remarks>
         /// Not readonly to support mutation in registration methods.
         /// </remarks>
-        protected QuickList<IReliableTransport> ReliableTransports = new(transports);
+        protected CRTPList<ITransport>.Lookup<IResilientTransport> ResilientTransports;
         /// <summary>
-        /// Dictionary with all <see cref="ISequentialTransport"/>s this <see cref="NetworkMember"/> can use.
+        /// Lookup for all <see cref="IReliableTransport"/>s this <see cref="NetworkMember"/> manages.
         /// </summary>
         /// <remarks>
         /// Not readonly to support mutation in registration methods.
         /// </remarks>
-        protected QuickList<ISequentialTransport> SequentialTransports = new(transports);
+        protected CRTPList<ITransport>.Lookup<IReliableTransport> ReliableTransports;
         /// <summary>
-        /// Dictionary with all <see cref="IUnreliableTransport"/>s this <see cref="NetworkMember"/> can use.
+        /// Lookup for all <see cref="ISequentialTransport"/>s this <see cref="NetworkMember"/> manages.
         /// </summary>
         /// <remarks>
         /// Not readonly to support mutation in registration methods.
         /// </remarks>
-        protected QuickList<IUnreliableTransport> UnreliableTransports = new(transports);
+        protected CRTPList<ITransport>.Lookup<ISequentialTransport> SequentialTransports;
         /// <summary>
-        /// Dictionary with all <see cref="IStreamTransport"/>s this <see cref="NetworkMember"/> can use.
+        /// Lookup for all <see cref="IUnreliableTransport"/>s this <see cref="NetworkMember"/> manages.
         /// </summary>
         /// <remarks>
         /// Not readonly to support mutation in registration methods.
         /// </remarks>
-        protected QuickList<IStreamTransport> StreamTransports = new(transports);
+        protected CRTPList<ITransport>.Lookup<IUnreliableTransport> UnreliableTransports;
         /// <summary>
-        /// Dictionary with all <see cref="IStreamTransport"/>s this <see cref="NetworkMember"/> can use.
+        /// Lookup for all <see cref="IStreamTransport"/>s this <see cref="NetworkMember"/> manages.
         /// </summary>
         /// <remarks>
         /// Not readonly to support mutation in registration methods.
         /// </remarks>
-        protected QuickList<IFileTransport> FileTransports = new(transports);
+        protected CRTPList<ITransport>.Lookup<IStreamTransport> StreamTransports;
+        /// <summary>
+        /// Lookup for all <see cref="IStreamTransport"/>s this <see cref="NetworkMember"/> manages.
+        /// </summary>
+        /// <remarks>
+        /// Not readonly to support mutation in registration methods.
+        /// </remarks>
+        protected CRTPList<ITransport>.Lookup<IFileTransport> FileTransports;
         /// <summary>
         /// Arguments used to start this <see cref="NetworkMember"/>.
         /// </summary>
@@ -263,6 +297,22 @@ namespace NetCore
         /// Constructs <see cref="NetworkMember"/> with a default initial transport capacity - <see cref="DefaultInitialTransportCapacity"/>.
         /// </summary>
         public NetworkMember() : this(DefaultInitialTransportCapacity) { }
+
+        /// <summary>
+        /// Constructs <see cref="NetworkMember"/> with a specified initial transport capacity - <paramref name="capacity"/>.
+        /// </summary>
+        /// <param name="capacity">Initial capacity for transports to pre-initialize.</param>
+        public NetworkMember(int capacity)
+        {
+            Transports = new(capacity);
+            // TODO: Review after fully implementing .GetLookup<T>() method.
+            ResilientTransports = Transports.GetLookup<IResilientTransport>();
+            SequentialTransports = Transports.GetLookup<ISequentialTransport>();
+            UnreliableTransports = Transports.GetLookup<IUnreliableTransport>();
+            ReliableTransports = Transports.GetLookup<IReliableTransport>();
+            StreamTransports = Transports.GetLookup<IStreamTransport>();
+            FileTransports = Transports.GetLookup<IFileTransport>();
+        }
 
 
 
@@ -2188,12 +2238,14 @@ namespace NetCore
         protected virtual int CountTransports()
         {
             lock (_lock)
+            {
                 return ResilientTransports.Count
                     + ReliableTransports.Count
                     + SequentialTransports.Count
                     + UnreliableTransports.Count
                     + StreamTransports.Count
                     + FileTransports.Count;
+            }
         }
 
         /// <summary>
