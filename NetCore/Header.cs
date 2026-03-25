@@ -5,6 +5,19 @@ using System.Buffers;
 namespace NetCore
 {
     /// <summary>
+    /// Indicates that there was not enough buffer space to contain some kind of data.
+    /// </summary>
+    public sealed class InsufficientBufferException(string argument, int has, int need)
+        : Exception($"{typeof(InsufficientBufferException).FullName}: Buffer ({argument}) is too small. Provided: ({has}). Need: ({need})");
+
+    /// <summary>
+    /// Indicates that header was not found in a target header holder.
+    /// </summary>
+    /// <param name="type">Type of the header.</param>
+    public sealed class HeaderNotFoundException(Type type)
+        : Exception($"{typeof(HeaderNotFoundException).FullName}: Header of a type ({type.FullName}) is not found.");
+
+    /// <summary>
     /// Message header which allows writing custom data to it.
     /// </summary>
     /// <remarks>

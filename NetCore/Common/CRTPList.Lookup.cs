@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -318,7 +319,8 @@ namespace NetCore.Common
                     case PackingMode.SizeByte:
                         if ((order >> 2) >= list.flags.Length)
                         {
-                            Array.Resize(ref list.flags, )
+                            throw new NotImplementedException();
+                            //Array.Resize(ref list.flags, )
                         }
 
                         index = (uint)list.stored++;

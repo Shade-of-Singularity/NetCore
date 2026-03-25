@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using NetCore.Common;
 using NetCore.Transports;
 using System;
@@ -9,6 +9,13 @@ using System.Threading;
 
 namespace NetCore
 {
+    /// <summary>
+    /// State exception of <see cref="NetworkMember"/>.
+    /// Usually thrown if you attempt to start already started <see cref="NetworkMember"/>, etc.
+    /// </summary>
+    /// <param name="message"><inheritdoc/></param>
+    public sealed class NetworkMemberStateException(string message) : Exception(message);
+
     /// <summary>
     /// Consumer used in ForEach methods for <see cref="ITransport"/>s.
     /// </summary>
@@ -322,6 +329,281 @@ namespace NetCore
         /// .                                               Public Methods
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+
+
+
+
+
+
+
+
+
+
+
+
+
+        readonly struct MemberOperation(UniTask<OperationResult> task, CancellationTokenSource? source, OperationType type)
+        {
+            public static readonly UniTask<OperationResult> CompletedTask = UniTask.FromResult(OperationResult.Cancelled).Preserve();
+            public static readonly MemberOperation CompletedOperation = new(CompletedTask, null, OperationType.Invalid);
+            public readonly UniTask<OperationResult> Task = task;
+            public readonly CancellationTokenSource? Source = source;
+            public readonly OperationType Type = type;
+            public bool IsCompleted => Source is null;
+            public UniTask<OperationResult> Cancel()
+            {
+                switch (Type)
+                {
+                    case OperationType.Invalid: break;
+
+                    // Cancellation token is not null when OperationType is not invalid.
+                    case OperationType.Activating:
+                    case OperationType.Deactivating:
+                    case OperationType.Restarting:
+                        if (Source!.IsCancellationRequested)
+                        {
+                            break;
+                        }
+
+                        Source.Cancel();
+                        Source.Dispose();
+                        break;
+
+                    default: throw new SwitchExpressionException();
+                }
+
+                return Task;
+            }
+            public UniTask<OperationResult> WithCancellationWhen(OperationType condition)
+            {
+                if (Type == condition)
+                {
+                    switch (condition)
+                    {
+                        case OperationType.Invalid: break;
+
+                        // Type and condition match.
+                        // Cancellation token is not null when OperationType is not invalid.
+                        case OperationType.Activating:
+                        case OperationType.Deactivating:
+                        case OperationType.Restarting:
+                            if (Source!.IsCancellationRequested)
+                            {
+                                break;
+                            }
+
+                            Source.Cancel();
+                            Source.Dispose();
+                            break;
+
+                        default: throw new SwitchExpressionException();
+                    }
+                }
+
+                return Task;
+            }
+        }
+
+        internal enum OperationType : byte
+        {
+            /// <summary>
+            /// Used for <see cref="MemberOperation.CompletedOperation"/>.
+            /// </summary>
+            Invalid = default,
+            /// <summary>
+            /// <see cref="StartState.Starting"/> or <see cref="ConnectionState.Connecting"/>.
+            /// </summary>
+            Activating,
+            /// <summary>
+            /// <see cref="StartState.Stopping"/> or <see cref="ConnectionState.Disconnecting"/>.
+            /// </summary>
+            Deactivating,
+            /// <summary>
+            /// Combines both operation types.
+            /// Operation order is strictly <see cref="Deactivating"/> and then <see cref="Activating"/>.
+            /// </summary>
+            Restarting,
+        }
+
+        /// <summary>
+        /// Result of the operation execution.
+        /// </summary>
+        public enum OperationResult : byte
+        {
+            /// <summary>
+            /// Operation succeeded.
+            /// </summary>
+            Success,
+            /// <summary>
+            /// Operation failed due to errors. See console for more info.
+            /// </summary>
+            Fail,
+            /// <summary>
+            /// Operation was cancelled by another operation.
+            /// </summary>
+            Cancelled,
+        }
+
+        // Note: only activation tasks should be cancelled.
+        //  This is because cancelling a deactivation/disconnection tasks can lead to transport state corruption.
+        //  Realistically, you should also consider returning a complete task in a deactivation method rather than await anything.
+        //  Previously stop and disconnect methods were blocking for a reason.
+        // Activation order:   (Startup) -> (Connection)
+        // Deactivation order: (Disconnection) -> (Stopping)
+        static MemberOperation StartupOperation = MemberOperation.CompletedOperation;
+        static MemberOperation ConnectionOperation = MemberOperation.CompletedOperation;
+        public async UniTask<OperationResult> Start()
+        {
+            UniTask<OperationResult> starting;
+            UniTask<OperationResult> connecting;
+            UniTask<OperationResult> main;
+            lock (_lock)
+            {
+                connecting = ConnectionOperation.WithCancellationWhen(OperationType.Activating);
+                ConnectionOperation = MemberOperation.CompletedOperation;
+
+                starting = StartupOperation.WithCancellationWhen(OperationType.Activating);
+                StartupOperation = MemberOperation.CompletedOperation;
+
+                // Note: we use an async method as a lambda expression,
+                //  to make sure that method will only start executing at an 'await' later on.
+                CancellationTokenSource source = new();
+                main = Create(this, static async (member, token) => await member.TestStartOperation(token), source.Token).Preserve();
+                StartupOperation = new(main, source, OperationType.Activating);
+            }
+
+            // Awaits cancellation.
+            await connecting;
+            await starting;
+            try
+            {
+                return await main;
+            }
+            catch (Exception exception)
+            {
+                LogException(exception);
+                return false;
+            }
+        }
+
+        public async UniTask<OperationResult> Stop()
+        {
+            UniTask<OperationResult> starting;
+            UniTask<OperationResult> connecting;
+            UniTask<OperationResult> main;
+            CancellationTokenSource source;
+            lock (_lock)
+            {
+                connecting = ConnectionOperation.WithCancellationWhen(OperationType.Activating);
+                ConnectionOperation = MemberOperation.CompletedOperation;
+
+                starting = StartupOperation.WithCancellationWhen(OperationType.Activating);
+                StartupOperation = MemberOperation.CompletedOperation;
+
+                // Note: we use an async method as a lambda expression,
+                //  to make sure that method will only start executing at an 'await' later on.
+                source = new();
+                main = Create(this, static async (member, token) => await member.TestStopOperation(token), source.Token).Preserve();
+                StartupOperation = new(main, source, OperationType.Deactivating);
+            }
+
+            // Awaits cancellation.
+            await connecting;
+            await starting;
+            try
+            {
+                if (source.IsCancellationRequested)
+                    return OperationResult.Cancelled;
+
+                return await main;
+            }
+            catch (Exception exception)
+            {
+                LogException(exception);
+                return OperationResult.Fail;
+            }
+        }
+
+        public async UniTask<OperationResult> Restart()
+        {
+            UniTask<OperationResult> connecting;
+            UniTask<OperationResult> starting;
+            UniTask<OperationResult> main;
+            CancellationTokenSource source;
+            lock (_lock)
+            {
+                connecting = ConnectionOperation.WithCancellationWhen(OperationType.Activating);
+                ConnectionOperation = MemberOperation.CompletedOperation;
+
+                // Note: we use an async method as a lambda expression,
+                //  to make sure that method will only start executing at an 'await' later on.
+                if (StartupOperation.Type == OperationType.Activating)
+                {
+                    starting = StartupOperation.Cancel();
+
+                    source = new();
+                    main
+                    main = ContinueWith(StartupOperation.Cancel(), this, static async (member, token) => await member.TestStopOperation(token), source.Token);
+                }
+                else
+                {
+                    starting = MemberOperation.CompletedTask;
+
+                    // If already stopping - continue with restart when operation completes.
+                    main = ContinueWith(StartupOperation.Task, this, static async (member, token) => await member.TestStopOperation(token), source.Token);
+                }
+
+                main = .Preserve();
+                StartupOperation = new(main, source, OperationType.Deactivating);
+            }
+
+            // Awaits cancellation.
+            await connecting;
+            await starting;
+            try
+            {
+                if (source.IsCancellationRequested)
+                    return OperationResult.Cancelled;
+
+                return await main;
+            }
+            catch (Exception exception)
+            {
+                LogException(exception);
+                return OperationResult.Fail;
+            }
+        }
+
+        protected virtual UniTask<OperationResult> TestStartOperation(CancellationToken token)
+        {
+
+        }
+
+        protected virtual UniTask<OperationResult> TestStopOperation(CancellationToken token)
+        {
+
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2794,6 +3076,13 @@ namespace NetCore
             TState state, Func<TState, CancellationToken, UniTask<TResult>> factory, CancellationToken token)
         {
             return factory(state, token);
+        }
+
+        private static async UniTask<TResult> ContinueWith<TState, TResult>(UniTask<TResult> task,
+            TState state, Func<TState, CancellationToken, UniTask<TResult>> factory, CancellationToken token)
+        {
+            await task;
+            return await factory(state, token);
         }
 
         /// TODO: Implement logger from ServiceCore instead.

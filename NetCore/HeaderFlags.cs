@@ -9,9 +9,9 @@ namespace NetCore
     /// Base value for those flags can change.
     /// Do not assume it will always be <see cref="byte"/>.
     /// Better use <see cref="Header"/> natively provided by the library:
-    /// <para><see cref="NetworkMember.GetHeader()"/></para>
+    /// <para><see cref="Header.GetLocked"/></para>
     /// For encoding, use <see cref="HeaderFlagsHelpers"/> instead of manually writing your own methods.
-    /// You can retrieve a size of this value by using <see cref="HeaderFlagsHelpers.HeaderBits"/>.
+    /// Side of this enum can be accessed here: <see cref="HeaderFlagsHelpers.HeaderBits"/>.
     /// </remarks>
     public enum HeaderFlags : byte { } // Merely a carrier for other types.
 
@@ -86,6 +86,10 @@ namespace NetCore
         /// How many bits are used to encode <see cref="HeaderFlags"/>.
         /// </summary>
         public const int HeaderBits = 8;
+        /// <summary>
+        /// How many bytes are used to encode <see cref="HeaderFlags"/>.
+        /// </summary>
+        public const int HeaderBytes = 1;
 
         /// <see cref="CustomHeaderUsage"/>
         internal const uint CustomHeaderUsageMask = 0b11;

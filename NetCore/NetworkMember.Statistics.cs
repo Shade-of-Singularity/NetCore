@@ -1,11 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-using NetCore.Common;
-using NetCore.Transports;
-using System;
-using System.Diagnostics.CodeAnalysis;
-using System.Threading;
-
-namespace NetCore
+﻿namespace NetCore
 {
     public abstract partial class NetworkMember
     {

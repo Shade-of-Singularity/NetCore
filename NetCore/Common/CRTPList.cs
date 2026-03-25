@@ -882,15 +882,14 @@ namespace NetCore.Common
                     {
                         case PackingMode.Size0: throw new SwitchExpressionException(mode);
                         case PackingMode.SizeByte:
-                            flags[order >> 2] = 
-                            break;
+                            throw new NotImplementedException();
                         case PackingMode.SizeUShort:
-                            break;
+                            throw new NotImplementedException();
                         case PackingMode.SizeUInt:
-                            break;
+                            throw new NotImplementedException();
                         default: throw new SwitchExpressionException(mode);
                     }
-                    ref uint flags1 = ref flags[flagsIndex];
+                    /*ref uint flags1 = ref flags[flagsIndex];
                     flags[mode switch
                     {
                         PackingMode.Size0 => throw new SwitchExpressionException(mode),
@@ -902,7 +901,7 @@ namespace NetCore.Common
                     items[0] = item;
                     stored = 1;
                     ItemChanged?.Invoke(item, order, added: true);
-                    return true;
+                    return true;*/
 
                 case PackingMode.SizeByte:
                     flagsIndex = order >> 2;
