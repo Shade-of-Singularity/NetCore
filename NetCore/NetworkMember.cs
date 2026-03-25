@@ -542,19 +542,18 @@ namespace NetCore
                     starting = StartupOperation.Cancel();
 
                     source = new();
-                    main
-                    main = ContinueWith(StartupOperation.Cancel(), this, static async (member, token) => await member.TestStopOperation(token), source.Token);
+                    main = Create(this, static async (member, token) => await member.TestStopOperation(token), source.Token).Preserve(); ;
                 }
                 else
                 {
                     starting = MemberOperation.CompletedTask;
+                    source = new();
 
                     // If already stopping - continue with restart when operation completes.
-                    main = ContinueWith(StartupOperation.Task, this, static async (member, token) => await member.TestStopOperation(token), source.Token);
+                    main = Create(this, static async (member, token) => await member.TestStopOperation(token), source.Token).Preserve(); ;
                 }
 
-                main = .Preserve();
-                StartupOperation = new(main, source, OperationType.Deactivating);
+                StartupOperation = new(main, source, OperationType.Restarting);
             }
 
             // Awaits cancellation.
@@ -576,12 +575,12 @@ namespace NetCore
 
         protected virtual UniTask<OperationResult> TestStartOperation(CancellationToken token)
         {
-
+            return UniTask.FromResult(OperationResult.Success);
         }
 
         protected virtual UniTask<OperationResult> TestStopOperation(CancellationToken token)
         {
-
+            return UniTask.FromResult(OperationResult.Success);
         }
 
 
