@@ -340,8 +340,30 @@ namespace NetCore
 
 
 
-
-
+        // 
+        // WARNING!
+        // This is a STATE MACHINE TERRITORY!
+        // Leave the hope [of understanding] whoever end-up reading it.
+        //
+        // While implementation is refined - it is a subject to change.
+        // Only rely on public API, and expect changes up to v2-v3 release of NetCore.
+        // (v1 - is a first public release, and when official battle-testing will begin, hence the potential changes)
+        //
+        // # General idea:
+        // When you call a target operation - target task is scheduled.
+        // 1. Exception is a stop operation - caller will instead await a previous stop operation if it exist.
+        // 2. If there is a need to schedule more operations in between - they are inserted before a target task.
+        // 3. Target task is a final task.
+        // 4. Latest Start and Connect operations prioritize latest input.
+        // 5. Stop and Disconnect operations doesn't need to be cancelled and re-scheduled, if another operation exist.
+        // 5.1. No5 does not apply if operation is not in a right order, or is already started.
+        // 5.2. Fortunately, 5.1. does not matter in out implementation.
+        //
+        // # Limitations:
+        // Current implementation respects a following limitation:
+        // 1. Stop and Disconnect methods does not require extra info to start, such as arguments.
+        // 2. Start and Connect methods require extra arguments to be started.
+        //
         readonly struct MemberOperation(UniTask<OperationResult> task, CancellationTokenSource? source, OperationType type)
         {
             public static readonly UniTask<OperationResult> CompletedTask = UniTask.FromResult(OperationResult.Cancelled).Preserve();
@@ -374,6 +396,7 @@ namespace NetCore
 
                 return Task;
             }
+
             public UniTask<OperationResult> WithCancellationWhen(OperationType condition)
             {
                 if (Type == condition)
@@ -437,7 +460,7 @@ namespace NetCore
             /// <summary>
             /// Operation failed due to errors. See console for more info.
             /// </summary>
-            Fail,
+            Failed,
             /// <summary>
             /// Operation was cancelled by another operation.
             /// </summary>
@@ -452,13 +475,33 @@ namespace NetCore
         // Deactivation order: (Disconnection) -> (Stopping)
         static MemberOperation StartupOperation = MemberOperation.CompletedOperation;
         static MemberOperation ConnectionOperation = MemberOperation.CompletedOperation;
-        public async UniTask<OperationResult> Start()
+        public async UniTask<OperationResult> Start() 
         {
             UniTask<OperationResult> starting;
             UniTask<OperationResult> connecting;
             UniTask<OperationResult> main;
             lock (_lock)
             {
+                CancellationTokenSource source;
+                switch (ConnectionOperation.Type)
+                {
+                    case OperationType.Invalid:
+                    case OperationType.Deactivating: connecting = MemberOperation.CompletedTask; break;
+
+                    case OperationType.Activating:
+                    case OperationType.Restarting:
+                        source = new();
+                        connecting = Create(static async (member, token) =>
+                        {
+
+                        }, );
+                        ConnectionOperation.Cancel()
+                        break;
+
+                    default: throw new SwitchExpressionException(ConnectionOperation.Type);
+                }
+                ConnectionOperation = MemberOperation.CompletedOperation;
+
                 connecting = ConnectionOperation.WithCancellationWhen(OperationType.Activating);
                 ConnectionOperation = MemberOperation.CompletedOperation;
 
@@ -482,11 +525,35 @@ namespace NetCore
             catch (Exception exception)
             {
                 LogException(exception);
-                return false;
+                return OperationResult.Failed;
             }
         }
 
-        public async UniTask<OperationResult> Stop()
+        /// <returns>
+        /// <see langword="true"/> if <paramref name="task"/> was provided and you should await it.
+        /// <see langword="false"/> if already started and a completed <paramref name="task"/> was provided.
+        /// </returns>
+        public bool EnsureStart(out UniTask<OperationResult> task, StartupArgsProvider provider)
+        {
+            lock (_lock)
+            {
+
+            }
+        }
+
+        /// <returns>
+        /// <see langword="true"/> if <paramref name="task"/> was provided and you should await it.
+        /// <see langword="false"/> if already started and a completed <paramref name="task"/> was provided.
+        /// </returns>
+        public bool EnsureStart(out UniTask<OperationResult> task, ConnectionArgs args)
+        {
+            lock (_lock)
+            {
+
+            }
+        }
+
+        async UniTask<OperationResult> InvokeStop()
         {
             UniTask<OperationResult> starting;
             UniTask<OperationResult> connecting;
@@ -520,7 +587,7 @@ namespace NetCore
             catch (Exception exception)
             {
                 LogException(exception);
-                return OperationResult.Fail;
+                return OperationResult.Failed;
             }
         }
 
@@ -569,7 +636,7 @@ namespace NetCore
             catch (Exception exception)
             {
                 LogException(exception);
-                return OperationResult.Fail;
+                return OperationResult.Failed;
             }
         }
 
