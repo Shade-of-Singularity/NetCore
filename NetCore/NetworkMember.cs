@@ -38,6 +38,9 @@ namespace NetCore
         /// <param name="consumer">Action to use on all registered <see cref="IResilientTransport"/>s.</param>
         public void ForEachResilientTransport(MemberTransportConsumer<T, IResilientTransport> consumer)
         {
+            // TODO: Consider using injection and/or give a way to provide arguments for a delegate.
+            //  This is so runtime won't have to allocate a class for remembering the variables.
+            //  A way for accessing the Lookup itself under a lock can also be considered.
             lock (_lock)
             {
                 T self = (T)this;
@@ -54,6 +57,9 @@ namespace NetCore
         /// <param name="consumer">Action to use on all registered <see cref="ISequentialTransport"/>s.</param>
         public void ForEachSequentialTransport(MemberTransportConsumer<T, ISequentialTransport> consumer)
         {
+            // TODO: Consider using injection and/or give a way to provide arguments for a delegate.
+            //  This is so runtime won't have to allocate a class for remembering the variables.
+            //  A way for accessing the Lookup itself under a lock can also be considered.
             lock (_lock)
             {
                 T self = (T)this;
@@ -69,6 +75,9 @@ namespace NetCore
         /// <param name="consumer">Action to use on all registered <see cref="IReliableTransport"/>s.</param>
         public void ForEachReliableTransport(MemberTransportConsumer<T, IReliableTransport> consumer)
         {
+            // TODO: Consider using injection and/or give a way to provide arguments for a delegate.
+            //  This is so runtime won't have to allocate a class for remembering the variables.
+            //  A way for accessing the Lookup itself under a lock can also be considered.
             lock (_lock)
             {
                 T self = (T)this;
@@ -85,6 +94,9 @@ namespace NetCore
         /// <param name="consumer">Action to use on all registered <see cref="IUnreliableTransport"/>s.</param>
         public void ForEachUnreliableTransport(MemberTransportConsumer<T, IUnreliableTransport> consumer)
         {
+            // TODO: Consider using injection and/or give a way to provide arguments for a delegate.
+            //  This is so runtime won't have to allocate a class for remembering the variables.
+            //  A way for accessing the Lookup itself under a lock can also be considered.
             lock (_lock)
             {
                 T self = (T)this;
@@ -142,17 +154,33 @@ namespace NetCore
         {
             get
             {
-                lock (_lock) return m_StartState;
+                lock (_lock) return m_StartupOperation.Type switch
+                {
+                    OperationType.Idle => StartState.Stopped,
+                    OperationType.Activating => StartState.Starting,
+                    OperationType.Restarting => StartState.Starting,
+                    OperationType.Deactivating => StartState.Stopping,
+                    OperationType.Completed => StartState.Started,
+                    _ => throw new SwitchExpressionException(m_StartupOperation.Type),
+                };
             }
         }
         /// <summary>
-        /// Current state of connection.
+        /// Current state of the connection.
         /// </summary>
         public ConnectionState ConnectionState
         {
             get
             {
-                lock (_lock) return m_ConnectionState;
+                lock (_lock) return m_ConnectionOperation.Type switch
+                {
+                    OperationType.Idle => ConnectionState.Idle,
+                    OperationType.Activating => ConnectionState.Connecting,
+                    OperationType.Restarting => ConnectionState.Connecting,
+                    OperationType.Deactivating => ConnectionState.Disconnecting,
+                    OperationType.Completed => (Transports.Count == 0 || m_ConnectedTransportsCount == 0) ? ConnectionState.Connecting : ConnectionState.Connected,
+                    _ => throw new SwitchExpressionException(m_StartupOperation.Type),
+                };
             }
         }
         /// <summary>
@@ -279,18 +307,8 @@ namespace NetCore
         /// Provider for Connection IDs.
         /// </summary>
         private readonly ConnectionIDProvider m_ConnectionIDProvider = new();
-        /// <inheritdoc cref="StartState"/>
-        private StartState m_StartState;
-        /// <inheritdoc cref="ConnectionState"/>
-        private ConnectionState m_ConnectionState;
-        /// <summary>
-        /// Token for current operation.
-        /// </summary>
-        private CancellationTokenSource? m_LastTokenSource;
-        /// <summary>
-        /// Handle for current operation.
-        /// </summary>
-        private UniTask<bool> m_LastOperation;
+        private StatefulOperation m_StartupOperation;
+        private StatefulOperation m_ConnectionOperation;
 
 
 
@@ -326,312 +344,337 @@ namespace NetCore
 
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
-        /// .                                               Public Methods
+        /// .                                              Protected Methods
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-
-
-
-
-
-
-
-
-
-
-
-        // 
-        // WARNING!
-        // This is a STATE MACHINE TERRITORY!
-        // Leave the hope [of understanding] whoever end-up reading it.
-        //
-        // While implementation is refined - it is a subject to change.
-        // Only rely on public API, and expect changes up to v2-v3 release of NetCore.
-        // (v1 - is a first public release, and when official battle-testing will begin, hence the potential changes)
-        //
-        // # General idea:
-        // When you call a target operation - target task is scheduled.
-        // 1. Exception is a stop operation - caller will instead await a previous stop operation if it exist.
-        // 2. If there is a need to schedule more operations in between - they are inserted before a target task.
-        // 3. Target task is a final task.
-        // 4. Latest Start and Connect operations prioritize latest input.
-        // 5. Stop and Disconnect operations doesn't need to be cancelled and re-scheduled, if another operation exist.
-        // 5.1. No5 does not apply if operation is not in a right order, or is already started.
-        // 5.2. Fortunately, 5.1. does not matter in out implementation.
-        //
-        // # Limitations:
-        // Current implementation respects a following limitation:
-        // 1. Stop and Disconnect methods does not require extra info to start, such as arguments.
-        // 2. Start and Connect methods require extra arguments to be started.
-        //
-        readonly struct MemberOperation(UniTask<OperationResult> task, CancellationTokenSource? source, OperationType type)
+        /// <summary>
+        /// Starts all transports with a given <see cref="NetCore.StartupArgs"/>.
+        /// <para>
+        /// When this method is called, all <see cref="ITransport"/>s are already stopped.
+        /// This rule is enforced by the internal architecture (unless developer interfere manually).</para>
+        /// </summary>
+        /// <remarks>
+        /// <para>This operation cannot be cancelled.</para>
+        /// If <paramref name="token"/> is cancelled - a <see cref="StopOperation"/> will run shortly after this one quits.
+        /// Additionally - it will physically wait for this operation to stop.
+        /// This was bade for better reliability with async operations.
+        /// </remarks>
+        protected virtual async UniTask<OperationResult> StartOperation(StartupArgs args, CancellationToken token)
         {
-            public static readonly UniTask<OperationResult> CompletedTask = UniTask.FromResult(OperationResult.Cancelled).Preserve();
-            public static readonly MemberOperation CompletedOperation = new(CompletedTask, null, OperationType.Invalid);
-            public readonly UniTask<OperationResult> Task = task;
-            public readonly CancellationTokenSource? Source = source;
-            public readonly OperationType Type = type;
-            public bool IsCompleted => Source is null;
-            public UniTask<OperationResult> Cancel()
+            ITransport[] transports = RentTransports(out int total);
+
+            try
             {
-                switch (Type)
+                for (int i = 0; i < total; i++)
                 {
-                    case OperationType.Invalid: break;
+                    if (token.IsCancellationRequested)
+                        return OperationResult.Cancelled;
 
-                    // Cancellation token is not null when OperationType is not invalid.
-                    case OperationType.Activating:
-                    case OperationType.Deactivating:
-                    case OperationType.Restarting:
-                        if (Source!.IsCancellationRequested)
-                        {
-                            break;
-                        }
-
-                        Source.Cancel();
-                        Source.Dispose();
-                        break;
-
-                    default: throw new SwitchExpressionException();
+                    if (!await transports[i].InvokeStart(args))
+                        return OperationResult.Failed;
                 }
 
-                return Task;
+                return OperationResult.Success;
             }
-
-            public UniTask<OperationResult> WithCancellationWhen(OperationType condition)
+            finally
             {
-                if (Type == condition)
-                {
-                    switch (condition)
-                    {
-                        case OperationType.Invalid: break;
-
-                        // Type and condition match.
-                        // Cancellation token is not null when OperationType is not invalid.
-                        case OperationType.Activating:
-                        case OperationType.Deactivating:
-                        case OperationType.Restarting:
-                            if (Source!.IsCancellationRequested)
-                            {
-                                break;
-                            }
-
-                            Source.Cancel();
-                            Source.Dispose();
-                            break;
-
-                        default: throw new SwitchExpressionException();
-                    }
-                }
-
-                return Task;
+                ReturnTransports(transports);
             }
-        }
-
-        internal enum OperationType : byte
-        {
-            /// <summary>
-            /// Used for <see cref="MemberOperation.CompletedOperation"/>.
-            /// </summary>
-            Invalid = default,
-            /// <summary>
-            /// <see cref="StartState.Starting"/> or <see cref="ConnectionState.Connecting"/>.
-            /// </summary>
-            Activating,
-            /// <summary>
-            /// <see cref="StartState.Stopping"/> or <see cref="ConnectionState.Disconnecting"/>.
-            /// </summary>
-            Deactivating,
-            /// <summary>
-            /// Combines both operation types.
-            /// Operation order is strictly <see cref="Deactivating"/> and then <see cref="Activating"/>.
-            /// </summary>
-            Restarting,
         }
 
         /// <summary>
-        /// Result of the operation execution.
+        /// Stops all transports. This operation cannot be cancelled.
+        /// <para>
+        /// This operation can complete synchronously.
+        /// </para>
+        /// <para>
+        /// When this method is called - transports are already started.
+        /// If <see cref="StartOperation"/> was previously cancelled - some <see cref="ITransport"/>s might remain started, while other will remain stopped.
+        /// This method is expected to call <see cref="ITransport.InvokeStop"/> to return all transports to a previous state.
+        /// </para>
         /// </summary>
-        public enum OperationResult : byte
+        /// <remarks>
+        /// <para>This operation cannot be cancelled.</para>
+        /// Instead - all other "activation" operations (e.g. <see cref="StartOperation"/>) will wait for this one to complete.
+        /// </remarks>
+        protected virtual async UniTask<OperationResult> StopOperation()
         {
-            /// <summary>
-            /// Operation succeeded.
-            /// </summary>
-            Success,
-            /// <summary>
-            /// Operation failed due to errors. See console for more info.
-            /// </summary>
-            Failed,
-            /// <summary>
-            /// Operation was cancelled by another operation.
-            /// </summary>
-            Cancelled,
+            // TODO: transports can change between start and stop calls.
+            //  In case this happens - on removal, Disconnect and Stop operations should run on a transport.
+            //  And they should be awaited until completed on Initialize, Start or Connect calls when assigned to another member or on manual call.
+            ITransport[] transports = RentTransports(out int total);
+
+            try
+            {
+                for (int i = 0; i < total; i++)
+                {
+                    if (!await transports[i].InvokeStop())
+                        return OperationResult.Failed;
+                }
+
+                return OperationResult.Success;
+            }
+            finally
+            {
+                ReturnTransports(transports);
+            }
         }
 
-        // Note: only activation tasks should be cancelled.
-        //  This is because cancelling a deactivation/disconnection tasks can lead to transport state corruption.
-        //  Realistically, you should also consider returning a complete task in a deactivation method rather than await anything.
-        //  Previously stop and disconnect methods were blocking for a reason.
-        // Activation order:   (Startup) -> (Connection)
-        // Deactivation order: (Disconnection) -> (Stopping)
-        static MemberOperation StartupOperation = MemberOperation.CompletedOperation;
-        static MemberOperation ConnectionOperation = MemberOperation.CompletedOperation;
-        public async UniTask<OperationResult> Start() 
+        /// <summary>
+        /// Asks all transports to connect to a remote end-point, specified with provided <see cref="NetCore.ConnectionArgs"/>.
+        /// If used server-side (e.g. in <see cref="Server"/>) - remote end-point is treated as a relay.
+        /// <para>
+        /// When this method is called - all transports are in a disconnected state.
+        /// This is enforced by the system architecture (unless developer manually interfere).
+        /// </para>
+        /// </summary>
+        /// <remarks>
+        /// <para>This operation cannot be cancelled.</para>
+        /// If <paramref name="token"/> is cancelled - a <see cref="DisconnectOperation"/> will run shortly after this one quits.
+        /// Additionally - it will physically wait for this operation to stop.
+        /// This was bade for better reliability with async operations.
+        /// </remarks>
+        protected virtual async UniTask<OperationResult> ConnectOperation(ConnectionArgs args, CancellationToken token)
         {
-            UniTask<OperationResult> starting;
-            UniTask<OperationResult> connecting;
-            UniTask<OperationResult> main;
+            ITransport[] transports = RentTransports(out int total);
+
+            try
+            {
+                for (int i = 0; i < total; i++)
+                {
+                    if (token.IsCancellationRequested)
+                        return OperationResult.Cancelled;
+
+                    if (!await transports[i].InvokeConnect(args))
+                        return OperationResult.Failed;
+                }
+
+                return OperationResult.Success;
+            }
+            finally
+            {
+                ReturnTransports(transports);
+            }
+        }
+
+        /// <summary>
+        /// Disconnects all transports. This operation cannot be cancelled.
+        /// <para>
+        /// When this method is called - all transports are connected.
+        /// If <see cref="ConnectOperation"/> was cancelled - some transports might be either fully connected, or was never connected in a first place.
+        /// This method is expected to call <see cref="ITransport.InvokeDisconnect"/>, to reset all transports back to disconnected state.
+        /// </para>
+        /// </summary>
+        /// <remarks>
+        /// <para>This operation cannot be cancelled.</para>
+        /// This operation cannot be cancelled.
+        /// Instead - all other "activation" operations (e.g. <see cref="StartOperation"/>) will wait for this one to complete.
+        /// </remarks>
+        protected virtual async UniTask<OperationResult> DisconnectOperation()
+        {
+            // TODO: transports can change between start and stop calls.
+            //  In case this happens - on removal, Disconnect and Stop operations should run on a transport.
+            //  And they should be awaited until completed on Initialize, Start or Connect calls when assigned to another member or on manual call.
+            ITransport[] transports = RentTransports(out int total);
+
+            try
+            {
+                for (int i = 0; i < total; i++)
+                {
+                    if (!await transports[i].InvokeDisconnect())
+                        return OperationResult.Failed;
+                }
+
+                return OperationResult.Success;
+            }
+            finally
+            {
+                ReturnTransports(transports);
+            }
+        }
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                                  Startup
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <summary>
+        /// Attempts to start this <see cref="NetworkMember"/>, if it is not already started.
+        /// </summary>
+        /// <returns>
+        /// <see langword="true"/> if started successfully, and <paramref name="task"/> to await was provided.
+        /// <see langword="false"/> if <see cref="NetworkMember"/> was already started, and thus - <paramref name="task"/> was not provided.
+        /// </returns>
+        /// <param name="task">Task to await, returned by a <see cref="Start"/> method.</param>
+        /// <param name="provider">Provider for <see cref="NetCore.ConnectionArgs"/>.</param>
+        /// <param name="clear">Whether to clear buffered <see cref="NetCore.ConnectionArgs"/> before giving them to <paramref name="provider"/>.</param>
+        public bool TryStart(out UniTask<OperationResult> task, StartupArgsProvider? provider, bool clear = true)
+        {
             lock (_lock)
             {
-                CancellationTokenSource source;
-                switch (ConnectionOperation.Type)
+                if (m_StartupOperation.Type != OperationType.Idle)
                 {
-                    case OperationType.Invalid:
-                    case OperationType.Deactivating: connecting = MemberOperation.CompletedTask; break;
+                    task = StatefulOperation.CompletedTask;
+                    return false;
+                }
+
+                task = Start(provider, clear);
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Restarts <see cref="NetworkMember"/> using previous args.
+        /// </summary>
+        /// <returns>Always an incomplete task, as restart forces at least one method to run.</returns>
+        public UniTask<OperationResult> Restart() => Start(null, clear: false); // Uses same arguments.
+
+        /// <summary>
+        /// Starts this <see cref="NetworkMember"/> with <see cref="NetCore.ConnectionArgs"/> provided by <paramref name="provider"/>.
+        /// </summary>
+        /// <param name="provider">Provider for <see cref="NetCore.ConnectionArgs"/>.</param>
+        /// <param name="clear">Whether to clear buffered <see cref="NetCore.ConnectionArgs"/> before giving them to <paramref name="provider"/>.</param>
+        public async UniTask<OperationResult> Start(StartupArgsProvider? provider, bool clear = true)
+        {
+            UniTask<OperationResult> connecting;
+            UniTask<OperationResult> disconnecting;
+            UniTask<OperationResult> starting;
+            UniTask<OperationResult> stopping;
+            UniTask<OperationResult> main;
+            CancellationTokenSource source;
+            lock (_lock)
+            {
+                // Makes sure that all transports are disconnected.
+                // Note: consider awaiting for created operations in a try-catch block as well, when calling operation directly.
+                switch (m_ConnectionOperation.Type)
+                {
+                    case OperationType.Idle:
+                        connecting = disconnecting = StatefulOperation.CompletedTask;
+                        break;
 
                     case OperationType.Activating:
-                    case OperationType.Restarting:
-                        source = new();
-                        connecting = Create(static async (member, token) =>
-                        {
-
-                        }, );
-                        ConnectionOperation.Cancel()
+                        connecting = m_ConnectionOperation.CancelActivation();
+                        disconnecting = Create(this, static async (member) => await member.DisconnectOperation()).Preserve();
+                        m_ConnectionOperation = new(null, connecting, disconnecting, OperationType.Deactivating);
                         break;
 
-                    default: throw new SwitchExpressionException(ConnectionOperation.Type);
+                    case OperationType.Restarting:
+                        if (m_ConnectionOperation.Deactivation.Status == UniTaskStatus.Pending)
+                        {
+                            m_ConnectionOperation.CancelActivation(); // Connection task is uninitialized here. We avoid calling it entirely.
+                            connecting = StatefulOperation.CompletedTask;
+                            disconnecting = m_ConnectionOperation.Deactivation;
+                            m_ConnectionOperation = new(null, connecting, disconnecting, OperationType.Deactivating);
+                        }
+                        else goto case OperationType.Activating;
+                        break;
+
+                    case OperationType.Deactivating:
+                        connecting = StatefulOperation.CompletedTask;
+                        disconnecting = m_ConnectionOperation.Deactivation;
+                        break;
+
+                    case OperationType.Completed:
+                        connecting = StatefulOperation.CompletedTask;
+                        disconnecting = Create(this, static async (member) => await member.DisconnectOperation()).Preserve();
+                        m_ConnectionOperation = new(null, connecting, disconnecting, OperationType.Deactivating);
+                        break;
+
+                    default: throw new SwitchExpressionException(m_ConnectionOperation.Type);
                 }
-                ConnectionOperation = MemberOperation.CompletedOperation;
 
-                connecting = ConnectionOperation.WithCancellationWhen(OperationType.Activating);
-                ConnectionOperation = MemberOperation.CompletedOperation;
-
-                starting = StartupOperation.WithCancellationWhen(OperationType.Activating);
-                StartupOperation = MemberOperation.CompletedOperation;
-
-                // Note: we use an async method as a lambda expression,
-                //  to make sure that method will only start executing at an 'await' later on.
-                CancellationTokenSource source = new();
-                main = Create(this, static async (member, token) => await member.TestStartOperation(token), source.Token).Preserve();
-                StartupOperation = new(main, source, OperationType.Activating);
-            }
-
-            // Awaits cancellation.
-            await connecting;
-            await starting;
-            try
-            {
-                return await main;
-            }
-            catch (Exception exception)
-            {
-                LogException(exception);
-                return OperationResult.Failed;
-            }
-        }
-
-        /// <returns>
-        /// <see langword="true"/> if <paramref name="task"/> was provided and you should await it.
-        /// <see langword="false"/> if already started and a completed <paramref name="task"/> was provided.
-        /// </returns>
-        public bool EnsureStart(out UniTask<OperationResult> task, StartupArgsProvider provider)
-        {
-            lock (_lock)
-            {
-
-            }
-        }
-
-        /// <returns>
-        /// <see langword="true"/> if <paramref name="task"/> was provided and you should await it.
-        /// <see langword="false"/> if already started and a completed <paramref name="task"/> was provided.
-        /// </returns>
-        public bool EnsureStart(out UniTask<OperationResult> task, ConnectionArgs args)
-        {
-            lock (_lock)
-            {
-
-            }
-        }
-
-        async UniTask<OperationResult> InvokeStop()
-        {
-            UniTask<OperationResult> starting;
-            UniTask<OperationResult> connecting;
-            UniTask<OperationResult> main;
-            CancellationTokenSource source;
-            lock (_lock)
-            {
-                connecting = ConnectionOperation.WithCancellationWhen(OperationType.Activating);
-                ConnectionOperation = MemberOperation.CompletedOperation;
-
-                starting = StartupOperation.WithCancellationWhen(OperationType.Activating);
-                StartupOperation = MemberOperation.CompletedOperation;
-
-                // Note: we use an async method as a lambda expression,
-                //  to make sure that method will only start executing at an 'await' later on.
+                // Initializes a start operation (without running any underlying code yet).
                 source = new();
-                main = Create(this, static async (member, token) => await member.TestStopOperation(token), source.Token).Preserve();
-                StartupOperation = new(main, source, OperationType.Deactivating);
+                main = Create((this, provider, clear), static async (v, token) => await v.Item1.InvokeStart(v.provider, v.clear, token), source.Token);
+
+                // Makes sure that all transports are stopped.
+                switch (m_StartupOperation.Type)
+                {
+                    case OperationType.Idle:
+                        starting = stopping = StatefulOperation.CompletedTask;
+                        m_StartupOperation = new(source, main, stopping, OperationType.Activating);
+                        break;
+
+                    case OperationType.Activating:
+                        starting = m_StartupOperation.CancelActivation();
+                        stopping = Create(this, static async (member, token) => await member.StopOperation(), source.Token).Preserve();
+                        m_StartupOperation = new(source, main, stopping, OperationType.Restarting);
+                        break;
+
+                    case OperationType.Restarting:
+                        if (m_StartupOperation.Deactivation.Status == UniTaskStatus.Pending)
+                        {
+                            starting = m_StartupOperation.CancelActivation();
+                            stopping = m_StartupOperation.Deactivation;
+                            // Note: we loose a reference to a now cancelled starting operation here.
+                            //  Its cancellation will not be awaited by a next caller. I wonder if it is an issue.
+                            m_StartupOperation = new(source, main, stopping, OperationType.Restarting);
+                        }
+                        else goto case OperationType.Activating;
+                        break;
+
+                    case OperationType.Deactivating:
+                        starting = StatefulOperation.CompletedTask;
+                        stopping = m_StartupOperation.Deactivation;
+                        m_StartupOperation = new(source, main, stopping, OperationType.Restarting);
+                        break;
+
+                    case OperationType.Completed:
+                        starting = StatefulOperation.CompletedTask;
+                        stopping = Create(this, static async (member, token) => await member.StopOperation(), source.Token).Preserve();
+                        m_StartupOperation = new(source, main, stopping, OperationType.Restarting);
+                        break;
+
+                    default: throw new SwitchExpressionException(m_StartupOperation.Type);
+                }
             }
 
-            // Awaits cancellation.
-            await connecting;
-            await starting;
-            try
-            {
-                if (source.IsCancellationRequested)
-                    return OperationResult.Cancelled;
+            return await InvokeOperations(connecting, disconnecting, starting, stopping, main, source);
 
-                return await main;
-            }
-            catch (Exception exception)
-            {
-                LogException(exception);
-                return OperationResult.Failed;
-            }
         }
 
-        public async UniTask<OperationResult> Restart()
+        async UniTask<OperationResult> InvokeStart(StartupArgsProvider? provider, bool clear, CancellationToken token)
         {
-            UniTask<OperationResult> connecting;
-            UniTask<OperationResult> starting;
-            UniTask<OperationResult> main;
-            CancellationTokenSource source;
+            StartupArgs args;
             lock (_lock)
             {
-                connecting = ConnectionOperation.WithCancellationWhen(OperationType.Activating);
-                ConnectionOperation = MemberOperation.CompletedOperation;
-
-                // Note: we use an async method as a lambda expression,
-                //  to make sure that method will only start executing at an 'await' later on.
-                if (StartupOperation.Type == OperationType.Activating)
-                {
-                    starting = StartupOperation.Cancel();
-
-                    source = new();
-                    main = Create(this, static async (member, token) => await member.TestStopOperation(token), source.Token).Preserve(); ;
-                }
-                else
-                {
-                    starting = MemberOperation.CompletedTask;
-                    source = new();
-
-                    // If already stopping - continue with restart when operation completes.
-                    main = Create(this, static async (member, token) => await member.TestStopOperation(token), source.Token).Preserve(); ;
-                }
-
-                StartupOperation = new(main, source, OperationType.Restarting);
-            }
-
-            // Awaits cancellation.
-            await connecting;
-            await starting;
-            try
-            {
-                if (source.IsCancellationRequested)
+                if (token.IsCancellationRequested)
                     return OperationResult.Cancelled;
 
-                return await main;
+                args = m_StartupArgs;
+                if (clear) args.Clear();
+                provider?.Invoke(args);
+            }
+
+            return await StartOperation(args, token);
+        }
+
+        async UniTask<OperationResult> InvokeOperations(
+            UniTask<OperationResult> task1, UniTask<OperationResult> task2, UniTask<OperationResult> task3, UniTask<OperationResult> task4,
+            UniTask<OperationResult> target, CancellationTokenSource source)
+        {
+            if (Settings.UseConcurrentProtections)
+            {
+                await UniTask.Yield();
+                lock (_lock) if (source.IsCancellationRequested) return OperationResult.Cancelled;
+            }
+
+            // Awaits cancellation of running tasks.
+            try { await task1; } catch { }
+            // Cancellation checks are under a lock to detect an operation replacement/cancellation.
+            lock (_lock) if (source.IsCancellationRequested) return OperationResult.Cancelled;
+            try { await task2; } catch { }
+            lock (_lock) if (source.IsCancellationRequested) return OperationResult.Cancelled;
+            try { await task3; } catch { }
+            lock (_lock) if (source.IsCancellationRequested) return OperationResult.Cancelled;
+
+            try
+            {
+                // Finally executes a target operation.
+                return await target;
             }
             catch (Exception exception)
             {
@@ -639,153 +682,8 @@ namespace NetCore
                 return OperationResult.Failed;
             }
         }
-
-        protected virtual UniTask<OperationResult> TestStartOperation(CancellationToken token)
-        {
-            return UniTask.FromResult(OperationResult.Success);
-        }
-
-        protected virtual UniTask<OperationResult> TestStopOperation(CancellationToken token)
-        {
-            return UniTask.FromResult(OperationResult.Success);
-        }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
         /*
-
-
-        enum Operation : byte
-        {
-            None, Start, Stop, Restart,
-        }
-
-
-
-
-        private CancellationTokenSource? lastTokenSource;
-        private Operation lastOperation;
-        private UniTask lastTask;
-
-        protected UniTask StartOperation() => UniTask.CompletedTask;
-        public UniTask Start()
-        {
-            lock (_lock)
-            {
-                switch (lastOperation)
-                {
-                    case Operation.None: break;
-                    case Operation.Start: return lastTask; // Simply awaits an existing task.
-                    case Operation.Stop:
-                        
-                        break;
-
-                    case Operation.Restart: throw new Exception("Already processing an operation.");
-                    default: throw new SwitchExpressionException(lastOperation);
-                }
-
-                
-            }
-        }
-
-        protected UniTask StopOperation() => UniTask.CompletedTask;
-        public bool TryStart(out UniTask task)
-        {
-            lock (_lock)
-            {
-                if (lastOperation == Operation.None)
-                {
-                    task = Start();
-                    return true;
-                }
-
-                task = default;
-                return false;
-            }
-        }
-
-        public UniTask Stop()
-        {
-
-        }
-
-        public bool TryStop(out UniTask task)
-        {
-
-        }
-
-        public UniTask Restart()
-        {
-
-        }
-
-
-
-
-
-
-
-
-
-        */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         /// <summary>
         /// Starts this <see cref="NetworkMember"/> using current <see cref="StartupArgs"/>.
         /// </summary>
@@ -1761,7 +1659,7 @@ namespace NetCore
                     }
                 }
             }
-        }
+        }*/
 
 
 
@@ -1910,7 +1808,7 @@ namespace NetCore
         /// </summary>
         /// <remarks>
         /// Throws is specified transport is not registered.
-        /// Use <see cref="TrySendUnreliable{TTransport}"/> to send message only if <typeparamref name="TTransport"/> is present.
+        /// Use <see cref="TrySendUnreliableTo{TTransport}"/> to send message only if <typeparamref name="TTransport"/> is present.
         /// </remarks>
         /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
         /// <param name="header">Header to encode with the message.</param>
@@ -2004,7 +1902,7 @@ namespace NetCore
         /// </summary>
         /// <remarks>
         /// Throws is specified transport is not registered.
-        /// Use <see cref="TrySendReliable{TTransport}"/> to send message only if <typeparamref name="TTransport"/> is present.
+        /// Use <see cref="TrySendReliableTo{TTransport}"/> to send message only if <typeparamref name="TTransport"/> is present.
         /// </remarks>
         /// <typeparam name="TTransport"><see cref="IReliableTransport"/> to use for sending of a message.</typeparam>
         /// <param name="header">Header to encode with the message.</param>
@@ -2098,7 +1996,7 @@ namespace NetCore
         /// </summary>
         /// <remarks>
         /// Throws is specified transport is not registered.
-        /// Use <see cref="TrySendSequential{TTransport}"/> to send message only if <typeparamref name="TTransport"/> is present.
+        /// Use <see cref="TrySendSequentialTo{TTransport}"/> to send message only if <typeparamref name="TTransport"/> is present.
         /// </remarks>
         /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
@@ -2191,7 +2089,7 @@ namespace NetCore
         /// </summary>
         /// <remarks>
         /// Throws is specified transport is not registered.
-        /// Use <see cref="TrySendResilient{TTransport}"/> to send message only if <typeparamref name="TTransport"/> is present.
+        /// Use <see cref="TrySendResilientTo{TTransport}"/> to send message only if <typeparamref name="TTransport"/> is present.
         /// </remarks>
         /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
@@ -3060,22 +2958,6 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Counts all transports (including duplicates).
-        /// </summary>
-        protected virtual int CountTransports()
-        {
-            lock (_lock)
-            {
-                return ResilientTransports.Count
-                    + ReliableTransports.Count
-                    + SequentialTransports.Count
-                    + UnreliableTransports.Count
-                    + StreamTransports.Count
-                    + FileTransports.Count;
-            }
-        }
-
-        /// <summary>
         /// Lists all transports in a newly created or rented array.
         /// </summary>
         /// <returns>All current transports.</returns>
@@ -3084,28 +2966,9 @@ namespace NetCore
             lock (_lock)
             {
                 // We cache transports inside the lock to avoid race conditions.
-                total = CountTransports();
+                total = Transports.Count;
                 ITransport[] transports = ArrayPool<ITransport>.Shared.Rent(NextSize(total));
-                int position = 0;
-
-                foreach (var t in ResilientTransports)
-                    transports[position++] = t;
-
-                foreach (var t in ReliableTransports)
-                    transports[position++] = t;
-
-                foreach (var t in SequentialTransports)
-                    transports[position++] = t;
-
-                foreach (var t in UnreliableTransports)
-                    transports[position++] = t;
-
-                foreach (var t in StreamTransports)
-                    transports[position++] = t;
-
-                foreach (var t in FileTransports)
-                    transports[position++] = t;
-
+                Transports.CopyTo(transports);
                 return transports;
             }
 
@@ -3142,6 +3005,11 @@ namespace NetCore
             TState state, Func<TState, CancellationToken, UniTask<TResult>> factory, CancellationToken token)
         {
             return factory(state, token);
+        }
+
+        private static UniTask<TResult> Create<TState, TResult>(TState state, Func<TState, UniTask<TResult>> factory)
+        {
+            return factory(state);
         }
 
         private static async UniTask<TResult> ContinueWith<TState, TResult>(UniTask<TResult> task,

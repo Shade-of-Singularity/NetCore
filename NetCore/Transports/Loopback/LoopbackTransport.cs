@@ -10,6 +10,7 @@ namespace NetCore.Transports.Loopback
     /// Implements native loopback connection, without overhead of any in-between systems, like TCP or UDP.
     /// Useful if you rely on client sending messages to itself at development time.
     /// </summary>
+    /// TODO: Replace with native routing if needed. Or continue support for testing of encoding/decoding methods.
     public class LoopbackTransport : Transport, IReliableTransport, IUnreliableTransport
     {
         private readonly record struct LoopbackEntry(LoopbackTransport Transport, ConnectionID RemoteCID)

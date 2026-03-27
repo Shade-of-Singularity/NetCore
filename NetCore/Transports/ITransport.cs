@@ -2,6 +2,7 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace NetCore.Transports
@@ -12,6 +13,13 @@ namespace NetCore.Transports
     /// <remarks>
     /// Transport manages both re-sending of a message, and a handshake process.
     /// This is needed to allow custom handshaking for different transports types, where one relies on IP, and the other - on a UID.
+    /// <para>
+    /// <see cref="ITransport"/> supports manual usage outside of <see cref="NetworkMember"/>,
+    /// BUT if you do - do NOT mix the uses! Do NOT use <see cref="ITransport"/> manually after registering it!
+    /// (For debugging:) You can check if it is registered anywhere by checking if <see cref="Holder"/> is assigned.
+    /// But good architecture should not create a situation where you need to check for it.
+    /// Just completely separate the usages - manually managed transports should be stored completely outside of an <see cref="NetworkMember"/>.
+    /// </para>
     /// </remarks>
     /// TODO: Add a way to define custom transports.
     /// TODO: Add a way to define custom sending modes (Riptide's Notify, etc.)
@@ -56,25 +64,60 @@ namespace NetCore.Transports
         /// </summary>
         public bool IsInitialized { get; protected set; }
         /// <summary>
+        /// Whether this <see cref="ITransport"/> is connected to remote host.
+        /// </summary>
+        /// <remarks>
+        /// Can only be true after <see cref="InvokeConnect"/> call.
+        /// </remarks>
+        public bool IsConnected { get; }
+        /// <summary>
         /// Current activation state of this instance.
         /// </summary>
-        public StartState StartState { get; protected set; }
+        public StartState StartState
+        {
+            get
+            {
+                lock (Lock) return StartupOperation.Type switch
+                {
+                    OperationType.Idle => StartState.Stopped,
+                    OperationType.Activating => StartState.Starting,
+                    OperationType.Restarting => StartState.Starting,
+                    OperationType.Deactivating => StartState.Stopping,
+                    OperationType.Completed => StartState.Started,
+                    _ => throw new SwitchExpressionException(StartupOperation.Type),
+                };
+            }
+        }
         /// <summary>
         /// Current connection state of this instance.
         /// </summary>
-        public ConnectionState ConnectionState { get; protected set; }
+        public ConnectionState ConnectionState
+        {
+            get
+            {
+                lock (Lock) return ConnectionOperation.Type switch
+                {
+                    OperationType.Idle => ConnectionState.Idle,
+                    OperationType.Activating => ConnectionState.Connecting,
+                    OperationType.Restarting => ConnectionState.Connecting,
+                    OperationType.Deactivating => ConnectionState.Disconnecting,
+                    OperationType.Completed => IsConnected ? ConnectionState.Connected : ConnectionState.Connecting,
+                    _ => throw new SwitchExpressionException(ConnectionOperation.Type),
+                };
+            }
+        }
         /// <summary>
         /// Lock object used in case of concurrent interactions with this <see cref="ITransport"/>.
         /// </summary>
         protected object Lock { get; }
         /// <summary>
-        /// Token source used to cancel currently running <see cref="InvokeStart"/> or <see cref="InvokeConnect"/> operations.
+        /// Startup operation data holder for an async state machine.
         /// </summary>
-        protected CancellationTokenSource? LastTokenSource { get; set; }
+        protected StatefulOperation StartupOperation { get; set; }
         /// <summary>
-        /// Last operation - either <see cref="InvokeStart"/> or <see cref="InvokeConnect"/> which is currently running.
+        /// Connection operation data holder for an async state machine.
         /// </summary>
-        protected UniTask LastOperation { get; set; }
+        protected StatefulOperation ConnectionOperation { get; set; }
         /// <summary>
         /// Initializes the <see cref="ITransport"/>.
         /// Called when transport is registered in a <see cref="NetworkMember"/>.
@@ -242,7 +285,7 @@ namespace NetCore.Transports
         /// <c>true</c> if started successfully.
         /// <c>false</c> if any issues appeared at stopping (see console for more info).
         /// </returns>
-        public bool InvokeStop()
+        public UniTask<bool> InvokeStop()
         {/*
             if (IsStarted)
             {
@@ -332,7 +375,7 @@ namespace NetCore.Transports
         /// <c>true</c> if disconnected successfully.
         /// <c>false</c> if any issues appeared during disconnection (see console for more info).
         /// </returns>
-        public bool InvokeDisconnect()
+        public UniTask<bool> InvokeDisconnect()
         {/*
             if (IsActive)
             {

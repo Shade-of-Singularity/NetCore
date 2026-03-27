@@ -50,5 +50,24 @@ namespace NetCore
             get => (string?)this.GetValueOrDefault(ServerNameKey);
             set => this[ServerNameKey] = value;
         }
+
+        //static readonly Stack<>
+
+        ///// <summary>
+        ///// Rents an <see cref="StartupArgs"/> instance from a pool.
+        ///// </summary>
+        //public static StartupArgs Rent()
+        //{
+
+        //}
+
+        ///// <summary>
+        ///// Returns given <see cref="StartupArgs"/> instance back to the pool.
+        ///// </summary>
+        ///// <param name="args"></param>
+        //public static void Return(StartupArgs args)
+        //{
+
+        //}
     }
 }

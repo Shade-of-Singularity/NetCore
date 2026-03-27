@@ -1527,6 +1527,18 @@ namespace NetCore.Common
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Copies items from the internal array into the output array.
+        /// </summary>
+        /// <param name="array">Buffer for storing items.</param>
+        public void CopyTo(TBase[] array) => Array.Copy(items, array, stored);
+        /// <summary>
+        /// Copies items from the internal array into the output array.
+        /// </summary>
+        /// <param name="array">Buffer for storing items.</param>
+        /// <param name="length">Amount of items copied to the buffer array.</param>
+        public void CopyTo(TBase[] array, out int length) => Array.Copy(items, array, length = stored);
+
 
 
 
