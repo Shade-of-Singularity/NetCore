@@ -74,26 +74,19 @@ namespace NetCore
         {
             UniTask<OperationResult> stopping = StopCoreUnlocked();
             m_StartTokenSource = new();
-            return m_StartOperation = Create((this, stopping, provider, clear), InvokeStartInternal, m_StartTokenSource);
+            return m_StartOperation = InvokeStartInternal(stopping, provider, clear, m_StartTokenSource).Preserve();
         }
 
-        // TODO: Consider removing indirection, since we hit an await block anyway before we modify a current m_State.
-        static async UniTask<OperationResult> InvokeStartInternal(
-            (NetworkMember member, UniTask<OperationResult> stopping, StartupArgsProvider? provider, bool clear) v, CancellationTokenSource source)
-        {
-            return await v.member.InvokeStartInternal(v.stopping, v.provider, v.clear, source);
-        }
         async UniTask<OperationResult> InvokeStartInternal(UniTask<OperationResult> stopping, StartupArgsProvider? provider, bool clear, CancellationTokenSource source)
         {
             if (Settings.UseConcurrentProtections)
             {
                 await UniTask.Yield();
-            }
-
-            lock (_lock)
-            {
-                if (TryDisposeIfCancelledUnlocked(source, identity: ref m_StartTokenSource))
-                    return OperationResult.CancelledOrInvalid;
+                lock (_lock)
+                {
+                    if (TryDisposeIfCancelledUnlocked(source, identity: ref m_StartTokenSource))
+                        return OperationResult.CancelledOrInvalid;
+                }
             }
 
             try { await stopping; } catch { }
@@ -104,6 +97,7 @@ namespace NetCore
                 if (TryDisposeIfCancelledUnlocked(source, identity: ref m_StartTokenSource))
                     return OperationResult.CancelledOrInvalid;
 
+                // Note: State should only chance after an await block.
                 m_State = MemberState.Starting;
                 args = m_StartupArgs;
                 if (clear) args.Clear();
@@ -171,19 +165,14 @@ namespace NetCore
 
             disconnecting = DisconnectCoreUnlocked();
 
-            return m_StopOperation = Create((this, disconnecting, cancelledStarting), InvokeStopInternal).Preserve();
+            return m_StopOperation = InvokeStopInternal(disconnecting, cancelledStarting).Preserve();
         }
 
-        // TODO: Consider removing indirection, since we hit an await block anyway before we modify a current m_State.
-        static async UniTask<OperationResult> InvokeStopInternal((NetworkMember member, UniTask<OperationResult> disconnecting, UniTask<OperationResult> cancelledStarting) v)
-        {
-            return await v.member.InvokeStopInternal(v.disconnecting, v.cancelledStarting);
-        }
         async UniTask<OperationResult> InvokeStopInternal(UniTask<OperationResult> disconnecting, UniTask<OperationResult> cancelledStarting)
         {
-            // TODO!!! Make sure that status changes only on actual await.
             try { await disconnecting; } catch { }
             try { await cancelledStarting; } catch { }
+            // Note: State should only chance after an await block.
             m_State = MemberState.Stopping;
 
             try
@@ -250,14 +239,7 @@ namespace NetCore
 
             UniTask<OperationResult> disconnection = DisconnectCoreUnlocked();
             m_ConnectionTokenSource = new();
-            return m_ConnectionTask = Create((this, disconnection, provider, clear), InvokeConnectInternal, m_ConnectionTokenSource);
-        }
-
-        // TODO: Consider removing indirection, since we hit an await block anyway before we modify a current m_State.
-        static async UniTask<OperationResult> InvokeConnectInternal(
-            (NetworkMember member, UniTask<OperationResult> disconnection, ConnectionArgsProvider? provider, bool clear) v, CancellationTokenSource source)
-        {
-            return await v.member.InvokeConnectInternal(v.disconnection, v.provider, v.clear, source);
+            return m_ConnectionTask = InvokeConnectInternal(disconnection, provider, clear, m_ConnectionTokenSource).Preserve();
         }
 
         async UniTask<OperationResult> InvokeConnectInternal(
@@ -266,12 +248,11 @@ namespace NetCore
             if (Settings.UseConcurrentProtections)
             {
                 await UniTask.Yield();
-            }
-
-            lock (_lock)
-            {
-                if (TryDisposeIfCancelledUnlocked(source, identity: ref m_ConnectionTokenSource))
-                    return OperationResult.CancelledOrInvalid;
+                lock (_lock)
+                {
+                    if (TryDisposeIfCancelledUnlocked(source, identity: ref m_ConnectionTokenSource))
+                        return OperationResult.CancelledOrInvalid;
+                }
             }
 
             try { await disconnection; } catch { }
@@ -282,6 +263,7 @@ namespace NetCore
                 if (TryDisposeIfCancelledUnlocked(source, identity: ref m_ConnectionTokenSource))
                     return OperationResult.CancelledOrInvalid;
 
+                // Note: State should only chance after an await block.
                 m_State = MemberState.Started_Connecting;
                 args = m_ConnectionArgs;
                 if (clear) args.Clear();
@@ -343,18 +325,13 @@ namespace NetCore
                 default: throw new SwitchExpressionException(m_State);
             }
 
-            return m_DisconnectionTask = Create((this, cancelledConnection), InvokeDisconnectInternal).Preserve();
+            return m_DisconnectionTask = InvokeDisconnectInternal(cancelledConnection).Preserve();
         }
 
-        // TODO: Consider removing indirection, since we hit an await block anyway before we modify a current m_State.
-        static async UniTask<OperationResult> InvokeDisconnectInternal((NetworkMember member, UniTask<OperationResult> cancelledConnection) v)
-        {
-            return await v.member.InvokeDisconnectInternal(v.cancelledConnection);
-        }
         async UniTask<OperationResult> InvokeDisconnectInternal(UniTask<OperationResult> cancelledConnection)
         {
-            // TODO!!! Make sure that status changes only on actual await.
             try { await cancelledConnection; } catch { }
+            // Note: State should only chance after an await block.
             m_State = MemberState.Started_Disconnecting;
 
             try
