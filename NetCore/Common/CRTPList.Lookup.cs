@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -20,6 +19,8 @@ namespace NetCore.Common
         ///  (Even approach like this should still be faster than <see cref="Dictionary{TKey, TValue}"/>).
         /// Note: Same applies to Insert methods. It's likely that we should use item swapping for insertion operations.
         /// Note: Was turned in a class for ease of use.
+        /// Note: Consider turning it into a standardized data structure, allowing for pretty fast iteration over the filtered items + counting of them.
+        ///  Or if it will not be efficient - provide helper methods instead, and consider moving then to SoG.Common library.
         public sealed class Lookup<TFilter> : IDisposable where TFilter : TBase
         {
             /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[

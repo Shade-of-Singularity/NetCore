@@ -13,9 +13,9 @@ namespace NetCore
     public readonly struct StatefulOperation(CancellationTokenSource? source, UniTask<OperationResult> activation, UniTask<OperationResult> deactivation, OperationType type)
     {
         /// <summary>
-        /// Completed task returning an <see cref="OperationResult.Cancelled"/>.
+        /// Completed task returning an <see cref="OperationResult.CancelledOrInvalid"/>.
         /// </summary>
-        public static readonly UniTask<OperationResult> CompletedTask = UniTask.FromResult(OperationResult.Cancelled);
+        public static readonly UniTask<OperationResult> CompletedTask = UniTask.FromResult(OperationResult.CancelledOrInvalid);
         /// <summary>
         /// Completed operation with all tasks completed.
         /// </summary>

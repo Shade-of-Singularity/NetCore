@@ -11,10 +11,17 @@ namespace NetCore
 {
     /// <summary>
     /// State exception of <see cref="NetworkMember"/>.
-    /// Usually thrown if you attempt to start already started <see cref="NetworkMember"/>, etc.
+    /// Usually thrown when you try to use a networking method, but target <see cref="NetworkMember"/> is in a state which doesn't allow given function right now.
+    /// Some of those exceptions, especially when explicitly stated, are system bugs and needs to be reported to us.
     /// </summary>
     /// <param name="message"><inheritdoc/></param>
     public sealed class NetworkMemberStateException(string message) : Exception(message);
+
+    /// <summary>
+    /// Thrown when you attempt to use networking methods on a member, which was not started yet or is still starting.
+    /// </summary>
+    /// <param name="message"><inheritdoc/></param>
+    public sealed class NetworkMemberNotStartedException(string message) : Exception(message);
 
     /// <summary>
     /// Consumer used in ForEach methods for <see cref="ITransport"/>s.
@@ -154,32 +161,49 @@ namespace NetCore
         {
             get
             {
-                lock (_lock) return m_StartupOperation.Type switch
+                MemberState state;
+                lock (_lock) state = m_State;
+                return state switch
                 {
-                    OperationType.Idle => StartState.Stopped,
-                    OperationType.Activating => StartState.Starting,
-                    OperationType.Restarting => StartState.Starting,
-                    OperationType.Deactivating => StartState.Stopping,
-                    OperationType.Completed => StartState.Started,
-                    _ => throw new SwitchExpressionException(m_StartupOperation.Type),
+                    MemberState.Stopped => StartState.Stopped,
+                    MemberState.Starting => StartState.Starting,
+                    MemberState.Stopping => StartState.Stopping,
+
+                    MemberState.Started_Idle => StartState.Started,
+                    MemberState.Started_Connecting => StartState.Started,
+                    MemberState.Started_Disconnecting => StartState.Started,
+                    MemberState.Started_Connected => StartState.Started,
+
+                    _ => throw new SwitchExpressionException(state),
                 };
             }
         }
         /// <summary>
         /// Current state of the connection.
         /// </summary>
+        /// <remarks>
+        /// If there are no transports registered - <see cref="NetworkMember"/> almost immediately
+        /// marked as <see cref="ConnectionState.Connected"/> on <see cref="Connect"/> method call.
+        /// Otherwise - marked as <see cref="ConnectionState.Connected"/> when at least one transport is connected.
+        /// </remarks>
         public ConnectionState ConnectionState
         {
             get
             {
-                lock (_lock) return m_ConnectionOperation.Type switch
+                MemberState state;
+                lock (_lock) state = m_State;
+                return state switch
                 {
-                    OperationType.Idle => ConnectionState.Idle,
-                    OperationType.Activating => ConnectionState.Connecting,
-                    OperationType.Restarting => ConnectionState.Connecting,
-                    OperationType.Deactivating => ConnectionState.Disconnecting,
-                    OperationType.Completed => (Transports.Count == 0 || m_ConnectedTransportsCount == 0) ? ConnectionState.Connecting : ConnectionState.Connected,
-                    _ => throw new SwitchExpressionException(m_StartupOperation.Type),
+                    MemberState.Stopped => ConnectionState.Idle,
+                    MemberState.Starting => ConnectionState.Idle,
+                    MemberState.Stopping => ConnectionState.Idle,
+                    MemberState.Started_Idle => ConnectionState.Idle,
+
+                    MemberState.Started_Connecting => ConnectionState.Connecting,
+                    MemberState.Started_Disconnecting => ConnectionState.Disconnecting,
+                    MemberState.Started_Connected => (Transports.Count == 0 || m_ConnectedTransportsCount > 0) ? ConnectionState.Connected : ConnectionState.Connecting,
+
+                    _ => throw new SwitchExpressionException(state),
                 };
             }
         }
@@ -307,8 +331,6 @@ namespace NetCore
         /// Provider for Connection IDs.
         /// </summary>
         private readonly ConnectionIDProvider m_ConnectionIDProvider = new();
-        private StatefulOperation m_StartupOperation;
-        private StatefulOperation m_ConnectionOperation;
 
 
 
@@ -349,18 +371,15 @@ namespace NetCore
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
         /// Starts all transports with a given <see cref="NetCore.StartupArgs"/>.
-        /// <para>
-        /// When this method is called, all <see cref="ITransport"/>s are already stopped.
-        /// This rule is enforced by the internal architecture (unless developer interfere manually).</para>
         /// </summary>
         /// <remarks>
-        /// <para>This operation cannot be cancelled.</para>
-        /// If <paramref name="token"/> is cancelled - a <see cref="StopOperation"/> will run shortly after this one quits.
-        /// Additionally - it will physically wait for this operation to stop.
-        /// This was bade for better reliability with async operations.
+        /// If any of the transports fail - unless this operation is cancelled, run <see cref="ITransport.InvokeStop"/> on all started transports.
+        /// This will reset their state back to uninitialized state.
+        /// Note: Remove the note unless transactional system is implemented in <see cref="ITransport.InvokeStart"/>.
         /// </remarks>
         protected virtual async UniTask<OperationResult> StartOperation(StartupArgs args, CancellationToken token)
         {
+            // TODO: Support multi-threaded startup.
             ITransport[] transports = RentTransports(out int total);
 
             try
@@ -368,10 +387,18 @@ namespace NetCore
                 for (int i = 0; i < total; i++)
                 {
                     if (token.IsCancellationRequested)
-                        return OperationResult.Cancelled;
+                        return OperationResult.CancelledOrInvalid;
 
                     if (!await transports[i].InvokeStart(args))
+                    {
+                        // Resets state on failure.
+                        while (i >= 0)
+                        {
+                            await transports[i--].InvokeStop();
+                        }
+
                         return OperationResult.Failed;
+                    }
                 }
 
                 return OperationResult.Success;
@@ -443,7 +470,7 @@ namespace NetCore
                 for (int i = 0; i < total; i++)
                 {
                     if (token.IsCancellationRequested)
-                        return OperationResult.Cancelled;
+                        return OperationResult.CancelledOrInvalid;
 
                     if (!await transports[i].InvokeConnect(args))
                         return OperationResult.Failed;
@@ -501,6 +528,7 @@ namespace NetCore
         /// .                                                  Startup
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /*
         /// <summary>
         /// Attempts to start this <see cref="NetworkMember"/>, if it is not already started.
         /// </summary>
@@ -682,6 +710,7 @@ namespace NetCore
                 return OperationResult.Failed;
             }
         }
+        */
 
         /*
         /// <summary>
@@ -3001,8 +3030,8 @@ namespace NetCore
         /// .                                               Private Methods
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        private static UniTask<TResult> Create<TState, TResult>(
-            TState state, Func<TState, CancellationToken, UniTask<TResult>> factory, CancellationToken token)
+        private static UniTask<TResult> Create<TState, TResult, TToken>(
+            TState state, Func<TState, TToken, UniTask<TResult>> factory, TToken token)
         {
             return factory(state, token);
         }

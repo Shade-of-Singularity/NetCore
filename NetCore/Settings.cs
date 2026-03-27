@@ -91,7 +91,7 @@ namespace NetCore
         /// <summary>
         /// <para>(Default: true)</para>
         /// Enables protections and delays, useful when <see cref="NetworkMember"/> and <see cref="ITransport"/>s
-        /// are accessed from multiple threads, or very frequently within one thread.
+        /// are accessed very frequently from multiple threads or from within one thread.
         /// </summary>
         /// <remarks>
         /// When protections are enabled - system will use <see cref="Cysharp.Threading.Tasks.UniTask.Yield"/>
