@@ -106,7 +106,8 @@ namespace NetCore
         /// Delays yield methods introduce are very small (usually at max ~0.017s),
         /// so it is recommended to always keep this option enabled.
         /// </remarks>
-        public static bool UseConcurrentProtections
+        [Obsolete("Not in use at the moment. Remove the attribute if parameter will be suddenly needed.")]
+        internal static bool UseConcurrentProtections
         {
             get => m_ConcurrentProtections;
             set => m_ConcurrentProtections = false;

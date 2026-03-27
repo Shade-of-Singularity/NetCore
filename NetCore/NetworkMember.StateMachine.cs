@@ -30,10 +30,10 @@ namespace NetCore
         private volatile MemberState m_State;
         private CancellationTokenSource? m_StartTokenSource;
         private UniTask<OperationResult> m_StartOperation = CompletedTask;
-        private UniTask<OperationResult> m_StopOperation = CompletedTask;
+        private CancellationTokenSource? m_StopTokenSource;
         private CancellationTokenSource? m_ConnectionTokenSource;
         private UniTask<OperationResult> m_ConnectionTask = CompletedTask;
-        private UniTask<OperationResult> m_DisconnectionTask = CompletedTask;
+        private CancellationTokenSource? m_DisconnectionTokenSource;
 
 
 
@@ -50,7 +50,7 @@ namespace NetCore
             {
                 if (m_State == MemberState.Stopped)
                 {
-                    task = StartCoreUnlocked(provider, clear);
+                    task = StartCoreUnlockedPreserved(provider, clear);
                     return true;
                 }
 
@@ -61,34 +61,23 @@ namespace NetCore
 
         public UniTask<OperationResult> Restart()
         {
-            lock (_lock) return StartCoreUnlocked(null, clear: false);
+            lock (_lock) return StartCoreUnlockedPreserved(null, clear: false);
         }
 
         public UniTask<OperationResult> Start(StartupArgsProvider? provider, bool clear = true)
         {
-            lock (_lock) return StartCoreUnlocked(provider, clear);
+            lock (_lock) return StartCoreUnlockedPreserved(provider, clear);
         }
 
         /// <inheritdoc cref="Start"/>
-        UniTask<OperationResult> StartCoreUnlocked(StartupArgsProvider? provider, bool clear)
+        /// Note: Returned task IS preserved, as it is cached in <see cref="m_StartOperation"/>.
+        UniTask<OperationResult> StartCoreUnlockedPreserved(StartupArgsProvider? provider, bool clear)
         {
-            UniTask<OperationResult> stopping = StopCoreUnlocked();
-            m_StartTokenSource = new();
-            return m_StartOperation = InvokeStartInternal(stopping, provider, clear, m_StartTokenSource).Preserve();
+            return m_StartOperation = InvokeStartInternal(StopCoreUnlockedUnpreserved(), provider, clear, m_StartTokenSource = new()).Preserve();
         }
 
         async UniTask<OperationResult> InvokeStartInternal(UniTask<OperationResult> stopping, StartupArgsProvider? provider, bool clear, CancellationTokenSource source)
         {
-            if (Settings.UseConcurrentProtections)
-            {
-                await UniTask.Yield();
-                lock (_lock)
-                {
-                    if (TryDisposeIfCancelledUnlocked(source, identity: ref m_StartTokenSource))
-                        return OperationResult.CancelledOrInvalid;
-                }
-            }
-
             try { await stopping; } catch { }
 
             StartupArgs args;
@@ -97,7 +86,7 @@ namespace NetCore
                 if (TryDisposeIfCancelledUnlocked(source, identity: ref m_StartTokenSource))
                     return OperationResult.CancelledOrInvalid;
 
-                // Note: State should only chance after an await block.
+                // Note: State should only change after await block, because the task above can mutate the state as well.
                 m_State = MemberState.Starting;
                 args = m_StartupArgs;
                 if (clear) args.Clear();
@@ -131,49 +120,39 @@ namespace NetCore
 
         public UniTask<OperationResult> Stop()
         {
-            lock (_lock) return StopCoreUnlocked();
+            lock (_lock) return StopCoreUnlockedUnpreserved().Preserve();
         }
 
         /// <inheritdoc cref="Stop"/>
-        UniTask<OperationResult> StopCoreUnlocked()
+        /// Note: Returned task is NOT preserved, as it is not cached anywhere.
+        UniTask<OperationResult> StopCoreUnlockedUnpreserved()
         {
             UniTask<OperationResult> cancelledStarting;
-            UniTask<OperationResult> disconnecting;
-            switch (m_State)
+            if (m_StartTokenSource is null) cancelledStarting = CompletedTask;
+            else
             {
-                case MemberState.Stopped: return CompletedTask;
-                case MemberState.Stopping: return m_StopOperation;
-
-                case MemberState.Starting:
-                    if (m_StartTokenSource is null)
-                    {
-                        throw new NetworkMemberStateException($"Member is marked starting, yet no start task was actually started. This is a system bug.");
-                    }
-
-                    m_StartTokenSource.Cancel();
-                    m_StartTokenSource = null;
-                    (cancelledStarting, m_StartOperation) = (m_StartOperation, CompletedTask);
-                    break;
-
-                case MemberState.Started_Idle:
-                case MemberState.Started_Connecting:
-                case MemberState.Started_Disconnecting:
-                case MemberState.Started_Connected: cancelledStarting = CompletedTask; break;
-
-                default: throw new SwitchExpressionException(m_State);
+                m_StartTokenSource.Cancel();
+                m_StartTokenSource = null;
+                (cancelledStarting, m_StartOperation) = (m_StartOperation, CompletedTask);
             }
 
-            disconnecting = DisconnectCoreUnlocked();
-
-            return m_StopOperation = InvokeStopInternal(disconnecting, cancelledStarting).Preserve();
+            m_StopTokenSource?.Cancel();
+            m_StopTokenSource = new();
+            return InvokeStopInternal(DisconnectCoreUnlockedUnpreserved(), cancelledStarting, m_StopTokenSource);
         }
 
-        async UniTask<OperationResult> InvokeStopInternal(UniTask<OperationResult> disconnecting, UniTask<OperationResult> cancelledStarting)
+        async UniTask<OperationResult> InvokeStopInternal(UniTask<OperationResult> disconnecting, UniTask<OperationResult> cancelledStarting, CancellationTokenSource source)
         {
             try { await disconnecting; } catch { }
             try { await cancelledStarting; } catch { }
-            // Note: State should only chance after an await block.
-            m_State = MemberState.Stopping;
+            lock (_lock)
+            {
+                if (TryDisposeIfCancelledUnlocked(source, identity: ref m_StopTokenSource))
+                    return OperationResult.CancelledOrInvalid;
+
+                // Note: State should only change after await block, because tasks above can mutate the state as well.
+                m_State = MemberState.Stopping;
+            }
 
             try
             {
@@ -186,8 +165,11 @@ namespace NetCore
             }
             finally
             {
-                // Note: if all tasks await for stop/disconnect to complete, can this state even override other states invalidly?
-                m_State = MemberState.Stopped;
+                lock (_lock)
+                {
+                    if (IdentifyTokenSourceWithDisposal(source, ref m_StopTokenSource))
+                        m_State = MemberState.Stopped;
+                }
             }
         }
 
@@ -201,7 +183,7 @@ namespace NetCore
             {
                 if (m_State == MemberState.Started_Idle)
                 {
-                    task = ConnectCoreUnlocked(provider, clear);
+                    task = ConnectCoreUnlockedPreserved(provider, clear);
                     return true;
                 }
 
@@ -212,16 +194,17 @@ namespace NetCore
 
         public UniTask<OperationResult> Reconnect()
         {
-            lock (_lock) return ConnectCoreUnlocked(null, clear: true);
+            lock (_lock) return ConnectCoreUnlockedPreserved(null, clear: true);
         }
 
         public UniTask<OperationResult> Connect(ConnectionArgsProvider? provider, bool clear = true)
         {
-            lock (_lock) return ConnectCoreUnlocked(provider, clear);
+            lock (_lock) return ConnectCoreUnlockedPreserved(provider, clear);
         }
 
         /// <inheritdoc cref="Connect"/>
-        UniTask<OperationResult> ConnectCoreUnlocked(ConnectionArgsProvider? provider, bool clear)
+        /// Note: Returned task IS preserved, as it is cached in <see cref="m_ConnectionTask"/>.
+        UniTask<OperationResult> ConnectCoreUnlockedPreserved(ConnectionArgsProvider? provider, bool clear)
         {
             switch (m_State)
             {
@@ -237,24 +220,13 @@ namespace NetCore
                 default: throw new SwitchExpressionException(m_State);
             }
 
-            UniTask<OperationResult> disconnection = DisconnectCoreUnlocked();
             m_ConnectionTokenSource = new();
-            return m_ConnectionTask = InvokeConnectInternal(disconnection, provider, clear, m_ConnectionTokenSource).Preserve();
+            return m_ConnectionTask = InvokeConnectInternal(DisconnectCoreUnlockedUnpreserved(), provider, clear, m_ConnectionTokenSource).Preserve();
         }
 
         async UniTask<OperationResult> InvokeConnectInternal(
             UniTask<OperationResult> disconnection, ConnectionArgsProvider? provider, bool clear, CancellationTokenSource source)
         {
-            if (Settings.UseConcurrentProtections)
-            {
-                await UniTask.Yield();
-                lock (_lock)
-                {
-                    if (TryDisposeIfCancelledUnlocked(source, identity: ref m_ConnectionTokenSource))
-                        return OperationResult.CancelledOrInvalid;
-                }
-            }
-
             try { await disconnection; } catch { }
 
             ConnectionArgs args;
@@ -263,7 +235,7 @@ namespace NetCore
                 if (TryDisposeIfCancelledUnlocked(source, identity: ref m_ConnectionTokenSource))
                     return OperationResult.CancelledOrInvalid;
 
-                // Note: State should only chance after an await block.
+                // Note: State should only change after await block, because the task above can mutate the state as well.
                 m_State = MemberState.Started_Connecting;
                 args = m_ConnectionArgs;
                 if (clear) args.Clear();
@@ -292,47 +264,77 @@ namespace NetCore
             }
         }
 
+
+
+
+        public bool TryDisconnect(out UniTask<OperationResult> task)
+        {
+            lock (_lock)
+            {
+                switch (m_State)
+                {
+                    case MemberState.Stopped:
+                    case MemberState.Starting:
+                    case MemberState.Stopping:
+                    case MemberState.Started_Idle:
+                    case MemberState.Started_Disconnecting: task = CompletedTask; return false;
+
+                    case MemberState.Started_Connecting:
+                    case MemberState.Started_Connected: task = DisconnectCoreUnlockedUnpreserved().Preserve(); return true;
+
+                    default: throw new SwitchExpressionException(m_State);
+                }
+            }
+        }
+
         public UniTask<OperationResult> Disconnect()
         {
-            lock (_lock) return DisconnectCoreUnlocked();
+            lock (_lock) return DisconnectCoreUnlockedUnpreserved().Preserve();
         }
 
         /// <inheritdoc cref="Disconnect"/>
-        UniTask<OperationResult> DisconnectCoreUnlocked()
+        /// Note: Returned task is NOT preserved, as it is not cached anywhere.
+        UniTask<OperationResult> DisconnectCoreUnlockedUnpreserved()
         {
-            UniTask<OperationResult> cancelledConnection;
             switch (m_State)
             {
                 case MemberState.Stopped:
                 case MemberState.Starting:
-                case MemberState.Stopping:
-                case MemberState.Started_Idle: return CompletedTask;
-                case MemberState.Started_Disconnecting: return m_DisconnectionTask;
+                case MemberState.Stopping: return CompletedTask;
 
+                case MemberState.Started_Idle:
                 case MemberState.Started_Connecting:
-                    if (m_ConnectionTokenSource is null)
-                    {
-                        throw new NetworkMemberStateException($"Member is marked as connecting, but no connection operation is running. This is a system bug.");
-                    }
-
-                    m_ConnectionTokenSource.Cancel();
-                    m_ConnectionTokenSource = null;
-                    (cancelledConnection, m_ConnectionTask) = (m_ConnectionTask, CompletedTask);
-                    break;
-
-                case MemberState.Started_Connected: cancelledConnection = CompletedTask; break;
+                case MemberState.Started_Disconnecting:
+                case MemberState.Started_Connected: break;
 
                 default: throw new SwitchExpressionException(m_State);
             }
 
-            return m_DisconnectionTask = InvokeDisconnectInternal(cancelledConnection).Preserve();
+            UniTask<OperationResult> cancelledConnection;
+            if (m_ConnectionTokenSource is null) cancelledConnection = CompletedTask;
+            else
+            {
+                m_ConnectionTokenSource.Cancel();
+                m_ConnectionTokenSource = null;
+                (cancelledConnection, m_ConnectionTask) = (m_ConnectionTask, CompletedTask);
+            }
+
+            m_DisconnectionTokenSource?.Cancel();
+            m_DisconnectionTokenSource = new();
+            return InvokeDisconnectInternal(cancelledConnection, m_DisconnectionTokenSource);
         }
 
-        async UniTask<OperationResult> InvokeDisconnectInternal(UniTask<OperationResult> cancelledConnection)
+        async UniTask<OperationResult> InvokeDisconnectInternal(UniTask<OperationResult> cancelledConnection, CancellationTokenSource source)
         {
             try { await cancelledConnection; } catch { }
-            // Note: State should only chance after an await block.
-            m_State = MemberState.Started_Disconnecting;
+            lock (_lock)
+            {
+                if (TryDisposeIfCancelledUnlocked(source, identity: ref m_DisconnectionTokenSource))
+                    return OperationResult.CancelledOrInvalid;
+
+                // Note: State should only change after await block, because the task above can mutate the state as well.
+                m_State = MemberState.Started_Disconnecting;
+            }
 
             try
             {
@@ -345,10 +347,16 @@ namespace NetCore
             }
             finally
             {
-                // Note: if all tasks await for stop/disconnect to complete, can this state even override other states invalidly?
-                m_State = MemberState.Started_Idle;
+                lock (_lock)
+                {
+                    if (IdentifyTokenSourceWithDisposal(source, ref m_DisconnectionTokenSource))
+                        m_State = MemberState.Started_Idle;
+                }
             }
         }
+
+
+
 
         /// <summary>
         /// Resets <paramref name="identity"/> to <see langword="null"/> if <paramref name="target"/> is disposed.
