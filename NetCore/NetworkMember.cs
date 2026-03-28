@@ -40,10 +40,10 @@ namespace NetCore
     public abstract class NetworkMember<T>(int transports) : NetworkMember(transports) where T : NetworkMember<T>
     {
         /// <summary>
-        /// Iterates over all resilient transports using a given <paramref name="consumer"/> delegate.
+        /// Iterates over all unreliable transports under a lock, using a given <paramref name="consumer"/> delegate.
         /// </summary>
-        /// <param name="consumer">Action to use on all registered <see cref="IResilientTransport"/>s.</param>
-        public void ForEachResilientTransport(MemberTransportConsumer<T, IResilientTransport> consumer)
+        /// <param name="consumer">Action to use on all registered <see cref="IUnreliableTransport"/>s.</param>
+        public void ForEachUnreliableTransport(MemberTransportConsumer<T, IUnreliableTransport> consumer)
         {
             // TODO: Consider using injection and/or give a way to provide arguments for a delegate.
             //  This is so runtime won't have to allocate a class for remembering the variables.
@@ -51,15 +51,32 @@ namespace NetCore
             lock (_lock)
             {
                 T self = (T)this;
-                foreach (var transport in ResilientTransports)
+                foreach (var transport in UnreliableTransports)
                 {
                     consumer(self, transport);
                 }
             }
         }
-
         /// <summary>
-        /// Iterates over all sequential transports using a given <paramref name="consumer"/> delegate.
+        /// Iterates over all reliable transports under a lock, using a given <paramref name="consumer"/> delegate.
+        /// </summary>
+        /// <param name="consumer">Action to use on all registered <see cref="IReliableTransport"/>s.</param>
+        public void ForEachReliableTransport(MemberTransportConsumer<T, IReliableTransport> consumer)
+        {
+            // TODO: Consider using injection and/or give a way to provide arguments for a delegate.
+            //  This is so runtime won't have to allocate a class for remembering the variables.
+            //  A way for accessing the Lookup itself under a lock can also be considered.
+            lock (_lock)
+            {
+                T self = (T)this;
+                foreach (var transport in ReliableTransports)
+                {
+                    consumer(self, transport);
+                }
+            }
+        }
+        /// <summary>
+        /// Iterates over all sequential transports under a lock, using a given <paramref name="consumer"/> delegate.
         /// </summary>
         /// <param name="consumer">Action to use on all registered <see cref="ISequentialTransport"/>s.</param>
         public void ForEachSequentialTransport(MemberTransportConsumer<T, ISequentialTransport> consumer)
@@ -77,10 +94,10 @@ namespace NetCore
             }
         }
         /// <summary>
-        /// Iterates over all reliable transports using a given <paramref name="consumer"/> delegate.
+        /// Iterates over all resilient transports under a lock, using a given <paramref name="consumer"/> delegate.
         /// </summary>
-        /// <param name="consumer">Action to use on all registered <see cref="IReliableTransport"/>s.</param>
-        public void ForEachReliableTransport(MemberTransportConsumer<T, IReliableTransport> consumer)
+        /// <param name="consumer">Action to use on all registered <see cref="IResilientTransport"/>s.</param>
+        public void ForEachResilientTransport(MemberTransportConsumer<T, IResilientTransport> consumer)
         {
             // TODO: Consider using injection and/or give a way to provide arguments for a delegate.
             //  This is so runtime won't have to allocate a class for remembering the variables.
@@ -88,26 +105,7 @@ namespace NetCore
             lock (_lock)
             {
                 T self = (T)this;
-                foreach (var transport in ReliableTransports)
-                {
-                    consumer(self, transport);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Iterates over all unreliable transports using a given <paramref name="consumer"/> delegate.
-        /// </summary>
-        /// <param name="consumer">Action to use on all registered <see cref="IUnreliableTransport"/>s.</param>
-        public void ForEachUnreliableTransport(MemberTransportConsumer<T, IUnreliableTransport> consumer)
-        {
-            // TODO: Consider using injection and/or give a way to provide arguments for a delegate.
-            //  This is so runtime won't have to allocate a class for remembering the variables.
-            //  A way for accessing the Lookup itself under a lock can also be considered.
-            lock (_lock)
-            {
-                T self = (T)this;
-                foreach (var transport in UnreliableTransports)
+                foreach (var transport in ResilientTransports)
                 {
                     consumer(self, transport);
                 }
@@ -1055,6 +1053,24 @@ namespace NetCore
         /// .       Note: this might be easier to resolve if we provide custom storage solution, allowing for filtering.
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        #region Any transport management
+        /// <summary>
+        /// Check whether transport of a specified type is registered.
+        /// </summary>
+        public bool HasTransport<TTransport>() where TTransport : ITransport => Transports.Has<TTransport>();
+        /// <summary>
+        /// Checks whether transport of a specified type is registered and belongs to a specific sending mode group.
+        /// </summary>
+        public bool HasTransport<TTransport>(SendingMode mode) where TTransport : ITransport => mode switch
+        {
+            SendingMode.Unreliable => UnreliableTransports.Has<TTransport>(),
+            SendingMode.Reliable => ReliableTransports.Has<TTransport>(),
+            SendingMode.Sequential => SequentialTransports.Has<TTransport>(),
+            SendingMode.Resilient => ResilientTransports.Has<TTransport>(),
+            _ => throw new SwitchExpressionException(mode),
+        };
+        #endregion
+
         #region General transport management
         /// <summary>
         /// Registers transport under all <see cref="SendingMode"/>s.
@@ -1101,7 +1117,8 @@ namespace NetCore
         /// <c>true</c> if transport was present and it was removed.
         /// <c>false</c> if transport was not present and thus - was not removed.
         /// </returns>
-        public bool RemoveGeneralTransport<T>(T transport) where T : class, IUnreliableTransport
+        public bool RemoveGeneralTransport<T>(T transport) where TTransport : class,
+            IResilientTransport, ISequentialTransport, IUnreliableTransport, IReliableTransport
         {
             throw new NotImplementedException();
         }
@@ -1109,7 +1126,8 @@ namespace NetCore
         /// <summary>
         /// Checks whether this <see cref="NetworkMember"/> manages a specific reliable transport.
         /// </summary>
-        public bool HasGeneralTransport<T>() where T : class, IUnreliableTransport
+        public bool HasGeneralTransport<T>() where TTransport : class,
+            IResilientTransport, ISequentialTransport, IUnreliableTransport, IReliableTransport
         {
             throw new NotImplementedException();
         }
@@ -1123,7 +1141,8 @@ namespace NetCore
         /// <c>true</c> if found and <paramref name="transport"/> was provided.
         /// <c>false</c> if not found and <paramref name="transport"/> is null.
         /// </returns>
-        public bool TryGetGeneralTransport<T>([NotNullWhen(true)] out T? transport) where T : class, IUnreliableTransport
+        public bool TryGetGeneralTransport<T>([NotNullWhen(true)] out T? transport) where TTransport : class,
+            IResilientTransport, ISequentialTransport, IUnreliableTransport, IReliableTransport
         {
             throw new NotImplementedException();
         }
@@ -1133,7 +1152,8 @@ namespace NetCore
         /// </summary>
         /// <typeparam name="T">Type of transport to look for.</typeparam>
         /// <returns>Transport instance or <c>null</c> when not found.</returns>
-        public T GetGeneralTransport<T>() where T : class, IUnreliableTransport
+        public T GetGeneralTransport<T>() where TTransport : class,
+            IResilientTransport, ISequentialTransport, IUnreliableTransport, IReliableTransport
         {
             throw new NotImplementedException();
         }
@@ -1142,7 +1162,7 @@ namespace NetCore
         /// Iterates over all <see cref="IUnreliableTransport"/>s using a given <paramref name="action"/>.
         /// </summary>
         /// <param name="action">Action to use on all registered <see cref="IUnreliableTransport"/>s.</param>
-        public void ForEachGeneralTransport(TransportConsumer<IUnreliableTransport> action)
+        public void ForEachGeneralTransport(TransportConsumer<ITransport> action)
         {
             throw new NotImplementedException();
         }

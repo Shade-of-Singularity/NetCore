@@ -136,7 +136,7 @@ namespace NetCore.Common
             /// .
             /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
             /// <inheritdoc cref="CRTPList{TBase}.Has{TItem}()"/>
-            public bool Has<TItem>() where TItem : TFilter
+            public bool Has<TItem>() where TItem : TBase
             {
                 if (ID<TItem>.FlagRegion >= filters.Length)
                 {

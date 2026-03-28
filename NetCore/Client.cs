@@ -55,23 +55,14 @@ namespace NetCore
                 default: throw new SwitchExpressionException(mode);
             }
         }
-
         /// <inheritdoc cref="Send(ref Header, ReadOnlySpan{byte}, ref Flags, SendingMode)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Send(ReadOnlySpan<byte> datagram, SendingMode mode)
         {
             Header header = Header.Get();
             Flags flags = Flags.Get();
-            switch (mode)
-            {
-                case SendingMode.Unreliable: SendUnreliable(ref header, datagram, ref flags); return;
-                case SendingMode.Reliable: SendReliable(ref header, datagram, ref flags); return;
-                case SendingMode.Sequential: SendSequential(ref header, datagram, ref flags); return;
-                case SendingMode.Resilient: SendResilient(ref header, datagram, ref flags); return;
-                default: throw new SwitchExpressionException(mode);
-            }
+            Send(ref header, datagram, ref flags, mode);
         }
-
         /// <inheritdoc cref="Send(ref Header, ReadOnlySpan{byte}, ref Flags, SendingMode)"/>
         /// <param name="datagram"/>
         /// <param name="mode"/>
@@ -84,16 +75,8 @@ namespace NetCore
             headerSetup?.Invoke(ref header);
             Flags flags = Flags.Get();
             flagsSetup?.Invoke(ref flags);
-            switch (mode)
-            {
-                case SendingMode.Unreliable: SendUnreliable(ref header, datagram, ref flags); return;
-                case SendingMode.Reliable: SendReliable(ref header, datagram, ref flags); return;
-                case SendingMode.Sequential: SendSequential(ref header, datagram, ref flags); return;
-                case SendingMode.Resilient: SendResilient(ref header, datagram, ref flags); return;
-                default: throw new SwitchExpressionException(mode);
-            }
+            Send(ref header, datagram, ref flags, mode);
         }
-
         /// <summary>
         /// Sends <paramref name="datagram"/> to the server, using specified <see cref="SendingMode"/>.
         /// Throws if no suitable transports were found.
@@ -123,25 +106,16 @@ namespace NetCore
                 default: throw new SwitchExpressionException(mode);
             }
         }
-
-        /// <inheritdoc cref="Send{TTansport}(ref Header, ReadOnlySpan{byte}, ref Flags, SendingMode)"/>
+        /// <inheritdoc cref="Send{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags, SendingMode)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Send<TTransport>(ReadOnlySpan<byte> datagram, SendingMode mode)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             Header header = Header.Get();
             Flags flags = Flags.Get();
-            switch (mode)
-            {
-                case SendingMode.Unreliable: SendUnreliable<TTransport>(ref header, datagram, ref flags); return;
-                case SendingMode.Reliable: SendReliable<TTransport>(ref header, datagram, ref flags); return;
-                case SendingMode.Sequential: SendSequential<TTransport>(ref header, datagram, ref flags); return;
-                case SendingMode.Resilient: SendResilient<TTransport>(ref header, datagram, ref flags); return;
-                default: throw new SwitchExpressionException(mode);
-            }
+            Send<TTransport>(ref header, datagram, ref flags, mode);
         }
-
-        /// <inheritdoc cref="Send{TTansport}(ref Header, ReadOnlySpan{byte}, ref Flags, SendingMode)"/>
+        /// <inheritdoc cref="Send{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags, SendingMode)"/>
         /// <param name="datagram"/>
         /// <param name="mode"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
@@ -154,14 +128,7 @@ namespace NetCore
             headerSetup?.Invoke(ref header);
             Flags flags = Flags.Get();
             flagsSetup?.Invoke(ref flags);
-            switch (mode)
-            {
-                case SendingMode.Unreliable: SendUnreliable<TTransport>(ref header, datagram, ref flags); return;
-                case SendingMode.Reliable: SendReliable<TTransport>(ref header, datagram, ref flags); return;
-                case SendingMode.Sequential: SendSequential<TTransport>(ref header, datagram, ref flags); return;
-                case SendingMode.Resilient: SendResilient<TTransport>(ref header, datagram, ref flags); return;
-                default: throw new SwitchExpressionException(mode);
-            }
+            Send<TTransport>(ref header, datagram, ref flags, mode);
         }
 
         /// <summary>
@@ -199,14 +166,7 @@ namespace NetCore
         {
             Header header = Header.Get();
             Flags flags = Flags.Get();
-            return mode switch
-            {
-                SendingMode.Unreliable => TrySendUnreliable(ref header, datagram, ref flags),
-                SendingMode.Reliable => TrySendReliable(ref header, datagram, ref flags),
-                SendingMode.Sequential => TrySendSequential(ref header, datagram, ref flags),
-                SendingMode.Resilient => TrySendResilient(ref header, datagram, ref flags),
-                _ => throw new SwitchExpressionException(mode),
-            };
+            return TrySend(ref header, datagram, ref flags, mode);
         }
 
         /// <inheritdoc cref="TrySend(ref Header, ReadOnlySpan{byte}, ref Flags, SendingMode)"/>
@@ -221,14 +181,7 @@ namespace NetCore
             headerSetup?.Invoke(ref header);
             Flags flags = Flags.Get();
             flagsSetup?.Invoke(ref flags);
-            return mode switch
-            {
-                SendingMode.Unreliable => TrySendUnreliable(ref header, datagram, ref flags),
-                SendingMode.Reliable => TrySendReliable(ref header, datagram, ref flags),
-                SendingMode.Sequential => TrySendSequential(ref header, datagram, ref flags),
-                SendingMode.Resilient => TrySendResilient(ref header, datagram, ref flags),
-                _ => throw new SwitchExpressionException(mode),
-            };
+            return TrySend(ref header, datagram, ref flags, mode);
         }
 
         /// <summary>
@@ -272,6 +225,8 @@ namespace NetCore
         {
             lock (_lock)
             {
+                if (!HasGeneralTransport<TTransport>())
+                    return false;
                 if (mode switch
                 {
                     SendingMode.Unreliable => !HasUnreliableTransport<TTransport>(),
@@ -283,15 +238,10 @@ namespace NetCore
 
                 Header header = Header.Get();
                 Flags flags = Flags.Get();
-                switch (mode)
-                {
-                    // Uses method which can throw when transport is missing, because previous check get us covered.
-                    case SendingMode.Unreliable: SendUnreliable<TTransport>(ref header, datagram, ref flags); return true;
-                    case SendingMode.Reliable: SendReliable<TTransport>(ref header, datagram, ref flags); return true;
-                    case SendingMode.Sequential: SendSequential<TTransport>(ref header, datagram, ref flags); return true;
-                    case SendingMode.Resilient: SendResilient<TTransport>(ref header, datagram, ref flags); return true;
-                    default: throw new SwitchExpressionException(mode);
-                }
+
+                // Uses method which can throw when transport is missing, because previous check get us covered.
+                Send(ref header, datagram, ref flags, mode);
+                return true;
             }
         }
 
@@ -322,15 +272,10 @@ namespace NetCore
                 headerSetup?.Invoke(ref header);
                 Flags flags = Flags.Get();
                 flagsSetup?.Invoke(ref flags);
-                switch (mode)
-                {
-                    // Uses method which can throw when transport is missing, because previous check get us covered.
-                    case SendingMode.Unreliable: SendUnreliable<TTransport>(ref header, datagram, ref flags); return true;
-                    case SendingMode.Reliable: SendReliable<TTransport>(ref header, datagram, ref flags); return true;
-                    case SendingMode.Sequential: SendSequential<TTransport>(ref header, datagram, ref flags); return true;
-                    case SendingMode.Resilient: SendResilient<TTransport>(ref header, datagram, ref flags); return true;
-                    default: throw new SwitchExpressionException(mode);
-                }
+
+                // Uses method which can throw when transport is missing, because previous check get us covered.
+                Send(ref header, datagram, ref flags, mode);
+                return true;
             }
         }
         #endregion
