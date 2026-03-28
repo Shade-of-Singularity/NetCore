@@ -225,16 +225,8 @@ namespace NetCore
         {
             lock (_lock)
             {
-                if (!HasGeneralTransport<TTransport>())
+                if (!HasTransport<TTransport>(mode))
                     return false;
-                if (mode switch
-                {
-                    SendingMode.Unreliable => !HasUnreliableTransport<TTransport>(),
-                    SendingMode.Reliable => !HasReliableTransport<TTransport>(),
-                    SendingMode.Sequential => !HasSequentialTransport<TTransport>(),
-                    SendingMode.Resilient => !HasResilientTransport<TTransport>(),
-                    _ => throw new SwitchExpressionException(mode),
-                }) return false;
 
                 Header header = Header.Get();
                 Flags flags = Flags.Get();
@@ -259,14 +251,8 @@ namespace NetCore
         {
             lock (_lock)
             {
-                if (mode switch
-                {
-                    SendingMode.Unreliable => !HasUnreliableTransport<TTransport>(),
-                    SendingMode.Reliable => !HasReliableTransport<TTransport>(),
-                    SendingMode.Sequential => !HasSequentialTransport<TTransport>(),
-                    SendingMode.Resilient => !HasResilientTransport<TTransport>(),
-                    _ => throw new SwitchExpressionException(mode),
-                }) return false;
+                if (!HasTransport<TTransport>(mode))
+                    return false;
 
                 Header header = Header.Get();
                 headerSetup?.Invoke(ref header);
