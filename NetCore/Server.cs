@@ -60,7 +60,8 @@ namespace NetCore
 
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
-        /// .                                               SendTo Messages
+        /// .                                                Send Messages
+        /// .                                A.K.A.: Good luck translating documentation.
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         #region General sending methods

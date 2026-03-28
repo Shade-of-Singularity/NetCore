@@ -534,6 +534,7 @@ namespace NetCore
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
         /// .                                               SendTo Messages
+        /// .                                A.K.A.: Good luck translating documentation.
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         #region General sending methods
@@ -1592,7 +1593,7 @@ namespace NetCore
         /// <summary>
         /// Checks whether this <see cref="NetworkMember"/> manages a specific reliable transport.
         /// </summary>
-        public bool HasNotifyTransport<T>() where T : class, ISequentialTransport
+        public bool HasSequentialTransport<T>() where T : class, ISequentialTransport
         {
             if (typeof(T) == typeof(ISequentialTransport))
             {
