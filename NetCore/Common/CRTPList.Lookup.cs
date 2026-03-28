@@ -104,6 +104,8 @@ namespace NetCore.Common
                     Array.Resize(ref filters, region + 1);
                 }
 
+                // WARNING! This is wrong! Only items of a specific type should be registered!
+                //  Instead, register items only if they are registered explicitly via a lookup itself!
                 uint flag = 1u << (order & 0b11111);
                 ref uint filter = ref filters[region];
                 if (added)
