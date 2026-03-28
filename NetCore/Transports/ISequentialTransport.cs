@@ -11,29 +11,33 @@ namespace NetCore.Transports
         /// Sequentially sends <paramref name="datagram"/> this <see cref="ITransport"/> manages.
         /// </summary>
         /// <param name="header">Header of the message.</param>
+        /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         /// <param name="datagram">Datagram to send.</param>
-        public void SendSequential(in Header header, ReadOnlySpan<byte> datagram);
+        public void SendSequential(in Header header, ReadOnlySpan<byte> datagram, in Flags flags);
         /// <summary>
         /// Sequentially sends <paramref name="datagram"/> to this <see cref="ITransport"/> manages, excluding <paramref name="toExclude"/>.
         /// </summary>
         /// <param name="header">Header of the message.</param>
         /// <param name="datagram">Datagram to send.</param>
+        /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         /// <param name="toExclude">Connection to avoid sending a <paramref name="datagram"/> to.</param>
-        public void SendSequentialExcluding(in Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude);
+        public void SendSequentialExcluding(in Header header, ReadOnlySpan<byte> datagram, in Flags flags, ConnectionID toExclude);
         /// <summary>
         /// Sequentially sends <paramref name="datagram"/> to the <paramref name="target"/> connection.
         /// </summary>
         /// <param name="header">Header of the message.</param>
         /// <param name="datagram">Datagram to send.</param>
+        /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         /// <param name="target">Connection to send a <paramref name="datagram"/> to. Nothing should be sent if transport doesn't manage this connection.</param>
-        public void SendSequentialTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionID target);
+        public void SendSequentialTo(in Header header, ReadOnlySpan<byte> datagram, in Flags flags, ConnectionID target);
         /// <summary>
         /// Handles raw <paramref name="datagram"/> of a sequential message.
         /// </summary>
         /// <param name="header">Header of the message.</param>
         /// <param name="datagram">Datagram from a remote connection.</param>
+        /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         /// <param name="source">Connection ID from which <paramref name="datagram"/> has arrived.</param>
-        public void HandleSequential(in Header header, ReadOnlySpan<byte> datagram, ConnectionID source);
+        public void HandleSequential(in Header header, ReadOnlySpan<byte> datagram, in Flags flags, ConnectionID source);
 
 
 
@@ -42,14 +46,16 @@ namespace NetCore.Transports
         /// </summary>
         /// <param name="header">Header of the message.</param>
         /// <param name="datagram">Datagram to send.</param>
+        /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         /// <param name="args">Temporary connection args used for this connection in particular.</param>
-        public void SendSequentialTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args);
+        public void SendSequentialTo(in Header header, ReadOnlySpan<byte> datagram, in Flags flags, ConnectionArgs args);
         /// <summary>
         /// Handles raw <paramref name="datagram"/> of a sequential message.
         /// </summary>
         /// <param name="header">Header of the message.</param>
         /// <param name="datagram">Datagram from a remote connection.</param>
+        /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         /// <param name="source">Temporary connection args from which <paramref name="datagram"/> has arrived.</param>
-        public void HandleSequential(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs source);
+        public void HandleSequential(in Header header, ReadOnlySpan<byte> datagram, in Flags flags, ConnectionArgs source);
     }
 }

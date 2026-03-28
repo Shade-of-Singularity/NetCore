@@ -67,5 +67,100 @@ namespace NetCore
         {
             return client.Connect(args => args.RemoteIPEndPoint = remoteEndPoint);
         }
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                                   Client
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <inheritdoc cref="Client.SendReliable"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliable(this Client client, ReadOnlySpan<byte> datagram, HeaderConstructor? header = null, FlagsConstructor? flags = null)
+        {
+            Header h = Header.Get();
+            header?.Invoke(ref h);
+            Flags f = Flags.Get();
+            flags?.Invoke(ref f);
+            client.SendReliable(ref h, datagram, ref f);
+        }
+
+        /// <inheritdoc cref="Client.SendReliable{TTransport}"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliable<TTransport>(this Client client, ReadOnlySpan<byte> datagram, HeaderConstructor? header = null, FlagsConstructor? flags = null)
+            where TTransport : class, IReliableTransport
+        {
+            Header h = Header.Get();
+            header?.Invoke(ref h);
+            Flags f = Flags.Get();
+            flags?.Invoke(ref f);
+            client.SendReliable<TTransport>(ref h, datagram, ref f);
+        }
+
+        /// <inheritdoc cref="Client.SendUnreliable"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliable(this Client client, ReadOnlySpan<byte> datagram, HeaderConstructor? header = null, FlagsConstructor? flags = null)
+        {
+            Header h = Header.Get();
+            header?.Invoke(ref h);
+            Flags f = Flags.Get();
+            flags?.Invoke(ref f);
+            client.SendUnreliable(ref h, datagram, ref f);
+        }
+
+        /// <inheritdoc cref="Client.SendUnreliable{TTransport}"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliable<TTransport>(this Client client, ReadOnlySpan<byte> datagram, HeaderConstructor? header = null, FlagsConstructor? flags = null)
+            where TTransport : class, IUnreliableTransport
+        {
+            Header h = Header.Get();
+            header?.Invoke(ref h);
+            Flags f = Flags.Get();
+            flags?.Invoke(ref f);
+            client.SendUnreliable<TTransport>(ref h, datagram, ref f);
+        }
+
+
+
+
+        /// <inheritdoc cref="Client.SendReliable"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliable(this Client client, ReadOnlySpan<byte> datagram)
+        {
+            Flags flags = Flags.Get();
+            Header header = Header.Get();
+            client.SendReliable(ref header, datagram, ref flags);
+        }
+
+        /// <inheritdoc cref="Client.SendReliable{TTransport}"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendReliable<TTransport>(this Client client, ReadOnlySpan<byte> datagram)
+            where TTransport : class, IReliableTransport
+        {
+            Flags flags = Flags.Get();
+            Header header = Header.Get();
+            client.SendReliable<TTransport>(ref header, datagram, ref flags);
+        }
+
+        /// <inheritdoc cref="Client.SendUnreliable"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliable(this Client client, ReadOnlySpan<byte> datagram)
+        {
+            Flags flags = Flags.Get();
+            Header header = Header.Get();
+            client.SendUnreliable(ref header, datagram, ref flags);
+        }
+
+        /// <inheritdoc cref="Client.SendUnreliable{TTransport}"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SendUnreliable<TTransport>(this Client client, ReadOnlySpan<byte> datagram)
+            where TTransport : class, IUnreliableTransport
+        {
+            Flags flags = Flags.Get();
+            Header header = Header.Get();
+            client.SendUnreliable<TTransport>(ref header, datagram, ref flags);
+        }
     }
 }

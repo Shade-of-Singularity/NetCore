@@ -1,6 +1,7 @@
 ﻿using NetCore.Transports;
 using System;
 using System.Buffers;
+using System.Runtime.InteropServices;
 
 namespace NetCore
 {
@@ -27,19 +28,20 @@ namespace NetCore
     ///  This will be useful if people would want to create custom relays which does not rely on <see cref="ITransport"/>s.
     /// TODO: Support dynamic header size.
     /// TODO: Rename to simply "Header" (?)
+    [StructLayout(LayoutKind.Explicit)]
     public ref struct Header(byte[] headers, byte[] content)
     {
         /// <summary>
         /// Array, encoding all the bits, representing used headers.
         /// </summary>
         /// TODO: Support array being null when using <c>default</c> declaration.
-        public readonly byte[] headers = headers;
+        [FieldOffset(0)] public readonly byte[] headers = headers;
         /// <summary>
         /// Array, holding unpacked <see cref="CustomHeader{T}"/> data.
         /// Layer or will be packed depending on specified <see cref="CustomHeaderUsage"/>.
         /// </summary>
         /// TODO: Support array being null when using <c>default</c> declaration.
-        public readonly byte[] content = content;
+        [FieldOffset(8)] public readonly byte[] content = content;
         /// <summary>
         /// Stores all flags this header defines. Includes:
         /// <para>- <see cref="CustomHeaderUsage"/> (assigned automatically).</para>
@@ -48,15 +50,15 @@ namespace NetCore
         /// Flags that are assigned automatically usually should not be touched.
         /// If you want to touch them though - use methods from <see cref="HeaderFlagsHelpers"/>.
         /// </remarks>
-        public HeaderFlags flags;
+        [FieldOffset(16)] public HeaderFlags flags;
         /// <summary>
-        /// Whether instance is disposed or not.
+        /// Indicates that this <see cref="Header"/> instance and its resources was disposed.
         /// </summary>
-        private volatile bool disposed;
+        [FieldOffset(17)] private bool disposed;
         /// <summary>
         /// Amount of sources using this header in a <![CDATA[using (var header = ...) { }]]> context.
         /// </summary>
-        private volatile ushort locks;
+        [FieldOffset(18)] private volatile ushort locks;
 
 
 
@@ -67,7 +69,7 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Creates <see cref="Header"/>, optimized for usage with currently registered <see cref="ITransport"/>s.
+        /// Creates <see cref="Header"/>, optimized for usage with <see cref="NetworkMember"/> and <see cref="ITransport"/>s.
         /// </summary>
         /// <remarks>
         /// Don't forget to call <see cref="Dispose"/> when you are done using it!
@@ -233,7 +235,7 @@ namespace NetCore
         }
 
         /// <summary>
-        /// Releases all internal resources.
+        /// Releases one lock. Releases all internal resources if there are no more locks.
         /// </summary>
         /// <exception cref="ObjectDisposedException"><see cref="Header"/> is already disposed.</exception>
         /// Note: We can mutate what Dispose does only because we use ref struct.
@@ -261,7 +263,7 @@ namespace NetCore
                 }
             }
 
-            ArrayPool<byte>.Shared.Return(headers);
+            ArrayPool<byte>.Shared.Return(headers, clearArray: true);
             ArrayPool<byte>.Shared.Return(content);
             disposed = true;
         }
