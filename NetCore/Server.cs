@@ -35,25 +35,23 @@ namespace NetCore
         /// Starts a server and binds all registered transports to a provided <see cref="StartupArgs.LocalIPEndPoint"/>.
         /// </summary>
         /// <inheritdoc/>
-        protected override async UniTask<bool> StartOperation(StartupArgs args, CancellationToken token)
+        protected override async UniTask<OperationResult> StartOperation(StartupArgs args, CancellationToken token)
         {
-            if (await base.StartOperation(args, token))
-            {
+            OperationResult result = await base.StartOperation(args, token);
+            if (result == OperationResult.Success)
                 Servers.Add(this);
-                return true;
-            }
 
-            return false;
+            return result;
         }
 
         /// <summary>
         /// Disconnects all the players, stops the server, and unbinds all transports.
         /// </summary>
         /// <inheritdoc/>
-        protected override UniTask<bool> StopOperation(CancellationToken token)
+        protected override UniTask<OperationResult> StopOperation()
         {
             Servers.Remove(this);
-            return base.StopOperation(token);
+            return base.StopOperation();
         }
 
         #region Datagram Transporting

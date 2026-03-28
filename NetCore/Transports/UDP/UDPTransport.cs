@@ -69,10 +69,6 @@ namespace NetCore.Transports.UDP
         /// </summary>
         protected static readonly IPEndPoint RemoteAnyIPv4 = new(IPAddress.Any, 0);
         /// <summary>
-        /// Lock, used when interacting with everything - <see cref="Socket"/>, <see cref="Source"/>, <see cref="Buffer"/>, <see cref="Clients"/>, etc.
-        /// </summary>
-        protected readonly object _lock = new();
-        /// <summary>
         /// Socket, used for receiving and sending of the data.
         /// </summary>
         protected Socket? Socket;
@@ -98,11 +94,11 @@ namespace NetCore.Transports.UDP
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <inheritdoc/>
-        public override void Initialize(NetworkMember member)
+        public override void Attach(NetworkMember member)
         {
             lock (_lock)
             {
-                base.Initialize(member);
+                base.Attach(member);
                 Socket = new(SocketType, SocketProtocol)
                 {
                     EnableBroadcast = true
@@ -111,13 +107,13 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public override void Terminate(NetworkMember member)
+        public override void Detach(NetworkMember member)
         {
             lock (_lock)
             {
                 Socket!.Dispose();
                 Socket = null;
-                base.Terminate(member);
+                base.Detach(member);
             }
         }
 
@@ -153,7 +149,7 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public override void Stop()
+        public override UniTask Stop()
         {
             lock (_lock)
             {
@@ -165,7 +161,7 @@ namespace NetCore.Transports.UDP
                 }
 
                 Socket!.Shutdown(SocketShutdown.Both);
-                base.Stop();
+                return base.Stop();
             }
         }
 
@@ -225,7 +221,7 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public override void Disconnect()
+        public override UniTask Disconnect()
         {
             lock (_lock)
             {
@@ -236,7 +232,7 @@ namespace NetCore.Transports.UDP
                 catch (SocketException ex) when (ex.ErrorCode == 10057) { } // Attempted to disconnect a non-connected socket.
             }
 
-            base.Disconnect();
+            return base.Disconnect();
         }
 
         /// <inheritdoc/>
@@ -348,11 +344,13 @@ namespace NetCore.Transports.UDP
             //  lock specific segments of that array, and make sure that lock in a transport is released as soon as data is copied over.
         }
 
+        /// <inheritdoc/>
         public void SendUnreliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args)
         {
             throw new NotImplementedException();
         }
 
+        /// <inheritdoc/>
         public void HandleUnreliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs source)
         {
             throw new NotImplementedException();

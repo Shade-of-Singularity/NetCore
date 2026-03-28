@@ -8,7 +8,7 @@ namespace NetCore.Transports
     public static class TransportHelpers
     {
         /// <summary>
-        /// Resolves type of an input <see cref="NetworkMember"/> in <see cref="ITransport.Initialize(NetworkMember)"/>.
+        /// Resolves type of an input <see cref="NetworkMember"/> in <see cref="ITransport.Attach(NetworkMember)"/>.
         /// </summary>
         /// <param name="initializer"><see cref="NetworkMember"/> which initializes <see cref="ITransport"/>.</param>
         /// <param name="server"><see cref="NetworkMember"/> casted to <see cref="Server"/>.</param>

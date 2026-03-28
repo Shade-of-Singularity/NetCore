@@ -12,6 +12,7 @@ namespace NetCore
     {
         /// <summary>
         /// Local end-point, on which <see cref="NetworkMember"/> needs to start.
+        /// Transports which rely on UID, like SteamNetworking UDP transport, can choose to use a different port than a provided one.
         /// </summary>
         IPEndPoint? LocalIPEndPoint { get; }
         /// <summary>

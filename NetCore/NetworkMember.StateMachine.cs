@@ -5,35 +5,21 @@ using System.Threading;
 
 namespace NetCore
 {
-    public partial class NetworkMember
+    // TODO: Implement dispatcher at some point.
+    public partial class NetworkMember // TODO: Provide non-provider-based methods for args handling.
     {
-        enum MemberState : byte
-        {
-            Stopped,
-            Starting,
-            Stopping,
-            Started_Idle,
-            Started_Connecting,
-            Started_Disconnecting,
-            Started_Connected,
-        }
-
-
-
-
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
         /// .                                               Private Fields
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        static readonly UniTask<OperationResult> CompletedTask = UniTask.FromResult(OperationResult.CancelledOrInvalid);
-        private volatile MemberState m_State;
         private CancellationTokenSource? m_StartTokenSource;
-        private UniTask<OperationResult> m_StartOperation = CompletedTask;
+        private UniTask<OperationResult> m_StartOperation = StateMachineHelpers.CompletedTask;
         private CancellationTokenSource? m_StopTokenSource;
         private CancellationTokenSource? m_ConnectionTokenSource;
-        private UniTask<OperationResult> m_ConnectionTask = CompletedTask;
+        private UniTask<OperationResult> m_ConnectionTask = StateMachineHelpers.CompletedTask;
         private CancellationTokenSource? m_DisconnectionTokenSource;
+        private volatile MemberState m_State;
 
 
 
@@ -44,6 +30,19 @@ namespace NetCore
         /// .  State machine (v2) operations cover: Start, Stop, Connect, Disconnect methods and supplementary methods.
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <summary>
+        /// If <see cref="NetworkMember"/> is currently stopped - starts it using <see cref="NetCore.StartupArgs"/>
+        /// provided by <paramref name="provider"/>, and provides a <paramref name="task"/> to await.
+        /// </summary>
+        /// <param name="task">Task from <see cref="Start"/> to await, or a completed task.</param>
+        /// <param name="provider">Provider for <see cref="NetCore.StartupArgs"/>. Can be <see langword="null"/>.</param>
+        /// <param name="clear">
+        /// Whether to clear <see cref="NetCore.StartupArgs"/> from previous session before providing them to <paramref name="provider"/> or not.
+        /// </param>
+        /// <returns>
+        /// <see langword="true"/> if it was possible to start this <see cref="NetworkMember"/> and <paramref name="task"/> was provided for awaiting.
+        /// <see langword="false"/> if <see cref="NetworkMember"/> was already started.
+        /// </returns>
         public bool TryStart(out UniTask<OperationResult> task, StartupArgsProvider? provider, bool clear = true)
         {
             lock (_lock)
@@ -54,16 +53,28 @@ namespace NetCore
                     return true;
                 }
 
-                task = CompletedTask;
+                task = StateMachineHelpers.CompletedTask;
                 return false;
             }
         }
 
+        /// <summary>
+        /// Restarts <see cref="NetworkMember"/> using <see cref="NetCore.StartupArgs"/> from a previous session.
+        /// </summary>
+        /// <returns>Task from <see cref="Start(StartupArgsProvider?, bool)"/> method to await.</returns>
         public UniTask<OperationResult> Restart()
         {
             lock (_lock) return StartCoreUnlockedPreserved(null, clear: false);
         }
 
+        /// <summary>
+        /// Stops <see cref="NetworkMember"/> if it currently runs, and start it again with <see cref="NetCore.StartupArgs"/> provided by <paramref name="provider"/>.
+        /// </summary>
+        /// <param name="provider">Provider for <see cref="NetCore.StartupArgs"/>. Can be <see langword="null"/>.</param>
+        /// <param name="clear">
+        /// Whether to clear <see cref="NetCore.StartupArgs"/> from previous session before providing them to <paramref name="provider"/> or not.
+        /// </param>
+        /// <returns>Startup task to await.</returns>
         public UniTask<OperationResult> Start(StartupArgsProvider? provider, bool clear = true)
         {
             lock (_lock) return StartCoreUnlockedPreserved(provider, clear);
@@ -118,6 +129,10 @@ namespace NetCore
 
 
 
+        /// <summary>
+        /// Stops <see cref="NetworkMember"/> if it is currently running.
+        /// </summary>
+        /// <returns>Stop task to await a completion of.</returns>
         public UniTask<OperationResult> Stop()
         {
             lock (_lock) return StopCoreUnlockedUnpreserved().Preserve();
@@ -128,12 +143,12 @@ namespace NetCore
         UniTask<OperationResult> StopCoreUnlockedUnpreserved()
         {
             UniTask<OperationResult> cancelledStarting;
-            if (m_StartTokenSource is null) cancelledStarting = CompletedTask;
+            if (m_StartTokenSource is null) cancelledStarting = StateMachineHelpers.CompletedTask;
             else
             {
                 m_StartTokenSource.Cancel();
                 m_StartTokenSource = null;
-                (cancelledStarting, m_StartOperation) = (m_StartOperation, CompletedTask);
+                (cancelledStarting, m_StartOperation) = (m_StartOperation, StateMachineHelpers.CompletedTask);
             }
 
             m_StopTokenSource?.Cancel();
@@ -176,7 +191,22 @@ namespace NetCore
 
 
 
-        /// Note: Also ensures to not throw any exceptions.
+        /// <summary>
+        /// If <see cref="NetworkMember"/> is started but idling - connects it to a remote host, using <see cref="NetCore.ConnectionArgs"/>
+        /// provided by <paramref name="provider"/>, and provides a <paramref name="task"/> to await.
+        /// </summary>
+        /// <remarks>
+        /// Additionally ensures to not throw a <see cref="MemberIsNotStartedException"/> - <see langword="false"/> if returned instead.
+        /// </remarks>
+        /// <param name="task">Task, returned by a <see cref="Connect(ConnectionArgsProvider?, bool)"/> method.</param>
+        /// <param name="provider">Provider for <see cref="NetCore.ConnectionArgs"/>. Can be <see langword="null"/>.</param>
+        /// <param name="clear">
+        /// Whether to clear <see cref="NetCore.ConnectionArgs"/> from previous session before providing them to <paramref name="provider"/> or not.
+        /// </param>
+        /// <returns>
+        /// <see langword="true"/> if it was possible to start connecting this <see cref="NetworkMember"/> and <paramref name="task"/> was provided for awaiting.
+        /// <see langword="false"/> if <see cref="NetworkMember"/> is already disconnected.
+        /// </returns>
         public bool TryConnect(out UniTask<OperationResult> task, ConnectionArgsProvider? provider, bool clear = true)
         {
             lock (_lock)
@@ -187,16 +217,62 @@ namespace NetCore
                     return true;
                 }
 
-                task = CompletedTask;
+                task = StateMachineHelpers.CompletedTask;
                 return false;
             }
         }
 
-        public UniTask<OperationResult> Reconnect()
+        /// <summary>
+        /// If <see cref="NetworkMember"/> is started - reconnects it to a remote host, using <see cref="NetCore.ConnectionArgs"/>
+        /// from a previous session, and provides a <paramref name="task"/> to await.
+        /// </summary>
+        /// <remarks>
+        /// Additionally ensures to not throw a <see cref="MemberIsNotStartedException"/> - <see langword="false"/> if returned instead.
+        /// </remarks>
+        /// <param name="task">Task from <see cref="Connect"/> to await, or a completed task.</param>
+        /// <returns>
+        /// <see langword="true"/> if <see cref="NetworkMember"/> is restarted and <paramref name="task"/> was provided for awaiting.
+        /// <see langword="false"/> if <see cref="NetworkMember"/> is stopped.
+        /// </returns>
+        public bool TryReconnect(out UniTask<OperationResult> task)
         {
-            lock (_lock) return ConnectCoreUnlockedPreserved(null, clear: true);
+            lock (_lock)
+            {
+                switch (m_State)
+                {
+                    case MemberState.Stopped:
+                    case MemberState.Starting:
+                    case MemberState.Stopping: task = StateMachineHelpers.CompletedTask; return false;
+
+                    case MemberState.Started_Idle:
+                    case MemberState.Started_Connecting:
+                    case MemberState.Started_Disconnecting:
+                    case MemberState.Started_Connected: task = ConnectCoreUnlockedPreserved(null, clear: false); return true;
+
+                    default: throw new SwitchExpressionException(m_State);
+                }
+            }
         }
 
+        /// <summary>
+        /// Reconnects this <see cref="NetworkMember"/> to a remote host using <see cref="NetCore.ConnectionArgs"/> from a previous session.
+        /// </summary>
+        /// <returns>Connection operation to await.</returns>
+        /// <exception cref="MemberIsNotStartedException">Member was not started before attempting a connection.</exception>
+        public UniTask<OperationResult> Reconnect()
+        {
+            lock (_lock) return ConnectCoreUnlockedPreserved(null, clear: false);
+        }
+
+        /// <summary>
+        /// Reconnects this <see cref="NetworkMember"/> to a remote host using <see cref="NetCore.ConnectionArgs"/> provided by <paramref name="provider"/>.
+        /// </summary>
+        /// <param name="provider">Provider for <see cref="NetCore.ConnectionArgs"/>. Can be <see langword="null"/>.</param>
+        /// <param name="clear">
+        /// Whether to clear <see cref="NetCore.ConnectionArgs"/> from previous session before providing them to <paramref name="provider"/> or not.
+        /// </param>
+        /// <returns>Connection operation to await.</returns>
+        /// <exception cref="MemberIsNotStartedException">Member was not started before attempting a connection.</exception>
         public UniTask<OperationResult> Connect(ConnectionArgsProvider? provider, bool clear = true)
         {
             lock (_lock) return ConnectCoreUnlockedPreserved(provider, clear);
@@ -210,7 +286,7 @@ namespace NetCore
             {
                 case MemberState.Stopped:
                 case MemberState.Starting:
-                case MemberState.Stopping: throw new NetworkMemberNotStartedException($"({GetType().Name}) is not started. Connection attempt is aborted.");
+                case MemberState.Stopping: throw new MemberIsNotStartedException($"({GetType().Name}) is not started. Connection attempt is aborted.");
 
                 case MemberState.Started_Idle:
                 case MemberState.Started_Connecting:
@@ -267,6 +343,18 @@ namespace NetCore
 
 
 
+        /// <summary>
+        /// If <see cref="NetworkMember"/> if currently connected or connecting - disconnects a this <see cref="NetworkMember"/>
+        /// from a remote host, and provides a <paramref name="task"/> to await.
+        /// </summary>
+        /// <remarks>
+        /// Additionally ensures to not throw a <see cref="MemberIsNotStartedException"/> - <see langword="false"/> if returned instead.
+        /// </remarks>
+        /// <param name="task">Task from <see cref="Disconnect"/> to await, or a completed task.</param>
+        /// <returns>
+        /// <see langword="true"/> if <see cref="NetworkMember"/> was connected, disconnection operation started and <paramref name="task"/> was provided for awaiting.
+        /// <see langword="false"/> if <see cref="NetworkMember"/> was not connected nor connecting, and no operation was started.
+        /// </returns>
         public bool TryDisconnect(out UniTask<OperationResult> task)
         {
             lock (_lock)
@@ -277,7 +365,7 @@ namespace NetCore
                     case MemberState.Starting:
                     case MemberState.Stopping:
                     case MemberState.Started_Idle:
-                    case MemberState.Started_Disconnecting: task = CompletedTask; return false;
+                    case MemberState.Started_Disconnecting: task = StateMachineHelpers.CompletedTask; return false;
 
                     case MemberState.Started_Connecting:
                     case MemberState.Started_Connected: task = DisconnectCoreUnlockedUnpreserved().Preserve(); return true;
@@ -287,6 +375,11 @@ namespace NetCore
             }
         }
 
+        /// <summary>
+        /// Disconnects <see cref="NetworkMember"/> from a remote host.
+        /// </summary>
+        /// <returns>Disconnect operation to await.</returns>
+        /// <exception cref="MemberIsNotStartedException">Member was not started before attempting a disconnection.</exception>
         public UniTask<OperationResult> Disconnect()
         {
             lock (_lock) return DisconnectCoreUnlockedUnpreserved().Preserve();
@@ -300,9 +393,9 @@ namespace NetCore
             {
                 case MemberState.Stopped:
                 case MemberState.Starting:
-                case MemberState.Stopping: return CompletedTask;
+                case MemberState.Stopping: throw new MemberIsNotStartedException($"({GetType().Name}) is not started. Disconnection attempt is aborted.");
 
-                case MemberState.Started_Idle:
+                case MemberState.Started_Idle: return StateMachineHelpers.CompletedTask;
                 case MemberState.Started_Connecting:
                 case MemberState.Started_Disconnecting:
                 case MemberState.Started_Connected: break;
@@ -311,12 +404,12 @@ namespace NetCore
             }
 
             UniTask<OperationResult> cancelledConnection;
-            if (m_ConnectionTokenSource is null) cancelledConnection = CompletedTask;
+            if (m_ConnectionTokenSource is null) cancelledConnection = StateMachineHelpers.CompletedTask;
             else
             {
                 m_ConnectionTokenSource.Cancel();
                 m_ConnectionTokenSource = null;
-                (cancelledConnection, m_ConnectionTask) = (m_ConnectionTask, CompletedTask);
+                (cancelledConnection, m_ConnectionTask) = (m_ConnectionTask, StateMachineHelpers.CompletedTask);
             }
 
             m_DisconnectionTokenSource?.Cancel();
@@ -327,6 +420,7 @@ namespace NetCore
         async UniTask<OperationResult> InvokeDisconnectInternal(UniTask<OperationResult> cancelledConnection, CancellationTokenSource source)
         {
             try { await cancelledConnection; } catch { }
+
             lock (_lock)
             {
                 if (TryDisposeIfCancelledUnlocked(source, identity: ref m_DisconnectionTokenSource))

@@ -1,10 +1,10 @@
-﻿using NetCore.Transports.Pipes;
-using NetCore.Transports.TCP;
+﻿using NetCore.Transports.TCP;
 using NetCore.Transports.UDP;
+using NetCore.Transports.Unix;
 using System;
 using System.Net;
 using System.Runtime.InteropServices;
-using System.Text;
+using System.Threading.Tasks;
 
 namespace NetCore.Tests
 {
@@ -17,30 +17,30 @@ namespace NetCore.Tests
             Client client = new();
             client.RegisterUnreliableTransport(new UDPTransport());
             client.RegisterReliableTransport(new TCPTransport());
-            client.RegisterTransportAsBoth(new PipeTransport());
+            client.RegisterTransportAsBoth(new UnixTransport());
 
             Server server = new();
             server.RegisterUnreliableTransport(new UDPTransport());
             server.RegisterReliableTransport(new TCPTransport());
-            server.RegisterTransportAsBoth(new PipeTransport());
+            server.RegisterTransportAsBoth(new UnixTransport());
         }
 
         [TestMethod]
-        public void UtilizeTransports()
+        public async Task UtilizeTransports()
         {
             Client client = new();
             client.RegisterUnreliableTransport(new UDPTransport());
             client.RegisterReliableTransport(new TCPTransport());
-            client.RegisterTransportAsBoth(new PipeTransport());
-            client.Start(IPAddress.Loopback, 25001);
+            client.RegisterTransportAsBoth(new UnixTransport());
+            await client.Start(IPAddress.Loopback, 25001);
 
             Server server = new();
             server.RegisterUnreliableTransport(new UDPTransport());
             server.RegisterReliableTransport(new TCPTransport());
-            server.RegisterTransportAsBoth(new PipeTransport());
-            server.Start(25000);
+            server.RegisterTransportAsBoth(new UnixTransport());
+            await server.Start(25000);
 
-            if (!client.Connect(IPAddress.Loopback, 25000))
+            if (await client.Connect(IPAddress.Loopback, 25000) == OperationResult.Success)
             {
                 throw new Exception("Fail to connect.");
             }
@@ -55,9 +55,9 @@ namespace NetCore.Tests
             client.SendUnreliable(MemoryMarshal.AsBytes(new string('a', ushort.MaxValue).AsSpan()));
             client.SendUnreliable(MemoryMarshal.AsBytes(new string('a', ushort.MaxValue).AsSpan()));
 
-            client.Disconnect();
-            client.Stop();
-            server.Stop();
+            await client.Disconnect();
+            await client.Stop();
+            await server.Stop();
         }
     }
 }

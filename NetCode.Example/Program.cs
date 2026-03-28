@@ -1,7 +1,8 @@
-﻿using NetCore.Transports.Loopback;
-using NetCore.Transports.Pipes;
+﻿using Cysharp.Threading.Tasks;
+using NetCore.Transports.Loopback;
 using NetCore.Transports.TCP;
 using NetCore.Transports.UDP;
+using NetCore.Transports.Unix;
 using System;
 using System.Net;
 using System.Runtime.InteropServices;
@@ -14,13 +15,13 @@ namespace NetCore.Examples
     {
         static void Main()
         {
-            UDPSending();
+            UDPSending().Forget();
 
             Console.WriteLine("Press any key to stop UDP server...");
             Console.ReadKey(); // This block until user hits any key.
         }
 
-        static async void UDPSending()
+        static async UniTaskVoid UDPSending()
         {
             Server server = new();
             server.RegisterUnreliableTransport(new UDPTransport());
@@ -28,12 +29,12 @@ namespace NetCore.Examples
             client.RegisterUnreliableTransport(new UDPTransport());
 
             const ushort ServerPort = 27001;
-            server.Start(IPAddress.Loopback, ServerPort);
+            await server.Start(IPAddress.Loopback, ServerPort);
             await Task.Delay(10);
 
-            client.Start(IPAddress.Any, 0);
+            await client.Start(IPAddress.Any, 0);
             await Task.Delay(10);
-            client.Connect(IPAddress.Loopback, ServerPort);
+            await client.Connect(IPAddress.Loopback, ServerPort);
             await Task.Delay(10);
 
             client.SendUnreliable(Encoding.UTF8.GetBytes("Test message."));
@@ -57,12 +58,12 @@ namespace NetCore.Examples
             Client client = new();
             client.RegisterUnreliableTransport(new UDPTransport());
             client.RegisterReliableTransport(new TCPTransport());
-            client.RegisterTransportAsBoth(new PipeTransport());
+            client.RegisterTransportAsBoth(new UnixTransport());
 
             Server server = new();
             server.RegisterUnreliableTransport(new UDPTransport());
             server.RegisterReliableTransport(new TCPTransport());
-            server.RegisterTransportAsBoth(new PipeTransport());
+            server.RegisterTransportAsBoth(new UnixTransport());
 
             client.SendReliable(MemoryMarshal.AsBytes("data #1 (from client)".AsSpan()));
             server.SendReliable(MemoryMarshal.AsBytes("data #1 (from server)".AsSpan()));
@@ -76,16 +77,16 @@ namespace NetCore.Examples
             server.SendUnreliableExcluding(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
         }
 
-        static void SendMessages()
+        static async UniTaskVoid SendMessages()
         {
             Client client = new();
             Server server = new();
 
             const int ServerPort = 25000;
             const int ClientPort = 25001;
-            server.Start(ServerPort);
-            client.Start(IPAddress.Loopback, ClientPort);
-            client.Connect(IPAddress.Loopback, ServerPort);
+            await server.Start(ServerPort);
+            await client.Start(IPAddress.Loopback, ClientPort);
+            await client.Connect(IPAddress.Loopback, ServerPort);
 
             client.SendReliable(MemoryMarshal.AsBytes("client (OrderedReliable) message".AsSpan()));
             server.SendReliable(MemoryMarshal.AsBytes("server (OrderedReliable) message".AsSpan()));
@@ -93,21 +94,21 @@ namespace NetCore.Examples
             server.SendUnreliable(MemoryMarshal.AsBytes("server (Unreliable) message".AsSpan()));
         }
 
-        static void SendMessagesFromTesting()
+        static async UniTaskVoid SendMessagesFromTesting()
         {
             Client client = new();
             client.RegisterUnreliableTransport(new UDPTransport());
             client.RegisterReliableTransport(new TCPTransport());
-            client.RegisterTransportAsBoth(new PipeTransport());
-            client.Start(IPAddress.Loopback, 25001);
+            client.RegisterTransportAsBoth(new UnixTransport());
+            await client.Start(IPAddress.Loopback, 25001);
 
             Server server = new();
             server.RegisterUnreliableTransport(new UDPTransport());
             server.RegisterReliableTransport(new TCPTransport());
-            server.RegisterTransportAsBoth(new PipeTransport());
-            server.Start(25000);
+            server.RegisterTransportAsBoth(new UnixTransport());
+            await server.Start(25000);
 
-            client.Connect(IPAddress.Loopback, 25000);
+            await client.Connect(IPAddress.Loopback, 25000);
 
             server.SendReliable(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
             server.SendReliable<TCPTransport>(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
@@ -119,9 +120,9 @@ namespace NetCore.Examples
             client.SendUnreliable(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
             client.SendUnreliable<LoopbackTransport>(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
 
-            client.Disconnect();
-            client.Stop();
-            server.Stop();
+            await client.Disconnect();
+            await client.Stop();
+            await server.Stop();
         }
     }
 }

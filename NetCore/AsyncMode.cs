@@ -1,7 +1,7 @@
 ﻿namespace NetCore
 {
     /// <summary>
-    /// Describes supported async modes.
+    /// Describes supported async execution modes for a <see cref="Transports.ITransport"/>.
     /// </summary>
     public enum AsyncMode : byte
     {

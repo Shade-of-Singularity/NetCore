@@ -28,7 +28,7 @@ namespace NetCore.Transports.TCP
             {
                 lock (_lock)
                 {
-                    if (IsInitialized || value?.IsInitialized == true)
+                    if (IsAttached || value?.IsAttached == true)
                     {
                         throw new Exception($"Cannot pair UDP with TCP after any of the transports were initialized/attached to a {nameof(NetworkMember)}.");
                     }

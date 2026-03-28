@@ -71,7 +71,7 @@ namespace NetCore.Transports.Loopback
         }
 
         /// <inheritdoc/>
-        public override void Disconnect()
+        public override UniTask Disconnect()
         {
             lock (m_Loopbacks)
             {
@@ -87,7 +87,7 @@ namespace NetCore.Transports.Loopback
                 m_Loopbacks.Clear();
             }
 
-            base.Disconnect();
+            return base.Disconnect();
         }
 
         /// <inheritdoc/>

@@ -1,6 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
 using System;
-using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -23,7 +22,7 @@ namespace NetCore.Transports
     /// </remarks>
     /// TODO: Add a way to define custom transports.
     /// TODO: Add a way to define custom sending modes (Riptide's Notify, etc.)
-    public interface ITransport
+    public partial interface ITransport
     {
         /// <summary>
         /// Which <see cref="AsyncMode"/>s does <see cref="InvokeStart"/> supports.
@@ -56,94 +55,101 @@ namespace NetCore.Transports
         /// </remarks>
         public bool IsClientSide => !IsServerSide;
         /// <summary>
-        /// <see cref="ITransport"/> holder which manages this <see cref="ITransport"/> instance.
+        /// Current <see cref="NetworkMember"/> which manages this <see cref="ITransport"/> instance.
         /// </summary>
-        public NetworkMember? Holder { get; }
+        public NetworkMember? Holder { get; protected set; }
         /// <summary>
         /// Whether this <see cref="ITransport"/> is initialized or not.
         /// </summary>
-        public bool IsInitialized { get; protected set; }
+        public bool IsAttached { get; protected set; }
         /// <summary>
-        /// Whether this <see cref="ITransport"/> is connected to remote host.
+        /// Whether this transport is actively communicating with a remote host.
         /// </summary>
-        /// <remarks>
-        /// Can only be true after <see cref="InvokeConnect"/> call.
-        /// </remarks>
         public bool IsConnected { get; }
         /// <summary>
-        /// Current activation state of this instance.
+        /// Current state of the <see cref="NetworkMember"/>.
         /// </summary>
-        public StartState StartState
+        public StartupState StartupState
         {
             get
             {
-                lock (Lock) return StartupOperation.Type switch
+                MemberState state;
+                lock (Lock) state = State;
+                return state switch
                 {
-                    OperationType.Idle => StartState.Stopped,
-                    OperationType.Activating => StartState.Starting,
-                    OperationType.Restarting => StartState.Starting,
-                    OperationType.Deactivating => StartState.Stopping,
-                    OperationType.Completed => StartState.Started,
-                    _ => throw new SwitchExpressionException(StartupOperation.Type),
+                    MemberState.Stopped => StartupState.Stopped,
+                    MemberState.Starting => StartupState.Starting,
+                    MemberState.Stopping => StartupState.Stopping,
+
+                    MemberState.Started_Idle => StartupState.Started,
+                    MemberState.Started_Connecting => StartupState.Started,
+                    MemberState.Started_Disconnecting => StartupState.Started,
+                    MemberState.Started_Connected => StartupState.Started,
+
+                    _ => throw new SwitchExpressionException(state),
                 };
             }
         }
         /// <summary>
-        /// Current connection state of this instance.
+        /// Current state of the connection.
         /// </summary>
+        /// <remarks>
+        /// If there are no transports registered - <see cref="NetworkMember"/> almost immediately
+        /// marked as <see cref="ConnectionState.Connected"/> on <see cref="Connect"/> method call.
+        /// Otherwise - marked as <see cref="ConnectionState.Connected"/> when at least one transport is connected.
+        /// </remarks>
         public ConnectionState ConnectionState
         {
             get
             {
-                lock (Lock) return ConnectionOperation.Type switch
+                MemberState state;
+                lock (Lock) state = State;
+                return state switch
                 {
-                    OperationType.Idle => ConnectionState.Idle,
-                    OperationType.Activating => ConnectionState.Connecting,
-                    OperationType.Restarting => ConnectionState.Connecting,
-                    OperationType.Deactivating => ConnectionState.Disconnecting,
-                    OperationType.Completed => IsConnected ? ConnectionState.Connected : ConnectionState.Connecting,
-                    _ => throw new SwitchExpressionException(ConnectionOperation.Type),
+                    MemberState.Stopped => ConnectionState.Idle,
+                    MemberState.Starting => ConnectionState.Idle,
+                    MemberState.Stopping => ConnectionState.Idle,
+                    MemberState.Started_Idle => ConnectionState.Idle,
+
+                    MemberState.Started_Connecting => ConnectionState.Connecting,
+                    MemberState.Started_Disconnecting => ConnectionState.Disconnecting,
+                    MemberState.Started_Connected => IsConnected ? ConnectionState.Connected : ConnectionState.Connecting,
+
+                    _ => throw new SwitchExpressionException(state),
                 };
             }
         }
         /// <summary>
-        /// Lock object used in case of concurrent interactions with this <see cref="ITransport"/>.
+        /// Attaches this <see cref="ITransport"/> to a <see cref="NetworkMember"/>.
         /// </summary>
-        protected object Lock { get; }
-        /// <summary>
-        /// Startup operation data holder for an async state machine.
-        /// </summary>
-        protected StatefulOperation StartupOperation { get; set; }
-        /// <summary>
-        /// Connection operation data holder for an async state machine.
-        /// </summary>
-        protected StatefulOperation ConnectionOperation { get; set; }
-        /// <summary>
-        /// Initializes the <see cref="ITransport"/>.
-        /// Called when transport is registered in a <see cref="NetworkMember"/>.
-        /// </summary>
-        /// <param name="member">Network member which initializes this <see cref="ITransport"/>.</param>
+        /// <remarks>
+        /// Operation cannot be performed if <see cref="ITransport"/> is already started.
+        /// </remarks>
+        /// <param name="member"><see cref="NetworkMember"/> to which to attach this <see cref="ITransport"/> instance.</param>
         /// <returns>
-        /// <c>true</c> if started successfully.
+        /// <c>true</c> if attached successfully.
         /// <c>false</c> if any issues appeared at initialization (see console for more info).
         /// </returns>
-        public bool InvokeInitialize(NetworkMember member)
+        /// <exception cref="InvalidOperationException">Attempted to attach this <see cref="ITransport"/> after starting it.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="member"/> is <see langword="null"/>.</exception>
+        public bool InvokeAttach(NetworkMember member)
         {
+            if (member is null)
+                throw new ArgumentNullException(nameof(member));
+
             lock (Lock)
             {
-                if (!IsInitialized)
+                if (State != MemberState.Stopped)
                 {
-                    if (LastTokenSource is not null)
-                    {
-                        LastTokenSource.Cancel();
-                        LastTokenSource.Dispose();
-                        LastTokenSource = null;
-                        LastOperation = default;
-                    }
+                    throw new InvalidOperationException($"Cannot attach an {GetType().Name} while it is active!");
+                }
 
+                if (!IsAttached)
+                {
                     try
                     {
-                        Initialize(member);
+                        Attach(member);
+                        Holder = member;
                     }
                     catch (Exception exception)
                     {
@@ -155,7 +161,8 @@ namespace NetCore.Transports
 
                         try
                         {
-                            Terminate(member);
+                            Detach(member);
+                            Holder = null;
                         }
                         catch (Exception inner)
                         {
@@ -169,7 +176,7 @@ namespace NetCore.Transports
                         return false;
                     }
 
-                    IsInitialized = true;
+                    IsAttached = true;
                 }
 
                 return true;
@@ -177,31 +184,35 @@ namespace NetCore.Transports
         }
 
         /// <summary>
-        /// Terminates the <see cref="ITransport"/>.
-        /// Called when transport is detached from a <see cref="NetworkMember"/>.
+        /// Detaches this <see cref="ITransport"/> from a current <see cref="NetworkMember"/>.
         /// </summary>
-        /// <param name="member"><see cref="NetworkMember"/> which previously initialized this <see cref="ITransport"/>.</param>
+        /// <remarks>
+        /// Operation cannot be performed if <see cref="ITransport"/> is already started.
+        /// </remarks>
         /// <returns>
-        /// <c>true</c> if started successfully.
-        /// <c>false</c> if any issues appeared at termination (see console for more info).
+        /// <c>true</c> if detached successfully.
+        /// <c>false</c> if any issues appeared at detaching (see console for more info).
         /// </returns>
-        public bool InvokeTerminate(NetworkMember member)
+        public bool InvokeDetach()
         {
             lock (Lock)
             {
-                if (IsInitialized && Holder == member)
+                if (State != MemberState.Stopped)
                 {
-                    if (LastTokenSource is not null)
+                    throw new InvalidOperationException($"Cannot detach an {GetType().Name} while it is active!");
+                }
+
+                if (IsAttached)
+                {
+                    if (Holder is null)
                     {
-                        LastTokenSource.Cancel();
-                        LastTokenSource.Dispose();
-                        LastTokenSource = null;
-                        LastOperation = default;
+                        throw new NullReferenceException($"Reference to a parent {nameof(NetworkMember)} in an attached {nameof(ITransport)} is missing!");
                     }
 
                     try
                     {
-                        Terminate(member);
+                        Detach(Holder);
+                        Holder = null;
                     }
                     catch (Exception exception)
                     {
@@ -213,209 +224,30 @@ namespace NetCore.Transports
                         return false;
                     }
 
-                    IsInitialized = false;
+                    IsAttached = false;
                 }
 
                 return true;
             }
         }
 
-        /// <summary>
-        /// Starts transport with a provided <see cref="IReadOnlyStartupArgs"/>.
-        /// Transports which rely on UID, like SteamNetworking UDP transport, can choose to use a different port than a provided one.
-        /// </summary>
-        /// <param name="args"><see cref="IReadOnlyStartupArgs"/> to use for setting up the transport.</param>
-        /// <returns>
-        /// <c>true</c> if started successfully.
-        /// <c>false</c> if operation cancelled or any issues appeared at starting (see console for more info).
-        /// </returns>
-        public async UniTask<bool> InvokeStart(IReadOnlyStartupArgs args)
-        {
-            lock (Lock)
-            {
-                switch (StartState)
-                {
-                    case StartState.Stopped: break;
-                    case StartState.Starting: throw new Exception($"Cannot start ({GetType().Name}) transport while it is starting.");
-                    case StartState.Started: throw new Exception($"Cannot start ({GetType().Name}) transport since it is already started.");
-                    case StartState.Stopping: throw new Exception($"Cannot start ({GetType().Name}) transport while it is stopping.");
-                }
-                /*
-                if (!IsStarted)
-                {
-                    try
-                    {
-                        await Start(args, token);
-                    }
-                    catch (Exception exception)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        if (exception is SocketException se)
-                            Console.WriteLine($"SocketException Code: {se.ErrorCode}");
-                        Console.WriteLine(exception);
-                        Console.ForegroundColor = ConsoleColor.White;
+        /// <inheritdoc cref="InvokeAttach"/>
+        protected void Attach(NetworkMember member);
 
-                        try
-                        {
-                            Stop();
-                        }
-                        catch (Exception inner)
-                        {
-                            Console.ForegroundColor = ConsoleColor.DarkRed;
-                            if (exception is SocketException se2)
-                                Console.WriteLine($"SocketException Code: {se2.ErrorCode}");
-                            Console.WriteLine(inner);
-                            Console.ForegroundColor = ConsoleColor.White;
-                        }
-
-                        return false;
-                    }
-
-                    IsStarted = true;
-                }*/
-
-                return true;
-            }
-        }
-
-        /// <summary>
-        /// Stops the transport, disposes the data and unbinds it.
-        /// </summary>
-        /// <returns>
-        /// <c>true</c> if started successfully.
-        /// <c>false</c> if any issues appeared at stopping (see console for more info).
-        /// </returns>
-        public UniTask<bool> InvokeStop()
-        {/*
-            if (IsStarted)
-            {
-                try
-                {
-                    Stop();
-                }
-                catch (Exception exception)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    if (exception is SocketException se)
-                        Console.WriteLine($"SocketException Code: {se.ErrorCode}");
-                    Console.WriteLine(exception);
-                    Console.ForegroundColor = ConsoleColor.White;
-                    return false;
-                }
-
-                IsStarted = false;
-            }*/
-
-            return true;
-        }
-
-        /// <summary>
-        /// Attempts to connect to a remote host from provided <see cref="IReadOnlyConnectionArgs"/>.
-        /// </summary>
-        /// <remarks>
-        /// When used with <see cref="IsServerSide"/> - connects to a remote relay and manages NAT hole if needed.
-        /// </remarks>
-        /// <param name="args"><see cref="IReadOnlyConnectionArgs"/> to use for connection.</param>
-        /// <param name="token">Token to cancel a connect operation.</param>
-        /// <returns>
-        /// <c>true</c> if connection started successfully.
-        /// <c>false</c> if operation cancelled or any issues appeared during connection attempt (see console for more info).
-        /// </returns>
-        /// TODO: Add a way to specify which transport sets expect to fire (TCP+UDP, SteamUDP-only, TCP-only, UDP-only, Pipe-only, etc).
-        public async UniTask<bool> InvokeConnect(IReadOnlyConnectionArgs args, CancellationToken token = default)
-        {
-            if (token.IsCancellationRequested)
-            {
-                return false;
-            }
-            /*
-            if (!IsActive)
-            {
-                try
-                {
-                    await Connect(args, token);
-                }
-                catch (Exception exception)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    if (exception is SocketException se)
-                        Console.WriteLine($"SocketException Code: {se.ErrorCode}");
-                    Console.WriteLine(exception);
-                    Console.ForegroundColor = ConsoleColor.White;
-
-                    try
-                    {
-                        Disconnect();
-                    }
-                    catch (Exception inner)
-                    {
-                        Console.ForegroundColor = ConsoleColor.DarkRed;
-                        if (exception is SocketException se2)
-                            Console.WriteLine($"SocketException Code: {se2.ErrorCode}");
-                        Console.WriteLine(inner);
-                        Console.ForegroundColor = ConsoleColor.White;
-                    }
-
-                    return false;
-                }
-
-                IsActive = true;
-            }*/
-
-            return true;
-        }
-
-        /// <summary>
-        /// Disconnects from current remote <see cref="IPEndPoint"/>.
-        /// </summary>
-        /// <remarks>
-        /// When used with <see cref="IsServerSide"/> - disconnects from a remote relay.
-        /// </remarks>
-        /// <returns>
-        /// <c>true</c> if disconnected successfully.
-        /// <c>false</c> if any issues appeared during disconnection (see console for more info).
-        /// </returns>
-        public UniTask<bool> InvokeDisconnect()
-        {/*
-            if (IsActive)
-            {
-                try
-                {
-                    Disconnect();
-                }
-                catch (Exception exception)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    if (exception is SocketException se)
-                        Console.WriteLine($"SocketException Code: {se.ErrorCode}");
-                    Console.WriteLine(exception);
-                    Console.ForegroundColor = ConsoleColor.White;
-                    return false;
-                }
-
-                IsActive = false;
-            }*/
-
-            return true;
-        }
-
-        /// <inheritdoc cref="InvokeInitialize"/>
-        protected void Initialize(NetworkMember member);
-
-        /// <inheritdoc cref="InvokeTerminate"/>
-        protected void Terminate(NetworkMember member);
+        /// <inheritdoc cref="InvokeDetach"/>
+        protected void Detach(NetworkMember member);
 
         /// <inheritdoc cref="InvokeStart"/>
         protected UniTask Start(IReadOnlyStartupArgs args, CancellationToken token);
 
         /// <inheritdoc cref="InvokeStop"/>
-        protected void Stop();
+        protected UniTask Stop();
 
         /// <inheritdoc cref="InvokeConnect"/>
         protected UniTask Connect(IReadOnlyConnectionArgs args, CancellationToken token);
 
         /// <inheritdoc cref="InvokeDisconnect"/>
-        protected void Disconnect();
+        protected UniTask Disconnect();
 
         /// <summary>
         /// Checks if <see cref="ITransport"/> manages a specific <paramref name="connection"/> at the moment.

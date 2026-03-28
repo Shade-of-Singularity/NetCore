@@ -3,24 +3,24 @@
 namespace NetCore
 {
     /// <summary>
-    /// Current starting state of an <see cref="NetworkMember"/>.
+    /// Current starting state of an network member.
     /// </summary>
-    public enum StartState : byte
+    public enum StartupState : byte
     {
         /// <summary>
-        /// <see cref="NetworkMember"/> is fully stopped.
+        /// An network member is fully stopped.
         /// </summary>
         Stopped,
         /// <summary>
-        /// <see cref="NetworkMember"/> and its <see cref="ITransport"/>s are starting.
+        /// An network member and its <see cref="ITransport"/>s (if any) are starting.
         /// </summary>
         Starting,
         /// <summary>
-        /// <see cref="NetworkMember"/> and its <see cref="ITransport"/>s have started.
+        /// An network member and its <see cref="ITransport"/>s (if any) have started.
         /// </summary>
         Started,
         /// <summary>
-        /// <see cref="NetworkMember"/> and its <see cref="ITransport"/>s are stopping.
+        /// An network member and its <see cref="ITransport"/>s (if any) are stopping.
         /// </summary>
         Stopping,
     }

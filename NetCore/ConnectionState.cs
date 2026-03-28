@@ -3,25 +3,25 @@
 namespace NetCore
 {
     /// <summary>
-    /// Current connection state of a <see cref="NetworkMember"/>.
+    /// Current connection state of an network member.
     /// </summary>
     public enum ConnectionState : byte
     {
         /// <summary>
-        /// <see cref="NetworkMember"/> is not connected to a remote host and is now idling.
+        /// An network member is not connected to a remote host and is now idling.
         /// </summary>
         Idle,
         /// <summary>
-        /// <see cref="NetworkMember"/> is now connecting to a remote host with own <see cref="ITransport"/>s.
+        /// An network member is now connecting to a remote host with own <see cref="ITransport"/>s (or by itself).
         /// </summary>
         Connecting,
         /// <summary>
-        /// <see cref="NetworkMember"/> is connected to a remote host.
-        /// Indicated by at least one <see cref="ITransport"/> having success in communicating with a remote host.
+        /// An network member is connected to a remote host.
+        /// Indicated by at least one <see cref="ITransport"/> (or member itself) having success in communicating with a remote host.
         /// </summary>
         Connected,
         /// <summary>
-        /// <see cref="NetworkMember"/> is disconnecting all its <see cref="ITransport"/>s from a remote host.
+        /// An network member is disconnecting all its <see cref="ITransport"/>s from a remote host (if any).
         /// </summary>
         Disconnecting,
     }
