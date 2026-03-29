@@ -36,65 +36,65 @@ namespace NetCore
         /// <summary>
         /// Sends <paramref name="datagram"/> to the server, using specified <see cref="SendingMode"/>.
         /// </summary>
-        /// <seealso cref="SendUnreliable(ReadOnlySpan{byte}, HeaderConstructor?, FlagsConstructor?)"/>
-        /// <seealso cref="SendReliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        /// <seealso cref="SendSequential(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        /// <seealso cref="SendResilient(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <seealso cref="SendUnreliable(in ReadOnlySpan{byte}, HeaderConstructor?, FlagsConstructor?)"/>
+        /// <seealso cref="SendReliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendSequential(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendResilient(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="mode"><see cref="SendingMode"/>, specifying which transport type to use.</param>
         /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Send(SendingMode mode, ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        public void Send(SendingMode mode, in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             switch (mode)
             {
-                case SendingMode.Unreliable: SendUnreliable(ref header, datagram, ref flags); return;
-                case SendingMode.Reliable: SendReliable(ref header, datagram, ref flags); return;
-                case SendingMode.Sequential: SendSequential(ref header, datagram, ref flags); return;
-                case SendingMode.Resilient: SendResilient(ref header, datagram, ref flags); return;
+                case SendingMode.Unreliable: SendUnreliable(datagram, ref header, ref flags); return;
+                case SendingMode.Reliable: SendReliable(datagram, ref header, ref flags); return;
+                case SendingMode.Sequential: SendSequential(datagram, ref header, ref flags); return;
+                case SendingMode.Resilient: SendResilient(datagram, ref header, ref flags); return;
                 default: throw new SwitchExpressionException(mode);
             }
         }
 
-        /// <inheritdoc cref="Send(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="Send(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Send(SendingMode mode, ReadOnlySpan<byte> datagram)
         {
             Header header = Header.Get();
             Flags flags = Flags.Get();
-            Send(mode, ref header, datagram, ref flags);
+            Send(mode, datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="Send(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="Send(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Send(SendingMode mode, ref Header header, ReadOnlySpan<byte> datagram)
+        public void Send(SendingMode mode, in ReadOnlySpan<byte> datagram, ref Header header)
         {
             Flags flags = Flags.Get();
-            Send(mode, ref header, datagram, ref flags);
+            Send(mode, datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="Send(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="Send(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Send(SendingMode mode, ReadOnlySpan<byte> datagram, ref Flags flags)
         {
             Header header = Header.Get();
-            Send(mode, ref header, datagram, ref flags);
+            Send(mode, datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="Send(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="Send(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="mode"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Send(SendingMode mode, ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public void Send(SendingMode mode, in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
         {
             Header header = Header.Get();
             headerSetup?.Invoke(ref header);
             Flags flags = Flags.Get();
             flagsSetup?.Invoke(ref flags);
-            Send(mode, ref header, datagram, ref flags);
+            Send(mode, datagram, ref header, ref flags);
         }
 
         /// <summary>
@@ -105,80 +105,80 @@ namespace NetCore
         /// This sending method requires target transport to define all transportation methods.
         /// To use transports with only specific transportation methods, please use specialized methods instead.
         /// </remarks>
-        /// <seealso cref="SendUnreliable(ReadOnlySpan{byte}, HeaderConstructor?, FlagsConstructor?)"/>
-        /// <seealso cref="SendReliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        /// <seealso cref="SendSequential(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        /// <seealso cref="SendResilient(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <seealso cref="SendUnreliable(in ReadOnlySpan{byte}, HeaderConstructor?, FlagsConstructor?)"/>
+        /// <seealso cref="SendReliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendSequential(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendResilient(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="mode"><see cref="SendingMode"/>, specifying which transport type to use.</param>
         /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Send<TTransport>(SendingMode mode, ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        public void Send<TTransport>(SendingMode mode, in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             switch (mode)
             {
-                case SendingMode.Unreliable: SendUnreliable<TTransport>(ref header, datagram, ref flags); return;
-                case SendingMode.Reliable: SendReliable<TTransport>(ref header, datagram, ref flags); return;
-                case SendingMode.Sequential: SendSequential<TTransport>(ref header, datagram, ref flags); return;
-                case SendingMode.Resilient: SendResilient<TTransport>(ref header, datagram, ref flags); return;
+                case SendingMode.Unreliable: SendUnreliable<TTransport>(datagram, ref header, ref flags); return;
+                case SendingMode.Reliable: SendReliable<TTransport>(datagram, ref header, ref flags); return;
+                case SendingMode.Sequential: SendSequential<TTransport>(datagram, ref header, ref flags); return;
+                case SendingMode.Resilient: SendResilient<TTransport>(datagram, ref header, ref flags); return;
                 default: throw new SwitchExpressionException(mode);
             }
         }
 
-        /// <inheritdoc cref="Send{TTransport}(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="Send{TTransport}(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Send<TTransport>(SendingMode mode, ReadOnlySpan<byte> datagram)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             Header header = Header.Get();
             Flags flags = Flags.Get();
-            Send<TTransport>(mode, ref header, datagram, ref flags);
+            Send<TTransport>(mode, datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="Send{TTransport}(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="Send{TTransport}(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Send<TTransport>(SendingMode mode, ref Header header, ReadOnlySpan<byte> datagram)
+        public void Send<TTransport>(SendingMode mode, in ReadOnlySpan<byte> datagram, ref Header header)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             Flags flags = Flags.Get();
-            Send<TTransport>(mode, ref header, datagram, ref flags);
+            Send<TTransport>(mode, datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="Send{TTransport}(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="Send{TTransport}(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Send<TTransport>(SendingMode mode, ReadOnlySpan<byte> datagram, ref Flags flags)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             Header header = Header.Get();
-            Send<TTransport>(mode, ref header, datagram, ref flags);
+            Send<TTransport>(mode, datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="Send{TTransport}(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="Send{TTransport}(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="mode"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Send<TTransport>(SendingMode mode, ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public void Send<TTransport>(SendingMode mode, in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             Header header = Header.Get();
             headerSetup?.Invoke(ref header);
             Flags flags = Flags.Get();
             flagsSetup?.Invoke(ref flags);
-            Send<TTransport>(mode, ref header, datagram, ref flags);
+            Send<TTransport>(mode, datagram, ref header, ref flags);
         }
 
         /// <summary>
         /// If there are transports that can send the data:
         /// Sends <paramref name="datagram"/> to the server, using specified <see cref="SendingMode"/>.
         /// </summary>
-        /// <seealso cref="SendUnreliable(ReadOnlySpan{byte}, HeaderConstructor?, FlagsConstructor?)"/>
-        /// <seealso cref="SendReliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        /// <seealso cref="SendSequential(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        /// <seealso cref="SendResilient(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <seealso cref="SendUnreliable(in ReadOnlySpan{byte}, HeaderConstructor?, FlagsConstructor?)"/>
+        /// <seealso cref="SendReliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendSequential(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendResilient(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="mode"><see cref="SendingMode"/>, specifying which transport type to use.</param>
         /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
@@ -188,19 +188,19 @@ namespace NetCore
         /// <c>false</c> otherwise.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySend(SendingMode mode, ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        public bool TrySend(SendingMode mode, in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             return mode switch
             {
-                SendingMode.Unreliable => TrySendUnreliable(ref header, datagram, ref flags),
-                SendingMode.Reliable => TrySendReliable(ref header, datagram, ref flags),
-                SendingMode.Sequential => TrySendSequential(ref header, datagram, ref flags),
-                SendingMode.Resilient => TrySendResilient(ref header, datagram, ref flags),
+                SendingMode.Unreliable => TrySendUnreliable(datagram, ref header, ref flags),
+                SendingMode.Reliable => TrySendReliable(datagram, ref header, ref flags),
+                SendingMode.Sequential => TrySendSequential(datagram, ref header, ref flags),
+                SendingMode.Resilient => TrySendResilient(datagram, ref header, ref flags),
                 _ => throw new SwitchExpressionException(mode),
             };
         }
 
-        /// <inheritdoc cref="TrySend(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySend(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TrySend(SendingMode mode, ReadOnlySpan<byte> datagram)
         {
@@ -213,14 +213,14 @@ namespace NetCore
                 Flags flags = Flags.Get();
 
                 // Uses method which can throw when transport is missing, because previous check get us covered.
-                Send(mode, ref header, datagram, ref flags);
+                Send(mode, datagram, ref header, ref flags);
                 return true;
             }
         }
 
-        /// <inheritdoc cref="TrySend(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySend(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySend(SendingMode mode, ref Header header, ReadOnlySpan<byte> datagram)
+        public bool TrySend(SendingMode mode, in ReadOnlySpan<byte> datagram, ref Header header)
         {
             lock (_lock)
             {
@@ -233,12 +233,12 @@ namespace NetCore
                 Flags flags = Flags.Get();
 
                 // Uses method which can throw when transport is missing, because previous check get us covered.
-                Send(mode, ref header, datagram, ref flags);
+                Send(mode, datagram, ref header, ref flags);
                 return true;
             }
         }
 
-        /// <inheritdoc cref="TrySend(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySend(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TrySend(SendingMode mode, ReadOnlySpan<byte> datagram, ref Flags flags)
         {
@@ -253,18 +253,18 @@ namespace NetCore
                 Header header = Header.Get();
 
                 // Uses method which can throw when transport is missing, because previous check get us covered.
-                Send(mode, ref header, datagram, ref flags);
+                Send(mode, datagram, ref header, ref flags);
                 return true;
             }
         }
 
-        /// <inheritdoc cref="TrySend(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySend(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="mode"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySend(SendingMode mode, ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public bool TrySend(SendingMode mode, in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
         {
             lock (_lock)
             {
@@ -279,7 +279,7 @@ namespace NetCore
                 flagsSetup?.Invoke(ref flags);
 
                 // Uses method which can throw when transport is missing, because previous check get us covered.
-                Send(mode, ref header, datagram, ref flags);
+                Send(mode, datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -288,10 +288,10 @@ namespace NetCore
         /// If there are transports that can send the data:
         /// Sends <paramref name="datagram"/> to the server, using specified <see cref="SendingMode"/>.
         /// </summary>
-        /// <seealso cref="SendUnreliable(ReadOnlySpan{byte}, HeaderConstructor?, FlagsConstructor?)"/>
-        /// <seealso cref="SendReliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        /// <seealso cref="SendSequential(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        /// <seealso cref="SendResilient(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <seealso cref="SendUnreliable(in ReadOnlySpan{byte}, HeaderConstructor?, FlagsConstructor?)"/>
+        /// <seealso cref="SendReliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendSequential(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendResilient(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <typeparam name="TTransport"><see cref="ITransport"/> to use for sending of a message.</typeparam>
         /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
@@ -302,15 +302,15 @@ namespace NetCore
         /// <c>false</c> otherwise.
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySend<TTransport>(SendingMode mode, ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        public bool TrySend<TTransport>(SendingMode mode, in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             return mode switch
             {
-                SendingMode.Unreliable => TrySendUnreliable<TTransport>(ref header, datagram, ref flags),
-                SendingMode.Reliable => TrySendReliable<TTransport>(ref header, datagram, ref flags),
-                SendingMode.Sequential => TrySendSequential<TTransport>(ref header, datagram, ref flags),
-                SendingMode.Resilient => TrySendResilient<TTransport>(ref header, datagram, ref flags),
+                SendingMode.Unreliable => TrySendUnreliable<TTransport>(datagram, ref header, ref flags),
+                SendingMode.Reliable => TrySendReliable<TTransport>(datagram, ref header, ref flags),
+                SendingMode.Sequential => TrySendSequential<TTransport>(datagram, ref header, ref flags),
+                SendingMode.Resilient => TrySendResilient<TTransport>(datagram, ref header, ref flags),
                 _ => throw new SwitchExpressionException(mode),
             };
         }
@@ -318,7 +318,7 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TrySend<TTransport>(SendingMode mode, ReadOnlySpan<byte> datagram)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
@@ -332,7 +332,7 @@ namespace NetCore
                 Flags flags = Flags.Get();
 
                 // Uses method which can throw when transport is missing, because previous check get us covered.
-                Send<TTransport>(mode, ref header, datagram, ref flags);
+                Send<TTransport>(mode, datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -340,9 +340,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySend<TTransport>(SendingMode mode, ref Header header, ReadOnlySpan<byte> datagram)
+        public bool TrySend<TTransport>(SendingMode mode, in ReadOnlySpan<byte> datagram, ref Header header)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             lock (_lock)
@@ -356,7 +356,7 @@ namespace NetCore
                 Flags flags = Flags.Get();
 
                 // Uses method which can throw when transport is missing, because previous check get us covered.
-                Send<TTransport>(mode, ref header, datagram, ref flags);
+                Send<TTransport>(mode, datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -364,7 +364,7 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TrySend<TTransport>(SendingMode mode, ReadOnlySpan<byte> datagram, ref Flags flags)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
@@ -380,7 +380,7 @@ namespace NetCore
                 Header header = Header.Get();
 
                 // Uses method which can throw when transport is missing, because previous check get us covered.
-                Send<TTransport>(mode, ref header, datagram, ref flags);
+                Send<TTransport>(mode, datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -388,13 +388,13 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="mode"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySend<TTransport>(SendingMode mode, ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public bool TrySend<TTransport>(SendingMode mode, in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             lock (_lock)
@@ -408,7 +408,7 @@ namespace NetCore
                 flagsSetup?.Invoke(ref flags);
 
                 // Uses method which can throw when transport is missing, because previous check get us covered.
-                Send<TTransport>(mode, ref header, datagram, ref flags);
+                Send<TTransport>(mode, datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -421,57 +421,60 @@ namespace NetCore
         /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        public virtual void SendUnreliable(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        public virtual void SendUnreliable(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
-            lock (_lock)
+            lock (_lock) SendUnreliable(datagram, ref header, ref flags);
+        }
+
+        /// <inheritdoc cref="SendUnreliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        void SendUnreliableUnlocked(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        {
+            using (header.Lock()) using (flags.Lock())
             {
-                using (header.Lock()) using (flags.Lock())
+                foreach (var transport in UnreliableTransports)
                 {
-                    foreach (var transport in UnreliableTransports)
-                    {
-                        transport.SendUnreliable(header, datagram, flags);
-                    }
+                    transport.SendUnreliable(datagram, header, flags);
                 }
             }
         }
 
-        /// <inheritdoc cref="SendUnreliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendUnreliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendUnreliable(ref Header header, ReadOnlySpan<byte> datagram)
+        public void SendUnreliable(in ReadOnlySpan<byte> datagram, ref Header header)
         {
             Flags flags = Flags.Get();
-            SendUnreliable(ref header, datagram, ref flags);
+            SendUnreliable(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendUnreliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendUnreliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendUnreliable(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public void SendUnreliable(in ReadOnlySpan<byte> datagram, ref Flags flags)
         {
             Header header = Header.Get();
-            SendUnreliable(ref header, datagram, ref flags);
+            SendUnreliable(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendUnreliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendUnreliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendUnreliable(ReadOnlySpan<byte> datagram)
+        public void SendUnreliable(in ReadOnlySpan<byte> datagram)
         {
             Header header = Header.Get();
             Flags flags = Flags.Get();
-            SendUnreliable(ref header, datagram, ref flags);
+            SendUnreliable(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendUnreliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendUnreliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendUnreliable(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public void SendUnreliable(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
         {
             Header header = Header.Get();
             headerSetup?.Invoke(ref header);
             Flags flags = Flags.Get();
             flagsSetup?.Invoke(ref flags);
-            SendUnreliable(ref header, datagram, ref flags);
+            SendUnreliable(datagram, ref header, ref flags);
         }
 
         /// <summary>
@@ -481,8 +484,8 @@ namespace NetCore
         /// <c>true</c> if transport was found and <paramref name="datagram"/> was sent.
         /// <c>false</c> otherwise.
         /// </returns>
-        /// <inheritdoc cref="SendUnreliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        public bool TrySendUnreliable(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        /// <inheritdoc cref="SendUnreliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public bool TrySendUnreliable(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             lock (_lock)
             {
@@ -493,7 +496,7 @@ namespace NetCore
                     return false;
                 }
 
-                SendUnreliable(ref header, datagram, ref flags);
+                SendUnreliable(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -501,9 +504,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendUnreliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendUnreliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendUnreliable(ReadOnlySpan<byte> datagram)
+        public bool TrySendUnreliable(in ReadOnlySpan<byte> datagram)
         {
             lock (_lock)
             {
@@ -512,7 +515,7 @@ namespace NetCore
 
                 Header header = Header.Get();
                 Flags flags = Flags.Get();
-                SendUnreliable(ref header, datagram, ref flags);
+                SendUnreliable(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -520,9 +523,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendUnreliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendUnreliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendUnreliable(ref Header header, ReadOnlySpan<byte> datagram)
+        public bool TrySendUnreliable(in ReadOnlySpan<byte> datagram, ref Header header)
         {
             lock (_lock)
             {
@@ -533,7 +536,7 @@ namespace NetCore
                 }
 
                 Flags flags = Flags.Get();
-                SendUnreliable(ref header, datagram, ref flags);
+                SendUnreliable(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -541,9 +544,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendUnreliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendUnreliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendUnreliable(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public bool TrySendUnreliable(in ReadOnlySpan<byte> datagram, ref Flags flags)
         {
             lock (_lock)
             {
@@ -554,7 +557,7 @@ namespace NetCore
                 }
 
                 Header header = Header.Get();
-                SendUnreliable(ref header, datagram, ref flags);
+                SendUnreliable(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -562,12 +565,12 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendUnreliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendUnreliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendUnreliable(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public bool TrySendUnreliable(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
         {
             lock (_lock)
             {
@@ -578,7 +581,7 @@ namespace NetCore
                 headerSetup?.Invoke(ref header);
                 Flags flags = Flags.Get();
                 flagsSetup?.Invoke(ref flags);
-                SendUnreliable(ref header, datagram, ref flags);
+                SendUnreliable(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -588,65 +591,65 @@ namespace NetCore
         /// </summary>
         /// <remarks>
         /// Throws is specified transport is not registered.
-        /// Use <see cref="TrySendUnreliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/> to send message only if <typeparamref name="TTransport"/> is present.
+        /// Use <see cref="TrySendUnreliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/> to send message only if <typeparamref name="TTransport"/> is present.
         /// </remarks>
         /// <typeparam name="TTransport"><see cref="IUnreliableTransport"/> to use for sending of a message.</typeparam>
         /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        public virtual void SendUnreliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        public virtual void SendUnreliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
             where TTransport : class, IUnreliableTransport
         {
             lock (_lock)
             {
                 using (header.Lock()) using (flags.Lock())
                 {
-                    GetUnreliableTransport<TTransport>().SendUnreliable(header, datagram, flags);
+                    GetUnreliableTransport<TTransport>().SendUnreliable(datagram, header, flags);
                 }
             }
         }
 
-        /// <inheritdoc cref="SendUnreliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendUnreliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendUnreliable<TTransport>(ReadOnlySpan<byte> datagram)
+        public void SendUnreliable<TTransport>(in ReadOnlySpan<byte> datagram)
             where TTransport : class, IUnreliableTransport
         {
             Header header = Header.Get();
             Flags flags = Flags.Get();
-            SendUnreliable<TTransport>(ref header, datagram, ref flags);
+            SendUnreliable<TTransport>(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendUnreliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendUnreliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendUnreliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram)
+        public void SendUnreliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header)
             where TTransport : class, IUnreliableTransport
         {
             Flags flags = Flags.Get();
-            SendUnreliable<TTransport>(ref header, datagram, ref flags);
+            SendUnreliable<TTransport>(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendUnreliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendUnreliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendUnreliable<TTransport>(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public void SendUnreliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Flags flags)
             where TTransport : class, IUnreliableTransport
         {
             Header header = Header.Get();
-            SendUnreliable<TTransport>(ref header, datagram, ref flags);
+            SendUnreliable<TTransport>(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendUnreliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendUnreliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendUnreliable<TTransport>(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public void SendUnreliable<TTransport>(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
             where TTransport : class, IUnreliableTransport
         {
             Header header = Header.Get();
             headerSetup?.Invoke(ref header);
             Flags flags = Flags.Get();
             flagsSetup?.Invoke(ref flags);
-            SendUnreliable<TTransport>(ref header, datagram, ref flags);
+            SendUnreliable<TTransport>(datagram, ref header, ref flags);
         }
 
         /// <summary>
@@ -659,8 +662,8 @@ namespace NetCore
         /// <c>true</c> if transport was found and <paramref name="datagram"/> was sent.
         /// <c>false</c> otherwise.
         /// </returns>
-        /// <inheritdoc cref="SendUnreliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        public bool TrySendUnreliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        /// <inheritdoc cref="SendUnreliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public bool TrySendUnreliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
             where TTransport : class, IUnreliableTransport
         {
             lock (_lock)
@@ -671,7 +674,7 @@ namespace NetCore
                     if (!UnreliableTransports.TryGet(out TTransport? transport))
                         return false;
 
-                    transport.SendUnreliable(header, datagram, flags);
+                    transport.SendUnreliable(datagram, header, flags);
                     return true;
                 }
             }
@@ -680,9 +683,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendUnreliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendUnreliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendUnreliable<TTransport>(ReadOnlySpan<byte> datagram)
+        public bool TrySendUnreliable<TTransport>(in ReadOnlySpan<byte> datagram)
             where TTransport : class, IUnreliableTransport
         {
             lock (_lock)
@@ -692,7 +695,7 @@ namespace NetCore
 
                 using Header header = Header.GetLocked();
                 using Flags flags = Flags.GetLocked();
-                transport.SendUnreliable(header, datagram, flags);
+                transport.SendUnreliable(datagram, header, flags);
                 return true;
             }
         }
@@ -700,9 +703,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendUnreliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendUnreliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendUnreliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram)
+        public bool TrySendUnreliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header)
             where TTransport : class, IUnreliableTransport
         {
             lock (_lock)
@@ -713,7 +716,7 @@ namespace NetCore
                         return false;
 
                     using Flags flags = Flags.GetLocked();
-                    transport.SendUnreliable(header, datagram, flags);
+                    transport.SendUnreliable(datagram, header, flags);
                     return true;
                 }
             }
@@ -722,9 +725,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendUnreliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendUnreliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendUnreliable<TTransport>(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public bool TrySendUnreliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Flags flags)
             where TTransport : class, IUnreliableTransport
         {
             lock (_lock)
@@ -735,7 +738,7 @@ namespace NetCore
                         return false;
 
                     using Header header = Header.GetLocked();
-                    transport.SendUnreliable(header, datagram, flags);
+                    transport.SendUnreliable(datagram, header, flags);
                     return true;
                 }
             }
@@ -744,12 +747,12 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendUnreliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendUnreliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendUnreliable<TTransport>(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public bool TrySendUnreliable<TTransport>(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
             where TTransport : class, IUnreliableTransport
         {
             lock (_lock)
@@ -763,7 +766,7 @@ namespace NetCore
                 flagsSetup?.Invoke(ref flags);
                 using (header.Lock()) using (flags.Lock())
                 {
-                    transport.SendUnreliable(header, datagram, flags);
+                    transport.SendUnreliable(datagram, header, flags);
                 }
 
                 return true;
@@ -781,7 +784,7 @@ namespace NetCore
         /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        public virtual void SendReliable(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        public virtual void SendReliable(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             lock (_lock)
             {
@@ -789,49 +792,49 @@ namespace NetCore
                 {
                     foreach (var transport in ReliableTransports)
                     {
-                        transport.SendReliable(header, datagram, flags);
+                        transport.SendReliable(datagram, header, flags);
                     }
                 }
             }
         }
 
-        /// <inheritdoc cref="SendReliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendReliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendReliable(ReadOnlySpan<byte> datagram)
+        public void SendReliable(in ReadOnlySpan<byte> datagram)
         {
             Header header = Header.Get();
             Flags flags = Flags.Get();
-            SendReliable(ref header, datagram, ref flags);
+            SendReliable(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendReliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendReliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendReliable(ref Header header, ReadOnlySpan<byte> datagram)
+        public void SendReliable(in ReadOnlySpan<byte> datagram, ref Header header)
         {
             Flags flags = Flags.Get();
-            SendReliable(ref header, datagram, ref flags);
+            SendReliable(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendReliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendReliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendReliable(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public void SendReliable(in ReadOnlySpan<byte> datagram, ref Flags flags)
         {
             Header header = Header.Get();
-            SendReliable(ref header, datagram, ref flags);
+            SendReliable(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendReliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendReliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendReliable(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public void SendReliable(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
         {
             Header header = Header.Get();
             headerSetup?.Invoke(ref header);
             Flags flags = Flags.Get();
             flagsSetup?.Invoke(ref flags);
-            SendReliable(ref header, datagram, ref flags);
+            SendReliable(datagram, ref header, ref flags);
         }
 
         /// <summary>
@@ -841,8 +844,8 @@ namespace NetCore
         /// <c>true</c> if transport was found and <paramref name="datagram"/> was sent.
         /// <c>false</c> otherwise.
         /// </returns>
-        /// <inheritdoc cref="SendReliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        public bool TrySendReliable(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        /// <inheritdoc cref="SendReliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public bool TrySendReliable(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             lock (_lock)
             {
@@ -853,7 +856,7 @@ namespace NetCore
                     return false;
                 }
 
-                SendReliable(ref header, datagram, ref flags);
+                SendReliable(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -861,9 +864,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendReliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendReliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendReliable(ReadOnlySpan<byte> datagram)
+        public bool TrySendReliable(in ReadOnlySpan<byte> datagram)
         {
             lock (_lock)
             {
@@ -872,7 +875,7 @@ namespace NetCore
 
                 Header header = Header.Get();
                 Flags flags = Flags.Get();
-                SendReliable(ref header, datagram, ref flags);
+                SendReliable(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -880,9 +883,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendReliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendReliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendReliable(ref Header header, ReadOnlySpan<byte> datagram)
+        public bool TrySendReliable(in ReadOnlySpan<byte> datagram, ref Header header)
         {
             lock (_lock)
             {
@@ -893,7 +896,7 @@ namespace NetCore
                 }
 
                 Flags flags = Flags.Get();
-                SendReliable(ref header, datagram, ref flags);
+                SendReliable(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -901,9 +904,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendReliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendReliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendReliable(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public bool TrySendReliable(in ReadOnlySpan<byte> datagram, ref Flags flags)
         {
             lock (_lock)
             {
@@ -914,7 +917,7 @@ namespace NetCore
                 }
 
                 Header header = Header.Get();
-                SendReliable(ref header, datagram, ref flags);
+                SendReliable(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -922,12 +925,12 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendReliable(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendReliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendReliable(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public bool TrySendReliable(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
         {
             lock (_lock)
             {
@@ -938,7 +941,7 @@ namespace NetCore
                 headerSetup?.Invoke(ref header);
                 Flags flags = Flags.Get();
                 flagsSetup?.Invoke(ref flags);
-                SendReliable(ref header, datagram, ref flags);
+                SendReliable(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -948,65 +951,65 @@ namespace NetCore
         /// </summary>
         /// <remarks>
         /// Throws is specified transport is not registered.
-        /// Use <see cref="TrySendReliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/> to send message only if <typeparamref name="TTransport"/> is present.
+        /// Use <see cref="TrySendReliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/> to send message only if <typeparamref name="TTransport"/> is present.
         /// </remarks>
         /// <typeparam name="TTransport"><see cref="IReliableTransport"/> to use for sending of a message.</typeparam>
         /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        public virtual void SendReliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        public virtual void SendReliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
             where TTransport : class, IReliableTransport
         {
             lock (_lock)
             {
                 using (header.Lock()) using (flags.Lock())
                 {
-                    GetReliableTransport<TTransport>().SendReliable(header, datagram, flags);
+                    GetReliableTransport<TTransport>().SendReliable(datagram, header, flags);
                 }
             }
         }
 
-        /// <inheritdoc cref="SendReliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendReliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendReliable<TTransport>(ReadOnlySpan<byte> datagram)
+        public void SendReliable<TTransport>(in ReadOnlySpan<byte> datagram)
             where TTransport : class, IReliableTransport
         {
             Header header = Header.Get();
             Flags flags = Flags.Get();
-            SendReliable<TTransport>(ref header, datagram, ref flags);
+            SendReliable<TTransport>(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendReliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendReliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendReliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram)
+        public void SendReliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header)
             where TTransport : class, IReliableTransport
         {
             Flags flags = Flags.Get();
-            SendReliable<TTransport>(ref header, datagram, ref flags);
+            SendReliable<TTransport>(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendReliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendReliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendReliable<TTransport>(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public void SendReliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Flags flags)
             where TTransport : class, IReliableTransport
         {
             Header header = Header.Get();
-            SendReliable<TTransport>(ref header, datagram, ref flags);
+            SendReliable<TTransport>(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendReliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendReliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendReliable<TTransport>(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public void SendReliable<TTransport>(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
             where TTransport : class, IReliableTransport
         {
             Header header = Header.Get();
             headerSetup?.Invoke(ref header);
             Flags flags = Flags.Get();
             flagsSetup?.Invoke(ref flags);
-            SendReliable<TTransport>(ref header, datagram, ref flags);
+            SendReliable<TTransport>(datagram, ref header, ref flags);
         }
 
         /// <summary>
@@ -1019,8 +1022,8 @@ namespace NetCore
         /// <c>true</c> if transport was found and <paramref name="datagram"/> was sent.
         /// <c>false</c> otherwise.
         /// </returns>
-        /// <inheritdoc cref="SendReliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        public bool TrySendReliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        /// <inheritdoc cref="SendReliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public bool TrySendReliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
             where TTransport : class, IReliableTransport
         {
             lock (_lock)
@@ -1031,7 +1034,7 @@ namespace NetCore
                     if (!ReliableTransports.TryGet(out TTransport? transport))
                         return false;
 
-                    transport.SendReliable(header, datagram, flags);
+                    transport.SendReliable(datagram, header, flags);
                     return true;
                 }
             }
@@ -1040,9 +1043,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendReliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendReliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendReliable<TTransport>(ReadOnlySpan<byte> datagram)
+        public bool TrySendReliable<TTransport>(in ReadOnlySpan<byte> datagram)
             where TTransport : class, IReliableTransport
         {
             lock (_lock)
@@ -1052,7 +1055,7 @@ namespace NetCore
 
                 using Header header = Header.GetLocked();
                 using Flags flags = Flags.GetLocked();
-                transport.SendReliable(header, datagram, flags);
+                transport.SendReliable(datagram, header, flags);
                 return true;
             }
         }
@@ -1060,9 +1063,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendReliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendReliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendReliable<TTransport>(ref Header header, ReadOnlySpan<byte> datagram)
+        public bool TrySendReliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header)
             where TTransport : class, IReliableTransport
         {
             lock (_lock)
@@ -1071,7 +1074,7 @@ namespace NetCore
                     return false;
 
                 using Flags flags = Flags.GetLocked();
-                transport.SendReliable(header, datagram, flags);
+                transport.SendReliable(datagram, header, flags);
                 return true;
             }
         }
@@ -1079,9 +1082,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendReliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendReliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendReliable<TTransport>(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public bool TrySendReliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Flags flags)
             where TTransport : class, IReliableTransport
         {
             lock (_lock)
@@ -1090,7 +1093,7 @@ namespace NetCore
                     return false;
 
                 using Header header = Header.GetLocked();
-                transport.SendReliable(header, datagram, flags);
+                transport.SendReliable(datagram, header, flags);
                 return true;
             }
         }
@@ -1098,12 +1101,12 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendReliable{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendReliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendReliable<TTransport>(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public bool TrySendReliable<TTransport>(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
             where TTransport : class, IReliableTransport
         {
             lock (_lock)
@@ -1117,7 +1120,7 @@ namespace NetCore
                 flagsSetup?.Invoke(ref flags);
                 using (header.Lock()) using (flags.Lock())
                 {
-                    transport.SendReliable(header, datagram, flags);
+                    transport.SendReliable(datagram, header, flags);
                 }
 
                 return true;
@@ -1132,7 +1135,7 @@ namespace NetCore
         /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        public virtual void SendSequential(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        public virtual void SendSequential(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             lock (_lock)
             {
@@ -1140,49 +1143,49 @@ namespace NetCore
                 {
                     foreach (var transport in SequentialTransports)
                     {
-                        transport.SendSequential(header, datagram, flags);
+                        transport.SendSequential(datagram, header, flags);
                     }
                 }
             }
         }
 
-        /// <inheritdoc cref="SendSequential(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendSequential(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendSequential(ReadOnlySpan<byte> datagram)
+        public void SendSequential(in ReadOnlySpan<byte> datagram)
         {
             Header header = Header.Get();
             Flags flags = Flags.Get();
-            SendSequential(ref header, datagram, ref flags);
+            SendSequential(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendSequential(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendSequential(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendSequential(ref Header header, ReadOnlySpan<byte> datagram)
+        public void SendSequential(in ReadOnlySpan<byte> datagram, ref Header header)
         {
             Flags flags = Flags.Get();
-            SendSequential(ref header, datagram, ref flags);
+            SendSequential(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendSequential(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendSequential(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendSequential(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public void SendSequential(in ReadOnlySpan<byte> datagram, ref Flags flags)
         {
             Header header = Header.Get();
-            SendSequential(ref header, datagram, ref flags);
+            SendSequential(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendSequential(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendSequential(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendSequential(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public void SendSequential(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
         {
             Header header = Header.Get();
             headerSetup?.Invoke(ref header);
             Flags flags = Flags.Get();
             flagsSetup?.Invoke(ref flags);
-            SendSequential(ref header, datagram, ref flags);
+            SendSequential(datagram, ref header, ref flags);
         }
 
         /// <summary>
@@ -1192,8 +1195,8 @@ namespace NetCore
         /// <c>true</c> if transport was found and <paramref name="datagram"/> was sent.
         /// <c>false</c> otherwise.
         /// </returns>
-        /// <inheritdoc cref="SendSequential(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        public bool TrySendSequential(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        /// <inheritdoc cref="SendSequential(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public bool TrySendSequential(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             lock (_lock)
             {
@@ -1204,7 +1207,7 @@ namespace NetCore
                     return false;
                 }
 
-                SendSequential(ref header, datagram, ref flags);
+                SendSequential(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -1212,9 +1215,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendSequential(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendSequential(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendSequential(ReadOnlySpan<byte> datagram)
+        public bool TrySendSequential(in ReadOnlySpan<byte> datagram)
         {
             lock (_lock)
             {
@@ -1223,7 +1226,7 @@ namespace NetCore
 
                 Header header = Header.Get();
                 Flags flags = Flags.Get();
-                SendSequential(ref header, datagram, ref flags);
+                SendSequential(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -1231,9 +1234,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendSequential(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendSequential(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendSequential(ref Header header, ReadOnlySpan<byte> datagram)
+        public bool TrySendSequential(in ReadOnlySpan<byte> datagram, ref Header header)
         {
             lock (_lock)
             {
@@ -1244,7 +1247,7 @@ namespace NetCore
                 }
 
                 Flags flags = Flags.Get();
-                SendSequential(ref header, datagram, ref flags);
+                SendSequential(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -1252,9 +1255,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendSequential(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendSequential(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendSequential(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public bool TrySendSequential(in ReadOnlySpan<byte> datagram, ref Flags flags)
         {
             lock (_lock)
             {
@@ -1265,7 +1268,7 @@ namespace NetCore
                 }
 
                 Header header = Header.Get();
-                SendSequential(ref header, datagram, ref flags);
+                SendSequential(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -1273,12 +1276,12 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendSequential(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendSequential(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendSequential(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public bool TrySendSequential(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
         {
             lock (_lock)
             {
@@ -1289,7 +1292,7 @@ namespace NetCore
                 headerSetup?.Invoke(ref header);
                 Flags flags = Flags.Get();
                 flagsSetup?.Invoke(ref flags);
-                SendSequential(ref header, datagram, ref flags);
+                SendSequential(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -1299,65 +1302,65 @@ namespace NetCore
         /// </summary>
         /// <remarks>
         /// Throws is specified transport is not registered.
-        /// Use <see cref="TrySendSequential{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/> to send message only if <typeparamref name="TTransport"/> is present.
+        /// Use <see cref="TrySendSequential{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/> to send message only if <typeparamref name="TTransport"/> is present.
         /// </remarks>
         /// <typeparam name="TTransport"><see cref="ISequentialTransport"/> to use for sending of a message.</typeparam>
         /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        public virtual void SendSequential<TTransport>(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        public virtual void SendSequential<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
             where TTransport : class, ISequentialTransport
         {
             lock (_lock)
             {
                 using (header.Lock()) using (flags.Lock())
                 {
-                    GetSequentialTransport<TTransport>().SendSequential(header, datagram, flags);
+                    GetSequentialTransport<TTransport>().SendSequential(datagram, header, flags);
                 }
             }
         }
 
-        /// <inheritdoc cref="SendSequential{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendSequential{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendSequential<TTransport>(ReadOnlySpan<byte> datagram)
+        public void SendSequential<TTransport>(in ReadOnlySpan<byte> datagram)
             where TTransport : class, ISequentialTransport
         {
             Header header = Header.Get();
             Flags flags = Flags.Get();
-            SendSequential<TTransport>(ref header, datagram, ref flags);
+            SendSequential<TTransport>(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendSequential{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendSequential{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendSequential<TTransport>(ref Header header, ReadOnlySpan<byte> datagram)
+        public void SendSequential<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header)
             where TTransport : class, ISequentialTransport
         {
             Flags flags = Flags.Get();
-            SendSequential<TTransport>(ref header, datagram, ref flags);
+            SendSequential<TTransport>(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendSequential{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendSequential{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendSequential<TTransport>(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public void SendSequential<TTransport>(in ReadOnlySpan<byte> datagram, ref Flags flags)
             where TTransport : class, ISequentialTransport
         {
             Header header = Header.Get();
-            SendSequential<TTransport>(ref header, datagram, ref flags);
+            SendSequential<TTransport>(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendSequential{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendSequential{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendSequential<TTransport>(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public void SendSequential<TTransport>(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
             where TTransport : class, ISequentialTransport
         {
             Header header = Header.Get();
             headerSetup?.Invoke(ref header);
             Flags flags = Flags.Get();
             flagsSetup?.Invoke(ref flags);
-            SendSequential<TTransport>(ref header, datagram, ref flags);
+            SendSequential<TTransport>(datagram, ref header, ref flags);
         }
 
         /// <summary>
@@ -1370,8 +1373,8 @@ namespace NetCore
         /// <c>true</c> if transport was found and <paramref name="datagram"/> was sent.
         /// <c>false</c> otherwise.
         /// </returns>
-        /// <inheritdoc cref="SendSequential{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        public bool TrySendSequential<TTransport>(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        /// <inheritdoc cref="SendSequential{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public bool TrySendSequential<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
             where TTransport : class, ISequentialTransport
         {
             lock (_lock)
@@ -1384,7 +1387,7 @@ namespace NetCore
                         return false;
                     }
 
-                    transport.SendSequential(header, datagram, flags);
+                    transport.SendSequential(datagram, header, flags);
                     return true;
                 }
             }
@@ -1393,9 +1396,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendSequential{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendSequential{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendSequential<TTransport>(ReadOnlySpan<byte> datagram)
+        public bool TrySendSequential<TTransport>(in ReadOnlySpan<byte> datagram)
             where TTransport : class, ISequentialTransport
         {
             lock (_lock)
@@ -1405,7 +1408,7 @@ namespace NetCore
 
                 using Header header = Header.GetLocked();
                 using Flags flags = Flags.GetLocked();
-                transport.SendSequential(header, datagram, flags);
+                transport.SendSequential(datagram, header, flags);
                 return true;
             }
         }
@@ -1413,9 +1416,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendSequential{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendSequential{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendSequential<TTransport>(ref Header header, ReadOnlySpan<byte> datagram)
+        public bool TrySendSequential<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header)
             where TTransport : class, ISequentialTransport
         {
             lock (_lock)
@@ -1427,7 +1430,7 @@ namespace NetCore
                 }
 
                 using Flags flags = Flags.GetLocked();
-                transport.SendSequential(header, datagram, flags);
+                transport.SendSequential(datagram, header, flags);
                 return true;
             }
         }
@@ -1435,9 +1438,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendSequential{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendSequential{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendSequential<TTransport>(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public bool TrySendSequential<TTransport>(in ReadOnlySpan<byte> datagram, ref Flags flags)
             where TTransport : class, ISequentialTransport
         {
             lock (_lock)
@@ -1449,7 +1452,7 @@ namespace NetCore
                 }
 
                 using Header header = Header.GetLocked();
-                transport.SendSequential(header, datagram, flags);
+                transport.SendSequential(datagram, header, flags);
                 return true;
             }
         }
@@ -1457,12 +1460,12 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendSequential{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendSequential{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendSequential<TTransport>(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public bool TrySendSequential<TTransport>(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
             where TTransport : class, ISequentialTransport
         {
             lock (_lock)
@@ -1476,7 +1479,7 @@ namespace NetCore
                 flagsSetup?.Invoke(ref flags);
                 using (header.Lock()) using (flags.Lock())
                 {
-                    transport.SendSequential(header, datagram, flags);
+                    transport.SendSequential(datagram, header, flags);
                 }
 
                 return true;
@@ -1491,7 +1494,7 @@ namespace NetCore
         /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        public virtual void SendResilient(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        public virtual void SendResilient(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             lock (_lock)
             {
@@ -1499,49 +1502,49 @@ namespace NetCore
                 {
                     foreach (var transport in ResilientTransports)
                     {
-                        transport.SendResilient(header, datagram, flags);
+                        transport.SendResilient(datagram, header, flags);
                     }
                 }
             }
         }
 
-        /// <inheritdoc cref="SendResilient(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendResilient(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendResilient(ReadOnlySpan<byte> datagram)
+        public void SendResilient(in ReadOnlySpan<byte> datagram)
         {
             Header header = Header.Get();
             Flags flags = Flags.Get();
-            SendResilient(ref header, datagram, ref flags);
+            SendResilient(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendResilient(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendResilient(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendResilient(ref Header header, ReadOnlySpan<byte> datagram)
+        public void SendResilient(in ReadOnlySpan<byte> datagram, ref Header header)
         {
             Flags flags = Flags.Get();
-            SendResilient(ref header, datagram, ref flags);
+            SendResilient(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendResilient(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendResilient(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendResilient(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public void SendResilient(in ReadOnlySpan<byte> datagram, ref Flags flags)
         {
             Header header = Header.Get();
-            SendResilient(ref header, datagram, ref flags);
+            SendResilient(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendResilient(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendResilient(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendResilient(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public void SendResilient(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
         {
             Header header = Header.Get();
             headerSetup?.Invoke(ref header);
             Flags flags = Flags.Get();
             flagsSetup?.Invoke(ref flags);
-            SendResilient(ref header, datagram, ref flags);
+            SendResilient(datagram, ref header, ref flags);
         }
 
         /// <summary>
@@ -1551,8 +1554,8 @@ namespace NetCore
         /// <c>true</c> if transport was found and <paramref name="datagram"/> was sent.
         /// <c>false</c> otherwise.
         /// </returns>
-        /// <inheritdoc cref="SendResilient(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        public bool TrySendResilient(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        /// <inheritdoc cref="SendResilient(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public bool TrySendResilient(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             lock (_lock)
             {
@@ -1563,7 +1566,7 @@ namespace NetCore
                     return false;
                 }
 
-                SendResilient(ref header, datagram, ref flags);
+                SendResilient(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -1571,9 +1574,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendResilient(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendResilient(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendResilient(ReadOnlySpan<byte> datagram)
+        public bool TrySendResilient(in ReadOnlySpan<byte> datagram)
         {
             lock (_lock)
             {
@@ -1582,7 +1585,7 @@ namespace NetCore
 
                 Header header = Header.Get();
                 Flags flags = Flags.Get();
-                SendResilient(ref header, datagram, ref flags);
+                SendResilient(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -1590,9 +1593,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendResilient(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendResilient(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendResilient(ref Header header, ReadOnlySpan<byte> datagram)
+        public bool TrySendResilient(in ReadOnlySpan<byte> datagram, ref Header header)
         {
             lock (_lock)
             {
@@ -1603,7 +1606,7 @@ namespace NetCore
                 }
 
                 Flags flags = Flags.Get();
-                SendResilient(ref header, datagram, ref flags);
+                SendResilient(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -1611,9 +1614,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendResilient(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendResilient(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendResilient(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public bool TrySendResilient(in ReadOnlySpan<byte> datagram, ref Flags flags)
         {
             lock (_lock)
             {
@@ -1624,7 +1627,7 @@ namespace NetCore
                 }
 
                 Header header = Header.Get();
-                SendResilient(ref header, datagram, ref flags);
+                SendResilient(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -1632,12 +1635,12 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendResilient(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendResilient(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendResilient(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public bool TrySendResilient(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
         {
             lock (_lock)
             {
@@ -1648,7 +1651,7 @@ namespace NetCore
                 headerSetup?.Invoke(ref header);
                 Flags flags = Flags.Get();
                 flagsSetup?.Invoke(ref flags);
-                SendResilient(ref header, datagram, ref flags);
+                SendResilient(datagram, ref header, ref flags);
                 return true;
             }
         }
@@ -1658,65 +1661,65 @@ namespace NetCore
         /// </summary>
         /// <remarks>
         /// Throws is specified transport is not registered.
-        /// Use <see cref="TrySendResilient{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/> to send message only if <typeparamref name="TTransport"/> is present.
+        /// Use <see cref="TrySendResilient{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/> to send message only if <typeparamref name="TTransport"/> is present.
         /// </remarks>
         /// <typeparam name="TTransport"><see cref="IReliableTransport"/> to use for sending of a message.</typeparam>
         /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        public virtual void SendResilient<TTransport>(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        public virtual void SendResilient<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
             where TTransport : class, IResilientTransport
         {
             lock (_lock)
             {
                 using (header.Lock()) using (flags.Lock())
                 {
-                    GetResilientTransport<TTransport>().SendResilient(header, datagram, flags);
+                    GetResilientTransport<TTransport>().SendResilient(datagram, header, flags);
                 }
             }
         }
 
-        /// <inheritdoc cref="SendResilient{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendResilient{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendResilient<TTransport>(ReadOnlySpan<byte> datagram)
+        public void SendResilient<TTransport>(in ReadOnlySpan<byte> datagram)
             where TTransport : class, IResilientTransport
         {
             Header header = Header.Get();
             Flags flags = Flags.Get();
-            SendResilient<TTransport>(ref header, datagram, ref flags);
+            SendResilient<TTransport>(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendResilient{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendResilient{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendResilient<TTransport>(ref Header header, ReadOnlySpan<byte> datagram)
+        public void SendResilient<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header)
             where TTransport : class, IResilientTransport
         {
             Flags flags = Flags.Get();
-            SendResilient<TTransport>(ref header, datagram, ref flags);
+            SendResilient<TTransport>(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendResilient{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendResilient{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendResilient<TTransport>(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public void SendResilient<TTransport>(in ReadOnlySpan<byte> datagram, ref Flags flags)
             where TTransport : class, IResilientTransport
         {
             Header header = Header.Get();
-            SendResilient<TTransport>(ref header, datagram, ref flags);
+            SendResilient<TTransport>(datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="SendResilient{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="SendResilient{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SendResilient<TTransport>(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public void SendResilient<TTransport>(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
             where TTransport : class, IResilientTransport
         {
             Header header = Header.Get();
             headerSetup?.Invoke(ref header);
             Flags flags = Flags.Get();
             flagsSetup?.Invoke(ref flags);
-            SendResilient<TTransport>(ref header, datagram, ref flags);
+            SendResilient<TTransport>(datagram, ref header, ref flags);
         }
 
         /// <summary>
@@ -1729,8 +1732,8 @@ namespace NetCore
         /// <c>true</c> if transport was found and <paramref name="datagram"/> was sent.
         /// <c>false</c> otherwise.
         /// </returns>
-        /// <inheritdoc cref="SendResilient(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
-        public bool TrySendResilient<TTransport>(ref Header header, ReadOnlySpan<byte> datagram, ref Flags flags)
+        /// <inheritdoc cref="SendResilient(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public bool TrySendResilient<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
             where TTransport : class, IResilientTransport
         {
             lock (_lock)
@@ -1741,7 +1744,7 @@ namespace NetCore
                     if (!ResilientTransports.TryGet(out TTransport? transport))
                         return false;
 
-                    transport.SendResilient(header, datagram, flags);
+                    transport.SendResilient(datagram, header, flags);
                     return true;
                 }
             }
@@ -1750,9 +1753,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendResilient{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendResilient{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendResilient<TTransport>(ReadOnlySpan<byte> datagram)
+        public bool TrySendResilient<TTransport>(in ReadOnlySpan<byte> datagram)
             where TTransport : class, IResilientTransport
         {
             lock (_lock)
@@ -1762,7 +1765,7 @@ namespace NetCore
 
                 using Header header = Header.GetLocked();
                 using Flags flags = Flags.GetLocked();
-                transport.SendResilient(header, datagram, flags);
+                transport.SendResilient(datagram, header, flags);
                 return true;
             }
         }
@@ -1770,9 +1773,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendResilient{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendResilient{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendResilient<TTransport>(ref Header header, ReadOnlySpan<byte> datagram)
+        public bool TrySendResilient<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header)
             where TTransport : class, IResilientTransport
         {
             lock (_lock)
@@ -1784,7 +1787,7 @@ namespace NetCore
                 }
 
                 using Flags flags = Flags.GetLocked();
-                transport.SendResilient(header, datagram, flags);
+                transport.SendResilient(datagram, header, flags);
                 return true;
             }
         }
@@ -1792,9 +1795,9 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendResilient{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendResilient{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendResilient<TTransport>(ReadOnlySpan<byte> datagram, ref Flags flags)
+        public bool TrySendResilient<TTransport>(in ReadOnlySpan<byte> datagram, ref Flags flags)
             where TTransport : class, IResilientTransport
         {
             lock (_lock)
@@ -1806,7 +1809,7 @@ namespace NetCore
                 }
 
                 using Header header = Header.GetLocked();
-                transport.SendResilient(header, datagram, flags);
+                transport.SendResilient(datagram, header, flags);
                 return true;
             }
         }
@@ -1814,12 +1817,12 @@ namespace NetCore
         /// <remarks>
         /// Does not allocate <see cref="Header"/> and <see cref="Flags"/> unless target transport actually exist.
         /// </remarks>
-        /// <inheritdoc cref="TrySendResilient{TTransport}(ref Header, ReadOnlySpan{byte}, ref Flags)"/>
+        /// <inheritdoc cref="TrySendResilient{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TrySendResilient<TTransport>(ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
+        public bool TrySendResilient<TTransport>(in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup = null, FlagsConstructor? flagsSetup = null)
             where TTransport : class, IResilientTransport
         {
             lock (_lock)
@@ -1833,7 +1836,7 @@ namespace NetCore
                 flagsSetup?.Invoke(ref flags);
                 using (header.Lock()) using (flags.Lock())
                 {
-                    transport.SendResilient(header, datagram, flags);
+                    transport.SendResilient(datagram, header, flags);
                 }
 
                 return true;

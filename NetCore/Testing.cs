@@ -44,16 +44,14 @@ namespace NetCore
             //  Size can be defined procedurally as well.
             //  However, this will only be possible to use with enum-only headers.
             Console.WriteLine($"Alignment (client): {header.GetEnum<AlignmentHeader, Alignment>()}");
-            client.SendReliable(ref header, default);
-
-            client.Send();
+            client.SendReliable("test".AsByteSpan(), ref header);
 
             header = Header.Get();
             header.Set<UIDHeader>(54634563463546uL);
             header.Set<AlignmentHeader, Alignment>(Alignment.TopRight);
             Console.WriteLine($"UID (server): {header.GetULong<UIDHeader>()}");
             Console.WriteLine($"Alignment (server): {header.GetEnum<AlignmentHeader, Alignment>()}");
-            server.SendReliable(ref header, default);
+            //server.SendReliable(default, ref header);
 
             client.SendReliable(stackalloc byte[8], Construct);
             static void Construct(ref Header header)

@@ -4,9 +4,9 @@
     /// Checks if <typeparamref name="TTarget"/> implements/inherits <typeparamref name="TBase"/>
     /// and caches the result to be reused again.
     /// </summary>
-    /// <typeparam name="TTarget">Target type to check for.</typeparam>
     /// <typeparam name="TBase">Target base type to seek in a <typeparamref name="TTarget"/> type.</typeparam>
-    internal static class Inheritance<TTarget, TBase>
+    /// <typeparam name="TTarget">Target type to check for.</typeparam>
+    internal static class IsAssignableFrom<TBase, TTarget>
     {
         /// <summary>
         /// Whether <typeparamref name="TTarget"/> implements/inherits <typeparamref name="TBase"/>

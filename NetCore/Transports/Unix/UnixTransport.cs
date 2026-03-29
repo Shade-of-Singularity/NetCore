@@ -4,67 +4,80 @@ namespace NetCore.Transports.Unix
 {
     public sealed class UnixTransport : Transport, IReliableTransport, IUnreliableTransport
     {
+        /// <inheritdoc/>
         public override bool HasConnection(ConnectionID connection)
         {
             throw new NotImplementedException();
         }
 
-        public void HandleReliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
+        /// <inheritdoc/>
+        public void HandleReliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
         {
             throw new NotImplementedException();
         }
 
-        public void HandleUnreliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
+        /// <inheritdoc/>
+        public void HandleUnreliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
         {
             throw new NotImplementedException();
         }
 
-        public void SendReliable(in Header header, ReadOnlySpan<byte> datagram)
+        /// <inheritdoc/>
+        public void SendReliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
         {
             throw new NotImplementedException();
         }
 
-        public void SendReliableExcluding(in Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
+        /// <inheritdoc/>
+        public void SendReliableExcluding(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
         {
             throw new NotImplementedException();
         }
 
-        public void SendReliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
+        /// <inheritdoc/>
+        public void SendReliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
         {
             throw new NotImplementedException();
         }
 
-        public void SendUnreliable(in Header header, ReadOnlySpan<byte> datagram)
+        /// <inheritdoc/>
+        public void SendUnreliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
         {
             throw new NotImplementedException();
         }
 
-        public void SendUnreliableExcluding(in Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
+        /// <inheritdoc/>
+        public void SendUnreliableExcluding(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
         {
             throw new NotImplementedException();
         }
 
-        public void SendUnreliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
+        /// <inheritdoc/>
+        public void SendUnreliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
         {
             throw new NotImplementedException();
         }
 
-        public void SendReliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args)
+        /// <inheritdoc/>
+        public void SendReliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
         {
             throw new NotImplementedException();
         }
 
-        public void HandleReliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs source)
+        /// <inheritdoc/>
+        public void HandleReliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
         {
             throw new NotImplementedException();
         }
 
-        public void SendUnreliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args)
+        /// <inheritdoc/>
+        public void SendUnreliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
         {
             throw new NotImplementedException();
         }
 
-        public void HandleUnreliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs source)
+        /// <inheritdoc/>
+        public void HandleUnreliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
         {
             throw new NotImplementedException();
         }

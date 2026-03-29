@@ -192,7 +192,7 @@ namespace NetCore.Transports.UDP
 
                     try
                     {
-                        HandleUnreliable(default, Buffer.AsSpan(0, result.ReceivedBytes), default(ConnectionID));
+                        HandleUnreliable(Buffer.AsSpan(0, result.ReceivedBytes), default, default, default(ConnectionID));
                     }
 #if DEBUG
                     catch (Exception ex) { Console.WriteLine($"{ex.Message}\n{ex.StackTrace}"); }
@@ -242,7 +242,7 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public void SendUnreliable(in Header header, ReadOnlySpan<byte> datagram)
+        public void SendUnreliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliable)}(datagram: {Encoding.UTF8.GetString(datagram)})");
@@ -266,7 +266,7 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableExcluding(in Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
+        public void SendUnreliableExcluding(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableExcluding)}(exclude: ({toExclude}) datagram: {Encoding.UTF8.GetString(datagram)})");
@@ -289,7 +289,7 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
+        public void SendUnreliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableTo)}(target: ({target}) datagram: {Encoding.UTF8.GetString(datagram)})");
@@ -311,7 +311,7 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args)
+        public void SendUnreliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(SendUnreliableTo)}(datagram: {Encoding.UTF8.GetString(datagram)}, args: {args})");
@@ -333,7 +333,7 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public void HandleUnreliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
+        public void HandleUnreliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"{nameof(UDPTransport)}.{nameof(HandleUnreliable)}(source: ({source}) datagram: {Encoding.UTF8.GetString(datagram)})");
@@ -345,13 +345,7 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableTo(Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public void HandleUnreliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs source)
+        public void HandleUnreliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
         {
             throw new NotImplementedException();
         }

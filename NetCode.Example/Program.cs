@@ -50,7 +50,7 @@ namespace NetCore.Examples
             server.Start(25000);
             client.Start(IPAddress.Any, 0);
             client.Connect(IPAddress.Loopback, 25000);
-            client.SendUnreliable(MemoryMarshal.AsBytes("test".AsSpan()));
+            client.SendUnreliable("test".AsByteSpan());
         }
 
         static void RegisterTransports()
@@ -65,16 +65,16 @@ namespace NetCore.Examples
             server.RegisterReliableTransport(new TCPTransport());
             server.RegisterTransportAsBoth(new UnixTransport());
 
-            client.SendReliable(MemoryMarshal.AsBytes("data #1 (from client)".AsSpan()));
-            server.SendReliable(MemoryMarshal.AsBytes("data #1 (from server)".AsSpan()));
+            client.SendReliable("data #1 (from client)".AsByteSpan());
+            //server.SendReliable("data #1 (from server)".AsByteSpan());
             Console.WriteLine();
-            client.SendUnreliable(MemoryMarshal.AsBytes("data #2 (from client)".AsSpan()));
-            server.SendUnreliable(MemoryMarshal.AsBytes("data #2 (from server)".AsSpan()));
+            client.SendUnreliable("data #2 (from client)".AsByteSpan());
+            //server.SendUnreliable("data #2 (from server)".AsByteSpan());
             Console.WriteLine();
-            server.SendUnreliableTo(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
-            server.SendReliableTo(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
-            server.SendReliableExcluding(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
-            server.SendUnreliableExcluding(MemoryMarshal.AsBytes("data #3 (from server)".AsSpan()), (ConnectionID)32);
+            //server.SendUnreliableTo("data #3 (from server)".AsByteSpan(), (ConnectionID)32);
+            //server.SendReliableTo("data #3 (from server)".AsByteSpan(), (ConnectionID)32);
+            //server.SendReliableExcluding("data #3 (from server)".AsByteSpan(), (ConnectionID)32);
+            //server.SendUnreliableExcluding("data #3 (from server)".AsByteSpan(), (ConnectionID)32);
         }
 
         static async UniTaskVoid SendMessages()
@@ -88,10 +88,10 @@ namespace NetCore.Examples
             await client.Start(IPAddress.Loopback, ClientPort);
             await client.Connect(IPAddress.Loopback, ServerPort);
 
-            client.SendReliable(MemoryMarshal.AsBytes("client (OrderedReliable) message".AsSpan()));
-            server.SendReliable(MemoryMarshal.AsBytes("server (OrderedReliable) message".AsSpan()));
-            client.SendUnreliable(MemoryMarshal.AsBytes("client (Unreliable) message".AsSpan()));
-            server.SendUnreliable(MemoryMarshal.AsBytes("server (Unreliable) message".AsSpan()));
+            client.SendReliable("client (OrderedReliable) message".AsByteSpan());
+            //server.SendReliable("server (OrderedReliable) message".AsByteSpan());
+            client.SendUnreliable("client (Unreliable) message".AsByteSpan());
+            //server.SendUnreliable("server (Unreliable) message".AsByteSpan());
         }
 
         static async UniTaskVoid SendMessagesFromTesting()
@@ -110,15 +110,15 @@ namespace NetCore.Examples
 
             await client.Connect(IPAddress.Loopback, 25000);
 
-            server.SendReliable(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
-            server.SendReliable<TCPTransport>(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
-            server.SendUnreliable(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
-            server.SendUnreliable<UDPTransport>(MemoryMarshal.AsBytes(new string('a', 16).AsSpan()));
+            //server.SendReliable(new string('a', 16).AsByteSpan());
+            //server.SendReliable<TCPTransport>(new string('a', 16).AsByteSpan());
+            //server.SendUnreliable(new string('a', 16).AsByteSpan());
+            //server.SendUnreliable<UDPTransport>(new string('a', 16).AsByteSpan());
 
-            client.SendReliable(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
-            client.SendReliable<LoopbackTransport>(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
-            client.SendUnreliable(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
-            client.SendUnreliable<LoopbackTransport>(MemoryMarshal.AsBytes(new string('a', 32).AsSpan()));
+            client.SendReliable(new string('a', 32).AsByteSpan());
+            client.SendReliable<LoopbackTransport>(new string('a', 32).AsByteSpan());
+            client.SendUnreliable(new string('a', 32).AsByteSpan());
+            client.SendUnreliable<LoopbackTransport>(new string('a', 32).AsByteSpan());
 
             await client.Disconnect();
             await client.Stop();

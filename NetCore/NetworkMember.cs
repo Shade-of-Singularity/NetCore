@@ -536,7 +536,7 @@ namespace NetCore
         /// .                                A.K.A.: Good luck translating documentation.
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        #region General sending methods
+        #region General SendTo args methods
         /// <summary>
         /// Sends <paramref name="datagram"/> to the end-point, specified with <paramref name="args"/>.
         /// </summary>
@@ -634,7 +634,7 @@ namespace NetCore
         }
         #endregion
 
-        #region Narrow sending methods - Unreliable
+        #region Narrow SendTo args methods - Unreliable
         /// <summary>
         /// Unreliably sends <paramref name="datagram"/> to a custom end-point specified with <paramref name="args"/>.
         /// </summary>
@@ -650,7 +650,7 @@ namespace NetCore
                 {
                     foreach (var transport in UnreliableTransports)
                     {
-                        transport.SendUnreliableTo(header, datagram, flags, args);
+                        transport.SendUnreliableTo(datagram, header, flags, args);
                     }
                 }
             }
@@ -674,7 +674,7 @@ namespace NetCore
                 {
                     foreach (var transport in UnreliableTransports)
                     {
-                        transport.SendUnreliableTo(header, datagram, flags, args);
+                        transport.SendUnreliableTo(datagram, header, flags, args);
                     }
                 }
 
@@ -701,7 +701,7 @@ namespace NetCore
             {
                 using (header.Lock()) using (flags.Lock()) using (args.Lock())
                 {
-                    GetUnreliableTransport<TTransport>().SendUnreliableTo(header, datagram, flags, args);
+                    GetUnreliableTransport<TTransport>().SendUnreliableTo(datagram, header, flags, args);
                 }
             }
         }
@@ -727,7 +727,7 @@ namespace NetCore
                 {
                     if (UnreliableTransports.TryGet(out TTransport? transport))
                     {
-                        transport.SendUnreliableTo(header, datagram, flags, args);
+                        transport.SendUnreliableTo(datagram, header, flags, args);
                         return true;
                     }
 
@@ -737,7 +737,7 @@ namespace NetCore
         }
         #endregion
 
-        #region Narrow sending methods - Reliable
+        #region Narrow SendTo args methods - Reliable
         /// <summary>
         /// Reliably sends <paramref name="datagram"/> to a custom end-point specified with <paramref name="args"/>.
         /// </summary>
@@ -753,7 +753,7 @@ namespace NetCore
                 {
                     foreach (var transport in ReliableTransports)
                     {
-                        transport.SendReliableTo(header, datagram, flags, args);
+                        transport.SendReliableTo(datagram, header, flags, args);
                     }
                 }
             }
@@ -777,7 +777,7 @@ namespace NetCore
                 {
                     foreach (var transport in ReliableTransports)
                     {
-                        transport.SendReliableTo(header, datagram, flags, args);
+                        transport.SendReliableTo(datagram, header, flags, args);
                     }
                 }
 
@@ -804,7 +804,7 @@ namespace NetCore
             {
                 using (header.Lock()) using (flags.Lock()) using (args.Lock())
                 {
-                    GetReliableTransport<TTransport>().SendReliableTo(header, datagram, flags, args);
+                    GetReliableTransport<TTransport>().SendReliableTo(datagram, header, flags, args);
                 }
             }
         }
@@ -830,7 +830,7 @@ namespace NetCore
                 {
                     if (ReliableTransports.TryGet(out TTransport? transport))
                     {
-                        transport.SendReliableTo(header, datagram, flags, args);
+                        transport.SendReliableTo(datagram, header, flags, args);
                         return true;
                     }
 
@@ -840,7 +840,7 @@ namespace NetCore
         }
         #endregion
 
-        #region Narrow sending methods - Sequential
+        #region Narrow SendTo args methods - Sequential
         /// <summary>
         /// Sequentially sends <paramref name="datagram"/> to a custom end-point specified with <paramref name="args"/>.
         /// </summary>
@@ -856,7 +856,7 @@ namespace NetCore
                 {
                     foreach (var transport in SequentialTransports)
                     {
-                        transport.SendSequentialTo(header, datagram, flags, args);
+                        transport.SendSequentialTo(datagram, header, flags, args);
                     }
                 }
             }
@@ -880,7 +880,7 @@ namespace NetCore
                 {
                     foreach (var transport in SequentialTransports)
                     {
-                        transport.SendSequentialTo(header, datagram, flags, args);
+                        transport.SendSequentialTo(datagram, header, flags, args);
                     }
                 }
 
@@ -906,7 +906,7 @@ namespace NetCore
             {
                 using (header.Lock()) using (flags.Lock()) using (args.Lock())
                 {
-                    GetSequentialTransport<TTransport>().SendSequentialTo(header, datagram, flags, args);
+                    GetSequentialTransport<TTransport>().SendSequentialTo(datagram, header, flags, args);
                 }
             }
         }
@@ -932,7 +932,7 @@ namespace NetCore
                 {
                     if (SequentialTransports.TryGet(out TTransport? transport))
                     {
-                        transport.SendSequentialTo(header, datagram, flags, args);
+                        transport.SendSequentialTo(datagram, header, flags, args);
                         return true;
                     }
 
@@ -942,7 +942,7 @@ namespace NetCore
         }
         #endregion
 
-        #region Narrow sending methods - Resilient
+        #region Narrow SendTo args methods - Resilient
         /// <summary>
         /// Resiliently sends <paramref name="datagram"/> to a custom end-point specified with <paramref name="args"/>.
         /// </summary>
@@ -958,7 +958,7 @@ namespace NetCore
                 {
                     foreach (var transport in ResilientTransports)
                     {
-                        transport.SendResilientTo(header, datagram, flags, args);
+                        transport.SendResilientTo(datagram, header, flags, args);
                     }
                 }
             }
@@ -982,7 +982,7 @@ namespace NetCore
                 {
                     foreach (var transport in ResilientTransports)
                     {
-                        transport.SendResilientTo(header, datagram, flags, args);
+                        transport.SendResilientTo(datagram, header, flags, args);
                     }
                 }
 
@@ -1008,7 +1008,7 @@ namespace NetCore
             {
                 using (header.Lock()) using (flags.Lock()) using (args.Lock())
                 {
-                    GetResilientTransport<TTransport>().SendResilientTo(header, datagram, flags, args);
+                    GetResilientTransport<TTransport>().SendResilientTo(datagram, header, flags, args);
                 }
             }
         }
@@ -1034,7 +1034,7 @@ namespace NetCore
                 {
                     if (ResilientTransports.TryGet(out TTransport? transport))
                     {
-                        transport.SendResilientTo(header, datagram, flags, args);
+                        transport.SendResilientTo(datagram, header, flags, args);
                         return true;
                     }
 

@@ -47,10 +47,6 @@ namespace NetCore.Transports.TCP
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <summary>
-        /// Lock, used when interacting with everything - <see cref="Socket"/>, <see cref="Source"/>, <see cref="Clients"/>, etc.
-        /// </summary>
-        protected readonly object _lock = new();
-        /// <summary>
         /// <see cref="UDP.UDPTransport"/> to pair this <see cref="TCPTransport"/> with.
         /// </summary>
         private UDPTransport? m_UDPTransport;
@@ -70,7 +66,7 @@ namespace NetCore.Transports.TCP
         }
 
         /// <inheritdoc/>
-        public void SendReliable(in Header header, ReadOnlySpan<byte> datagram)
+        public void SendReliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(TCPTransport)}.{nameof(SendReliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -78,7 +74,7 @@ namespace NetCore.Transports.TCP
         }
 
         /// <inheritdoc/>
-        public void SendReliableExcluding(in Header header, ReadOnlySpan<byte> datagram, ConnectionID toExclude)
+        public void SendReliableExcluding(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(TCPTransport)}.{nameof(SendReliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -86,7 +82,7 @@ namespace NetCore.Transports.TCP
         }
 
         /// <inheritdoc/>
-        public void SendReliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionID target)
+        public void SendReliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(TCPTransport)}.{nameof(SendReliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -94,7 +90,7 @@ namespace NetCore.Transports.TCP
         }
 
         /// <inheritdoc/>
-        public void HandleReliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionID source)
+        public void HandleReliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"{nameof(TCPTransport)}.{nameof(HandleReliable)}(source: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -102,13 +98,13 @@ namespace NetCore.Transports.TCP
         }
 
         /// <inheritdoc/>
-        public void SendReliableTo(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs args)
+        public void SendReliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
         {
             throw new NotImplementedException();
         }
 
         /// <inheritdoc/>
-        public void HandleReliable(in Header header, ReadOnlySpan<byte> datagram, ConnectionArgs source)
+        public void HandleReliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
         {
             throw new NotImplementedException();
         }

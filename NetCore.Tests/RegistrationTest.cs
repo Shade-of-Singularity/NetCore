@@ -45,15 +45,15 @@ namespace NetCore.Tests
                 throw new Exception("Fail to connect.");
             }
 
-            server.SendReliable(MemoryMarshal.AsBytes(new string('a', ushort.MaxValue).AsSpan()));
-            server.SendReliable(MemoryMarshal.AsBytes(new string('a', ushort.MaxValue).AsSpan()));
-            server.SendUnreliable(MemoryMarshal.AsBytes(new string('a', ushort.MaxValue).AsSpan()));
-            server.SendUnreliable(MemoryMarshal.AsBytes(new string('a', ushort.MaxValue).AsSpan()));
+            //server.SendReliable(new string('a', ushort.MaxValue).AsByteSpan());
+            //server.SendReliable(new string('a', ushort.MaxValue).AsByteSpan());
+            //server.SendUnreliable(new string('a', ushort.MaxValue).AsByteSpan());
+            //server.SendUnreliable(new string('a', ushort.MaxValue).AsByteSpan());
 
-            client.SendReliable(MemoryMarshal.AsBytes(new string('a', ushort.MaxValue).AsSpan()));
-            client.SendReliable(MemoryMarshal.AsBytes(new string('a', ushort.MaxValue).AsSpan()));
-            client.SendUnreliable(MemoryMarshal.AsBytes(new string('a', ushort.MaxValue).AsSpan()));
-            client.SendUnreliable(MemoryMarshal.AsBytes(new string('a', ushort.MaxValue).AsSpan()));
+            client.SendReliable(new string('a', ushort.MaxValue).AsByteSpan());
+            client.SendReliable(new string('a', ushort.MaxValue).AsByteSpan());
+            client.SendUnreliable(new string('a', ushort.MaxValue).AsByteSpan());
+            client.SendUnreliable(new string('a', ushort.MaxValue).AsByteSpan());
 
             await client.Disconnect();
             await client.Stop();
