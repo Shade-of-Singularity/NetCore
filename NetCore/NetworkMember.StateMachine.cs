@@ -10,6 +10,19 @@ namespace NetCore
     {
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
+        /// .                                            Protected Properties
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <summary>
+        /// Current raw <see cref="NetworkMember"/> state, retrieved outside of a <see cref="_lock"/>.
+        /// </summary>
+        protected MemberState StateUnlocked => m_State;
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
         /// .                                               Private Fields
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
@@ -20,6 +33,30 @@ namespace NetCore
         private UniTask<OperationResult> m_ConnectionTask = StateMachineHelpers.CompletedTask;
         private CancellationTokenSource? m_DisconnectionTokenSource;
         private volatile MemberState m_State;
+
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                               Public Methods
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        /// <summary>
+        /// Checks whether current member state allows sending messages.
+        /// </summary>
+        /// <seealso cref="MemberStateExtensions.AllowsSendingMessages(MemberState)"/>
+        public bool AllowsSendingMessages()
+        {
+            lock (_lock) return m_State.AllowsSendingMessages();
+        }
+
+        /// <remarks>
+        /// Retrieve value outside of a <see langword="lock"/>.
+        /// </remarks>
+        /// <inheritdoc cref="AllowsSendingMessages"/>
+        /// <seealso cref="MemberStateExtensions.AllowsSendingMessages(MemberState)"/>
+        protected bool AllowsSendingMessagesCore() => m_State.AllowsSendingMessages();
 
 
 

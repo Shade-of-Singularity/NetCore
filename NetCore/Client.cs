@@ -379,6 +379,9 @@ namespace NetCore
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         protected virtual void SendUnreliableCore(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
+            //if (!AllowsSendingMessagesCore())
+            //    throw new MemberIsNotStartedException($"Network member was not yet started and cannot send messages yet");
+
             using (header.Lock()) using (flags.Lock())
             {
                 foreach (var transport in UnreliableTransports)
