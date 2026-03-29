@@ -1085,14 +1085,14 @@ namespace NetCore
         }
 
         /// <inheritdoc cref="HasTransport{TTransport}(SendingMode)"/>
-        protected bool HasTransportCore<TTransport>(SendingMode mode) where TTransport : ITransport => mode switch
-        {
-            SendingMode.Unreliable => UnreliableTransports.Has<TTransport>(),
-            SendingMode.Reliable => ReliableTransports.Has<TTransport>(),
-            SendingMode.Sequential => SequentialTransports.Has<TTransport>(),
-            SendingMode.Resilient => ResilientTransports.Has<TTransport>(),
-            _ => throw new SwitchExpressionException(mode),
-        };
+        //protected bool HasTransportCore<TTransport>(SendingMode mode) where TTransport : ITransport => mode switch
+        //{
+        //    SendingMode.Unreliable => UnreliableTransports.Has<TTransport>(),
+        //    SendingMode.Reliable => ReliableTransports.Has<TTransport>(),
+        //    SendingMode.Sequential => SequentialTransports.Has<TTransport>(),
+        //    SendingMode.Resilient => ResilientTransports.Has<TTransport>(),
+        //    _ => throw new SwitchExpressionException(mode),
+        //};
 
         /// <summary>
         /// Checks if there is any transport, at all, than will be able to handle a given <see cref="SendingMode"/>.
@@ -1111,14 +1111,14 @@ namespace NetCore
         }
 
         /// <inheritdoc cref="HasAnyTransport(SendingMode)"/>
-        public bool HasAnyTransportCore(SendingMode mode) => mode switch
-        {
-            SendingMode.Unreliable => UnreliableTransports.Count > 0,
-            SendingMode.Reliable => ReliableTransports.Count > 0,
-            SendingMode.Sequential => SequentialTransports.Count > 0,
-            SendingMode.Resilient => ResilientTransports.Count > 0,
-            _ => throw new SwitchExpressionException(mode),
-        };
+        //public bool HasAnyTransportCore(SendingMode mode) => mode switch
+        //{
+        //    SendingMode.Unreliable => UnreliableTransports.Count > 0,
+        //    SendingMode.Reliable => ReliableTransports.Count > 0,
+        //    SendingMode.Sequential => SequentialTransports.Count > 0,
+        //    SendingMode.Resilient => ResilientTransports.Count > 0,
+        //    _ => throw new SwitchExpressionException(mode),
+        //};
         #endregion
 
         #region General transport management
@@ -1313,19 +1313,19 @@ namespace NetCore
         }
 
         /// <summary>
-        /// Checks whether this <see cref="NetworkMember"/> manages a specific reliable transport.
+        /// Checks whether this <see cref="NetworkMember"/> manages any unreliable transports.
+        /// </summary>
+        public bool HasAnyUnreliableTransport()
+        {
+            lock (_lock) return UnreliableTransports.Count == 0;
+        }
+
+        /// <summary>
+        /// Checks whether this <see cref="NetworkMember"/> manages a specific unreliable transport.
         /// </summary>
         public bool HasUnreliableTransport<T>() where T : class, IUnreliableTransport
         {
-            if (typeof(T) == typeof(IUnreliableTransport))
-            {
-                throw new ArgumentException($"You should only check transports with explicitly defined end-type - do not rely on the base.");
-            }
-
-            lock (_lock)
-            {
-                return UnreliableTransports.Has<T>();
-            }
+            lock (_lock) return UnreliableTransports.Has<T>();
         }
 
         /// <summary>
@@ -1488,19 +1488,19 @@ namespace NetCore
         }
 
         /// <summary>
+        /// Checks whether this <see cref="NetworkMember"/> manages any reliable transports.
+        /// </summary>
+        public bool HasAnyReliableTransport()
+        {
+            lock (_lock) return ReliableTransports.Count == 0;
+        }
+
+        /// <summary>
         /// Checks whether this <see cref="NetworkMember"/> manages a specific reliable transport.
         /// </summary>
         public bool HasReliableTransport<T>() where T : class, IReliableTransport
         {
-            if (typeof(T) == typeof(IReliableTransport))
-            {
-                throw new ArgumentException($"You should only check transports with explicitly defined end-type - do not rely on the base.");
-            }
-
-            lock (_lock)
-            {
-                return ReliableTransports.Has<T>();
-            }
+            lock (_lock) return ReliableTransports.Has<T>();
         }
 
         /// <summary>
@@ -1613,7 +1613,7 @@ namespace NetCore
         /// <c>true</c> if transport was present, was removed and the instance is provided as <paramref name="transport"/>.
         /// <c>false</c> if transport was not present and thus - was not removed.
         /// </returns>
-        public bool RemoveNotifyTransport<T>([NotNullWhen(true)] out T? transport) where T : class, ISequentialTransport
+        public bool RemoveSequentialTransport<T>([NotNullWhen(true)] out T? transport) where T : class, ISequentialTransport
         {
             if (typeof(T) == typeof(ISequentialTransport))
             {
@@ -1661,19 +1661,19 @@ namespace NetCore
         }
 
         /// <summary>
+        /// Checks whether this <see cref="NetworkMember"/> manages any sequential transports.
+        /// </summary>
+        public bool HasAnySequentialTransport()
+        {
+            lock (_lock) return SequentialTransports.Count == 0;
+        }
+
+        /// <summary>
         /// Checks whether this <see cref="NetworkMember"/> manages a specific reliable transport.
         /// </summary>
         public bool HasSequentialTransport<T>() where T : class, ISequentialTransport
         {
-            if (typeof(T) == typeof(ISequentialTransport))
-            {
-                throw new ArgumentException($"You should only check transports with explicitly defined end-type - do not rely on the base.");
-            }
-
-            lock (_lock)
-            {
-                return SequentialTransports.Has<T>();
-            }
+            lock (_lock) return SequentialTransports.Has<T>();
         }
 
         /// <summary>
@@ -1685,7 +1685,7 @@ namespace NetCore
         /// <c>true</c> if found and <paramref name="transport"/> was provided.
         /// <c>false</c> if not found and <paramref name="transport"/> is null.
         /// </returns>
-        public bool TryGetNotifyTransport<T>([NotNullWhen(true)] out T? transport) where T : class, ISequentialTransport
+        public bool TryGetSequentialTransport<T>([NotNullWhen(true)] out T? transport) where T : class, ISequentialTransport
         {
             if (typeof(T) == typeof(ISequentialTransport))
             {
@@ -1720,7 +1720,7 @@ namespace NetCore
         /// Iterates over all <see cref="ISequentialTransport"/>s using a given <paramref name="action"/>.
         /// </summary>
         /// <param name="action">Action to use on all registered <see cref="ISequentialTransport"/>s.</param>
-        public void ForEachNotifyTransport(TransportConsumer<ISequentialTransport> action)
+        public void ForEachSequentialTransport(TransportConsumer<ISequentialTransport> action)
         {
             lock (_lock)
             {
@@ -1739,7 +1739,7 @@ namespace NetCore
         /// <c>true</c> - all transports were removed successfully.
         /// <c>false</c> - some transports had issues executing <see cref="ITransport.Detach(NetworkMember)"/>.
         /// </returns>
-        public bool ClearNotifyTransports()
+        public bool ClearSequentialTransports()
         {
             lock (_lock)
             {
@@ -1834,19 +1834,19 @@ namespace NetCore
         }
 
         /// <summary>
+        /// Checks whether this <see cref="NetworkMember"/> manages any resilient transports.
+        /// </summary>
+        public bool HasAnyResilientTransport()
+        {
+            lock (_lock) return ResilientTransports.Count == 0;
+        }
+
+        /// <summary>
         /// Checks whether this <see cref="NetworkMember"/> manages a specific reliable transport.
         /// </summary>
         public bool HasResilientTransport<T>() where T : class, IResilientTransport
         {
-            if (typeof(T) == typeof(IResilientTransport))
-            {
-                throw new ArgumentException($"You should only check transports with explicitly defined end-type - do not rely on the base.");
-            }
-
-            lock (_lock)
-            {
-                return ResilientTransports.Has<T>();
-            }
+            lock (_lock) return ResilientTransports.Has<T>();
         }
 
         /// <summary>
