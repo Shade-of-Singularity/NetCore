@@ -35,28 +35,25 @@ namespace NetCore
         static readonly Server server = new();
         public static void Main()
         {
-            Header header;
-            using (header = Header.GetLocked())
-            {
-                header.Set<UIDHeader>(325623253uL);
-                header.Set<AlignmentHeader, Alignment>(Alignment.BottomLeft);
-                Console.WriteLine($"UID (client): {header.GetULong<UIDHeader>()}");
-                // Note: we can probably generate a custom header at runtime for enums.
-                //  Size can be defined procedurally as well.
-                //  However, this will only be possible to use with enum-only headers.
-                Console.WriteLine($"Alignment (client): {header.GetEnum<AlignmentHeader, Alignment>()}");
-                client.SendReliable(ref header, default);
-            }
+            // If header is disposed automatically, if not locked before usage.
+            Header header = Header.Get();
+            header.Set<UIDHeader>(325623253uL);
+            header.Set<AlignmentHeader, Alignment>(Alignment.BottomLeft);
+            Console.WriteLine($"UID (client): {header.GetULong<UIDHeader>()}");
+            // Note: we can probably generate a custom header at runtime for enums.
+            //  Size can be defined procedurally as well.
+            //  However, this will only be possible to use with enum-only headers.
+            Console.WriteLine($"Alignment (client): {header.GetEnum<AlignmentHeader, Alignment>()}");
+            client.SendReliable(ref header, default);
 
-            using (header = Header.GetLocked())
-            {
-                header.Lock();
-                header.Set<UIDHeader>(54634563463546uL);
-                header.Set<AlignmentHeader, Alignment>(Alignment.TopRight);
-                Console.WriteLine($"UID (server): {header.GetULong<UIDHeader>()}");
-                Console.WriteLine($"Alignment (server): {header.GetEnum<AlignmentHeader, Alignment>()}");
-                server.SendReliable(ref header, default);
-            }
+            client.Send();
+
+            header = Header.Get();
+            header.Set<UIDHeader>(54634563463546uL);
+            header.Set<AlignmentHeader, Alignment>(Alignment.TopRight);
+            Console.WriteLine($"UID (server): {header.GetULong<UIDHeader>()}");
+            Console.WriteLine($"Alignment (server): {header.GetEnum<AlignmentHeader, Alignment>()}");
+            server.SendReliable(ref header, default);
 
             client.SendReliable(stackalloc byte[8], Construct);
             static void Construct(ref Header header)

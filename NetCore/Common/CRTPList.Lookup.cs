@@ -21,6 +21,8 @@ namespace NetCore.Common
         /// Note: Was turned in a class for ease of use.
         /// Note: Consider turning it into a standardized data structure, allowing for pretty fast iteration over the filtered items + counting of them.
         ///  Or if it will not be efficient - provide helper methods instead, and consider moving then to SoG.Common library.
+        /// TODO: Add a base class/interface implementing <see cref="Count"/>, for basic size checks.
+        ///  This can simplify some switch operations in <see cref="NetworkMember"/>, e.g. <see cref="NetworkMember.HasAnyTransport(SendingMode)"/>.
         public sealed class Lookup<TFilter> : IDisposable where TFilter : TBase
         {
             /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[

@@ -6,12 +6,18 @@ using System.Runtime.InteropServices;
 namespace NetCore
 {
     /// <summary>
-    /// (Not thread-safe!)
     /// Container for flags, which doesn't meant to move over the network, so they can be packed better.
     /// </summary>
     /// <remarks>
+    /// (Not thread-safe!)
+    /// <para>
     /// Optimized for adding new flags, but removal is expensive.
     /// If possible - avoid removing flags, but instead overwrite a value they store, if possible.
+    /// </para>
+    /// <para>Can be created using <see cref="Get"/> or <see cref="GetLocked"/>.</para>
+    /// <para><see cref="Header"/>/<see cref="Flags"/> must not be reused across concurrent send calls unless explicitly locked within a <see langword="using"/> block.</para>
+    /// </remarks>
+    /// <remarks>
     /// </remarks>
     /// TODO: Improve resizing logic.
     [StructLayout(LayoutKind.Explicit)]
@@ -102,6 +108,18 @@ namespace NetCore
                 throw new ObjectDisposedException(nameof(Flags));
 
             locks++;
+        }
+
+        /// <summary>
+        /// Disposes this instance if it has no locks.
+        /// </summary>
+        /// <remarks>
+        /// Same as using <see cref="HeaderHelpers.Lock(ref Header)"/> and <see cref="Dispose"/> sequentially.
+        /// </remarks>
+        public void DisposeIfUnlocked()
+        {
+            if (locks == 0)
+                Dispose();
         }
 
         /// <summary>

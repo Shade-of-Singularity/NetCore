@@ -1,5 +1,4 @@
 ﻿using NetCore.Common;
-using System.Runtime.CompilerServices;
 
 namespace NetCore
 {

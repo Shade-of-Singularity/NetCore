@@ -131,6 +131,7 @@ namespace NetCore
     ///  I'm alright with how things are right now though - allocating 6 arrays with 2 items + 24 bytes per list it's not much:
     ///  = 240 bytes.
     ///  It's nothing compared to other things.
+    /// TODO: Make sure transports can only be added/removed if member is not started already.
     public abstract partial class NetworkMember : INetworkMemberStatistics
     {
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
@@ -1057,18 +1058,41 @@ namespace NetCore
         /// <summary>
         /// Check whether transport of a specified type is registered.
         /// </summary>
-        public bool HasTransport<TTransport>() where TTransport : ITransport => Transports.Has<TTransport>();
+        public bool HasTransport<TTransport>() where TTransport : ITransport
+        {
+            lock (_lock) return Transports.Has<TTransport>();
+        }
+
         /// <summary>
         /// Checks whether transport of a specified type is registered and belongs to a specific sending mode group.
         /// </summary>
-        public bool HasTransport<TTransport>(SendingMode mode) where TTransport : ITransport => mode switch
+        public bool HasTransport<TTransport>(SendingMode mode) where TTransport : ITransport
         {
-            SendingMode.Unreliable => UnreliableTransports.Has<TTransport>(),
-            SendingMode.Reliable => ReliableTransports.Has<TTransport>(),
-            SendingMode.Sequential => SequentialTransports.Has<TTransport>(),
-            SendingMode.Resilient => ResilientTransports.Has<TTransport>(),
-            _ => throw new SwitchExpressionException(mode),
-        };
+            lock (_lock) return mode switch
+            {
+                SendingMode.Unreliable => UnreliableTransports.Has<TTransport>(),
+                SendingMode.Reliable => ReliableTransports.Has<TTransport>(),
+                SendingMode.Sequential => SequentialTransports.Has<TTransport>(),
+                SendingMode.Resilient => ResilientTransports.Has<TTransport>(),
+                _ => throw new SwitchExpressionException(mode),
+            };
+        }
+
+        /// <summary>
+        /// Checks if there is any transport, at all, than will be able to handle a given <see cref="SendingMode"/>.
+        /// Used in broadcasting TrySend methods.
+        /// </summary>
+        public bool HasAnyTransport(SendingMode mode)
+        {
+            lock (_lock) return mode switch
+            {
+                SendingMode.Unreliable => UnreliableTransports.Count > 0,
+                SendingMode.Reliable => ReliableTransports.Count > 0,
+                SendingMode.Sequential => SequentialTransports.Count > 0,
+                SendingMode.Resilient => ResilientTransports.Count > 0,
+                _ => throw new SwitchExpressionException(mode),
+            };
+        }
         #endregion
 
         #region General transport management
@@ -1111,13 +1135,13 @@ namespace NetCore
         /// <summary>
         /// Tries to remove specific <paramref name="transport"/> from the map of active transports.
         /// </summary>
-        /// <typeparam name="T">Type of transport to remove.</typeparam>
+        /// <typeparam name="TTransport">Type of transport to remove.</typeparam>
         /// <param name="transport">Transport to remove.</param>
         /// <returns>
         /// <c>true</c> if transport was present and it was removed.
         /// <c>false</c> if transport was not present and thus - was not removed.
         /// </returns>
-        public bool RemoveGeneralTransport<T>(T transport) where TTransport : class,
+        public bool RemoveGeneralTransport<TTransport>(TTransport transport) where TTransport : class,
             IResilientTransport, ISequentialTransport, IUnreliableTransport, IReliableTransport
         {
             throw new NotImplementedException();
@@ -1126,33 +1150,33 @@ namespace NetCore
         /// <summary>
         /// Checks whether this <see cref="NetworkMember"/> manages a specific reliable transport.
         /// </summary>
-        public bool HasGeneralTransport<T>() where TTransport : class,
+        public bool HasGeneralTransport<TTransport>() where TTransport : class,
             IResilientTransport, ISequentialTransport, IUnreliableTransport, IReliableTransport
         {
             throw new NotImplementedException();
         }
 
         /// <summary>
-        /// Tries to retrieve <see cref="IUnreliableTransport"/> under a given <typeparamref name="T"/> type.
+        /// Tries to retrieve <see cref="IUnreliableTransport"/> under a given <typeparamref name="TTransport"/> type.
         /// </summary>
-        /// <typeparam name="T">Type of transport to look for.</typeparam>
+        /// <typeparam name="TTransport">Type of transport to look for.</typeparam>
         /// <param name="transport">Transport instance or <c>null</c> when not found.</param>
         /// <returns>
         /// <c>true</c> if found and <paramref name="transport"/> was provided.
         /// <c>false</c> if not found and <paramref name="transport"/> is null.
         /// </returns>
-        public bool TryGetGeneralTransport<T>([NotNullWhen(true)] out T? transport) where TTransport : class,
+        public bool TryGetGeneralTransport<TTransport>([NotNullWhen(true)] out TTransport? transport) where TTransport : class,
             IResilientTransport, ISequentialTransport, IUnreliableTransport, IReliableTransport
         {
             throw new NotImplementedException();
         }
 
         /// <summary>
-        /// Retrieves <see cref="IUnreliableTransport"/> under a given <typeparamref name="T"/> type.
+        /// Retrieves <see cref="IUnreliableTransport"/> under a given <typeparamref name="TTransport"/> type.
         /// </summary>
-        /// <typeparam name="T">Type of transport to look for.</typeparam>
+        /// <typeparam name="TTransport">Type of transport to look for.</typeparam>
         /// <returns>Transport instance or <c>null</c> when not found.</returns>
-        public T GetGeneralTransport<T>() where TTransport : class,
+        public TTransport GetGeneralTransport<TTransport>() where TTransport : class,
             IResilientTransport, ISequentialTransport, IUnreliableTransport, IReliableTransport
         {
             throw new NotImplementedException();

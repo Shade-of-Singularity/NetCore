@@ -22,7 +22,9 @@ namespace NetCore
     /// Message header which allows writing custom data to it.
     /// </summary>
     /// <remarks>
-    /// Can be created using <see cref="Get"/> or <see cref="GetLocked"/>.
+    /// (Not thread-safe!)
+    /// <para>Can be created using <see cref="Get"/> or <see cref="GetLocked"/>.</para>
+    /// <para><see cref="Header"/>/<see cref="Flags"/> must not be reused across concurrent send calls unless explicitly locked within a <see langword="using"/> block.</para>
     /// </remarks>
     /// TODO: Add a way to parse a beginning of the message into a valid header without using <see cref="NetworkMember"/> as a base.
     ///  This will be useful if people would want to create custom relays which does not rely on <see cref="ITransport"/>s.
@@ -232,6 +234,18 @@ namespace NetCore
                 throw new ObjectDisposedException(nameof(Header));
 
             locks++;
+        }
+
+        /// <summary>
+        /// Disposes this instance if it has no locks.
+        /// </summary>
+        /// <remarks>
+        /// Same as using <see cref="HeaderHelpers.Lock(ref Header)"/> and <see cref="Dispose"/> sequentially.
+        /// </remarks>
+        public void DisposeIfUnlocked()
+        {
+            if (locks == 0)
+                Dispose();
         }
 
         /// <summary>
