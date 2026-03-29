@@ -8,14 +8,14 @@ namespace NetCore.Transports
     public interface ISequentialTransport : ITransport
     {
         /// <summary>
-        /// Sequentially sends <paramref name="datagram"/> this <see cref="ITransport"/> manages.
+        /// Sequentially sends <paramref name="datagram"/> to all connections this <see cref="ITransport"/> manages.
         /// </summary>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="header">Header of the message.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         public void SendSequential(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags);
         /// <summary>
-        /// Sequentially sends <paramref name="datagram"/> to this <see cref="ITransport"/> manages, excluding <paramref name="toExclude"/>.
+        /// Sequentially sends <paramref name="datagram"/> to all connections this <see cref="ITransport"/> manages, excluding <paramref name="toExclude"/>.
         /// </summary>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="header">Header of the message.</param>
