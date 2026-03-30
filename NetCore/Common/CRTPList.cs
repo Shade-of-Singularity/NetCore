@@ -41,7 +41,7 @@ namespace NetCore.Common
     /// </summary>
     /// <param name="providedType">Provided type.</param>
     /// <param name="realType">Type of the real item instance.</param>
-    internal sealed class ItemTypeMismatchException(Type providedType, Type realType)
+    public sealed class ItemTypeMismatchException(Type providedType, Type realType)
         : Exception($"Specified item type ({providedType.Name}) and type of a real item ({realType.Name}) does not match.");
 
     /// <summary>
@@ -162,7 +162,7 @@ namespace NetCore.Common
             public static readonly uint Flag = 1u << (Order & 0b11111);
         }
 
-        /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="Lookup{TFilter}.Enumerator"/>.
+        /// Note (for maintainers): exposed as <see langword="internal"/> for usage in <see cref="Lookup{TFilter}.LookupEnumerator"/>.
         internal enum PackingMode : byte
         {
             /// <summary>
@@ -274,6 +274,7 @@ namespace NetCore.Common
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <param name="item">If <see langword="null"/> - all items were removed.</param>
+        /// <param name="order">Initialization order of a specific item.</param>
         /// <param name="added">When <paramref name="item"/> is not null - either item that was added or removed.</param>
         private delegate void OnItemChangedHandler(TBase? item, int order, bool added);
 
@@ -469,20 +470,20 @@ namespace NetCore.Common
         internal bool TryGetInternal<TItem>(int order, [NotNullWhen(true)] out TItem? item) where TItem : TBase
         {
             int flagsIndex;
-            uint flags;
+            uint packed;
             switch (mode)
             {
                 case PackingMode.Size0: item = default; return false;
                 case PackingMode.SizeByte:
                     flagsIndex = order >> 2;
-                    if (flagsIndex >= this.flags.Length)
+                    if (flagsIndex >= flags.Length)
                     {
                         item = default;
                         return false; // Handles out-of-bound.
                     }
 
-                    flags = this.flags[flagsIndex];
-                    if ((flags & (order & 0b11) switch
+                    packed = flags[flagsIndex];
+                    if ((packed & (order & 0b11) switch
                     {
                         0 => PackingByte.ItemFlag1,
                         1 => PackingByte.ItemFlag2,
@@ -495,18 +496,18 @@ namespace NetCore.Common
                         return false; // Item not found.
                     }
 
-                    return TryGetInternalUnsafeByte(order, out item, flags);
+                    return TryGetInternalUnsafeByte(order, out item, packed);
 
                 case PackingMode.SizeUShort:
                     flagsIndex = order >> 1;
-                    if (flagsIndex >= this.flags.Length)
+                    if (flagsIndex >= flags.Length)
                     {
                         item = default;
                         return false; // Handles out-of-bound.
                     }
 
-                    flags = this.flags[flagsIndex];
-                    if ((flags & (order & 0b1) switch
+                    packed = flags[flagsIndex];
+                    if ((packed & (order & 0b1) switch
                     {
                         0 => PackingUShort.ItemFlag1,
                         1 => PackingUShort.ItemFlag2,
@@ -517,24 +518,24 @@ namespace NetCore.Common
                         return false; // Item not found.
                     }
 
-                    return TryGetInternalUnsafeUShort(order, out item, flags);
+                    return TryGetInternalUnsafeUShort(order, out item, packed);
 
                 case PackingMode.SizeUInt:
                     flagsIndex = order;
-                    if (flagsIndex >= this.flags.Length)
+                    if (flagsIndex >= flags.Length)
                     {
                         item = default;
                         return false; // Handles out-of-bound.
                     }
 
-                    flags = this.flags[flagsIndex];
-                    if ((flags & PackingUInt.ItemFlag) == 0)
+                    packed = flags[flagsIndex];
+                    if ((packed & PackingUInt.ItemFlag) == 0)
                     {
                         item = default;
                         return false; // Item not found.
                     }
 
-                    return TryGetInternalUnsafeUInt(out item, flags);
+                    return TryGetInternalUnsafeUInt(out item, packed);
 
                 default: throw new SwitchExpressionException(mode);
             }
@@ -628,19 +629,19 @@ namespace NetCore.Common
         internal TItem GetInternal<TItem>(int order) where TItem : TBase
         {
             int flagsIndex;
-            uint flags;
+            uint packed;
             switch (mode)
             {
                 case PackingMode.Size0: throw new ItemNotFoundException(typeof(TItem));
                 case PackingMode.SizeByte:
                     flagsIndex = order >> 2;
-                    if (flagsIndex >= this.flags.Length)
+                    if (flagsIndex >= flags.Length)
                     {
                         throw new ItemNotFoundException(typeof(TItem));
                     }
 
-                    flags = this.flags[flagsIndex];
-                    if ((flags & (order & 0b11) switch
+                    packed = flags[flagsIndex];
+                    if ((packed & (order & 0b11) switch
                     {
                         0 => PackingByte.ItemFlag1,
                         1 => PackingByte.ItemFlag2,
@@ -654,22 +655,22 @@ namespace NetCore.Common
 
                     return (TItem)items[(order & 0b11) switch
                     {
-                        0 => (flags & PackingByte.ItemValue1) >> PackingByte.ItemShift1,
-                        1 => (flags & PackingByte.ItemValue2) >> PackingByte.ItemShift2,
-                        2 => (flags & PackingByte.ItemValue3) >> PackingByte.ItemShift3,
-                        3 => (flags & PackingByte.ItemValue4) >> PackingByte.ItemShift4,
+                        0 => (packed & PackingByte.ItemValue1) >> PackingByte.ItemShift1,
+                        1 => (packed & PackingByte.ItemValue2) >> PackingByte.ItemShift2,
+                        2 => (packed & PackingByte.ItemValue3) >> PackingByte.ItemShift3,
+                        3 => (packed & PackingByte.ItemValue4) >> PackingByte.ItemShift4,
                         _ => throw new SwitchExpressionException(order & 0b11),
                     }]!;
 
                 case PackingMode.SizeUShort:
                     flagsIndex = order >> 1;
-                    if (flagsIndex >= this.flags.Length)
+                    if (flagsIndex >= flags.Length)
                     {
                         throw new ItemNotFoundException(typeof(TItem));
                     }
 
-                    flags = this.flags[flagsIndex];
-                    if ((flags & (order & 0b1) switch
+                    packed = flags[flagsIndex];
+                    if ((packed & (order & 0b1) switch
                     {
                         0 => PackingUShort.ItemFlag1,
                         1 => PackingUShort.ItemFlag2,
@@ -681,25 +682,25 @@ namespace NetCore.Common
 
                     return (TItem)items[(order & 0b1) switch
                     {
-                        0 => (flags & PackingUShort.ItemValue1) >> PackingUShort.ItemShift1,
-                        1 => (flags & PackingUShort.ItemValue2) >> PackingUShort.ItemShift2,
+                        0 => (packed & PackingUShort.ItemValue1) >> PackingUShort.ItemShift1,
+                        1 => (packed & PackingUShort.ItemValue2) >> PackingUShort.ItemShift2,
                         _ => throw new SwitchExpressionException(order & 0b1),
                     }]!;
 
                 case PackingMode.SizeUInt:
                     flagsIndex = order;
-                    if (flagsIndex >= this.flags.Length)
+                    if (flagsIndex >= flags.Length)
                     {
                         throw new ItemNotFoundException(typeof(TItem));
                     }
 
-                    flags = this.flags[flagsIndex];
-                    if ((flags & PackingUInt.ItemFlag) == 0)
+                    packed = flags[flagsIndex];
+                    if ((packed & PackingUInt.ItemFlag) == 0)
                     {
                         throw new ItemNotFoundException(typeof(TItem));
                     }
 
-                    return (TItem)items[(flags & PackingUInt.ItemValue) >> PackingUInt.ItemShift]!;
+                    return (TItem)items[(packed & PackingUInt.ItemValue) >> PackingUInt.ItemShift]!;
 
                 default: throw new SwitchExpressionException(mode);
             }
@@ -740,19 +741,19 @@ namespace NetCore.Common
         internal TItem? SafeGetInternal<TItem>(int order) where TItem : class, TBase
         {
             int flagsIndex;
-            uint flags;
+            uint packed;
             switch (mode)
             {
                 case PackingMode.Size0: return default;
                 case PackingMode.SizeByte:
                     flagsIndex = order >> 2;
-                    if (flagsIndex >= this.flags.Length)
+                    if (flagsIndex >= flags.Length)
                     {
                         return default; // Handles out-of-bound.
                     }
 
-                    flags = this.flags[flagsIndex];
-                    if ((flags & (order & 0b11) switch
+                    packed = flags[flagsIndex];
+                    if ((packed & (order & 0b11) switch
                     {
                         0 => PackingByte.ItemFlag1,
                         1 => PackingByte.ItemFlag2,
@@ -766,22 +767,22 @@ namespace NetCore.Common
 
                     return items[(order & 0b11) switch
                     {
-                        0 => (flags & PackingByte.ItemValue1) >> PackingByte.ItemShift1,
-                        1 => (flags & PackingByte.ItemValue2) >> PackingByte.ItemShift2,
-                        2 => (flags & PackingByte.ItemValue3) >> PackingByte.ItemShift3,
-                        3 => (flags & PackingByte.ItemValue4) >> PackingByte.ItemShift4,
+                        0 => (packed & PackingByte.ItemValue1) >> PackingByte.ItemShift1,
+                        1 => (packed & PackingByte.ItemValue2) >> PackingByte.ItemShift2,
+                        2 => (packed & PackingByte.ItemValue3) >> PackingByte.ItemShift3,
+                        3 => (packed & PackingByte.ItemValue4) >> PackingByte.ItemShift4,
                         _ => throw new SwitchExpressionException(order & 0b11),
                     }] as TItem;
 
                 case PackingMode.SizeUShort:
                     flagsIndex = order >> 1;
-                    if (flagsIndex >= this.flags.Length)
+                    if (flagsIndex >= flags.Length)
                     {
                         return default; // Handles out-of-bound.
                     }
 
-                    flags = this.flags[flagsIndex];
-                    if ((flags & (order & 0b1) switch
+                    packed = flags[flagsIndex];
+                    if ((packed & (order & 0b1) switch
                     {
                         0 => PackingUShort.ItemFlag1,
                         1 => PackingUShort.ItemFlag2,
@@ -793,25 +794,25 @@ namespace NetCore.Common
 
                     return items[(order & 0b1) switch
                     {
-                        0 => (flags & PackingUShort.ItemValue1) >> PackingUShort.ItemShift1,
-                        1 => (flags & PackingUShort.ItemValue2) >> PackingUShort.ItemShift2,
+                        0 => (packed & PackingUShort.ItemValue1) >> PackingUShort.ItemShift1,
+                        1 => (packed & PackingUShort.ItemValue2) >> PackingUShort.ItemShift2,
                         _ => throw new SwitchExpressionException(order & 0b1),
                     }] as TItem;
 
                 case PackingMode.SizeUInt:
                     flagsIndex = order;
-                    if (flagsIndex >= this.flags.Length)
+                    if (flagsIndex >= flags.Length)
                     {
                         return default; // Handles out-of-bound.
                     }
 
-                    flags = this.flags[flagsIndex];
-                    if ((flags & PackingUInt.ItemFlag) == 0)
+                    packed = flags[flagsIndex];
+                    if ((packed & PackingUInt.ItemFlag) == 0)
                     {
                         return default; // Item not found.
                     }
 
-                    return items[(flags & PackingUInt.ItemValue) >> PackingUInt.ItemShift] as TItem;
+                    return items[(packed & PackingUInt.ItemValue) >> PackingUInt.ItemShift] as TItem;
 
                 default: throw new SwitchExpressionException(mode);
             }
@@ -1081,21 +1082,21 @@ namespace NetCore.Common
                     Span<byte> bytes = MemoryMarshal.AsBytes(span);
                     if (index == 0)
                     {
-                        foreach (ref uint flags in span)
+                        foreach (ref uint packed in span)
                         {
                             // Adds 1 only in entries that have an flag defined (a.k.a. entries which encode an index).
-                            flags += (flags & 0x80808080) >> 15;
+                            packed += (packed & 0x80808080) >> 15;
                         }
                     }
                     else
                     {
-                        foreach (ref byte flags in bytes)
+                        foreach (ref byte packed in bytes)
                         {
-                            uint position = (uint)(flags & PackingByte.ByteValue);
+                            uint position = (uint)(packed & PackingByte.ByteValue);
                             if (position >= index)
                             {
                                 // +1 here will never overflow into a flag, as remapping (or too large exception) should happen sooner.
-                                flags = (byte)(PackingByte.ByteFlag | (position + 1));
+                                packed = (byte)(PackingByte.ByteFlag | (position + 1));
                             }
                         }
                     }
@@ -1118,21 +1119,21 @@ namespace NetCore.Common
                     Span<ushort> ushorts = MemoryMarshal.Cast<uint, ushort>(span);
                     if (index == 0)
                     {
-                        foreach (ref uint flags in span)
+                        foreach (ref uint packed in span)
                         {
                             // Adds 1 only in entries that have an flag defined (a.k.a. entries which encode an index).
-                            flags += (flags & 0x80008000) >> 31;
+                            packed += (packed & 0x80008000) >> 31;
                         }
                     }
                     else
                     {
-                        foreach (ref ushort flags in ushorts)
+                        foreach (ref ushort packed in ushorts)
                         {
-                            uint position = (uint)(flags & PackingUShort.UShortValue);
+                            uint position = (uint)(packed & PackingUShort.UShortValue);
                             if (position >= index)
                             {
                                 // +1 here will never overflow into a flag, as remapping (or too large exception) should happen sooner.
-                                flags = (ushort)(PackingUShort.UShortFlag | (position + 1));
+                                packed = (ushort)(PackingUShort.UShortFlag | (position + 1));
                             }
                         }
                     }
@@ -1154,21 +1155,21 @@ namespace NetCore.Common
                     Array.Copy(items, index, items, index + 1, items.Length - index - 1);
                     if (index == 0)
                     {
-                        foreach (ref uint flags in span)
+                        foreach (ref uint packed in span)
                         {
                             // Adds 1 only in entries that have an flag defined (a.k.a. entries which encode an index).
-                            flags += (flags & 0x80000000) >> 7;
+                            packed += (packed & 0x80000000) >> 7;
                         }
                     }
                     else
                     {
-                        foreach (ref uint flags in span)
+                        foreach (ref uint packed in span)
                         {
-                            uint position = flags & PackingUInt.ItemValue;
+                            uint position = packed & PackingUInt.ItemValue;
                             if (position >= index)
                             {
                                 // +1 here will never overflow into a flag, as remapping (or too large exception) should happen sooner.
-                                flags = PackingUInt.ItemFlag | (position + 1);
+                                packed = PackingUInt.ItemFlag | (position + 1);
                             }
                         }
                     }
@@ -1243,19 +1244,19 @@ namespace NetCore.Common
         internal bool RemoveInternal<TItem>(int order, TItem? criteria, [NotNullWhen(true)] out TItem? item) where TItem : TBase
         {
             int index;
-            uint flags;
+            uint packed;
             switch (mode)
             {
                 case PackingMode.Size0: item = default; return false;
                 case PackingMode.SizeByte:
-                    if ((order >> 2) >= this.flags.Length)
+                    if ((order >> 2) >= flags.Length)
                     {
                         item = default;
                         return false; // Handles out-of-bounds.
                     }
 
-                    flags = this.flags[order >> 2];
-                    if ((flags & (order & 0b11) switch
+                    packed = flags[order >> 2];
+                    if ((packed & (order & 0b11) switch
                     {
                         0 => PackingByte.ItemFlag1,
                         1 => PackingByte.ItemFlag2,
@@ -1270,10 +1271,10 @@ namespace NetCore.Common
 
                     index = (int)((order & 0b11) switch
                     {
-                        0 => (flags & PackingByte.ItemValue1) >> PackingByte.ItemShift1,
-                        1 => (flags & PackingByte.ItemValue2) >> PackingByte.ItemShift2,
-                        2 => (flags & PackingByte.ItemValue3) >> PackingByte.ItemShift3,
-                        3 => (flags & PackingByte.ItemValue4) >> PackingByte.ItemShift4,
+                        0 => (packed & PackingByte.ItemValue1) >> PackingByte.ItemShift1,
+                        1 => (packed & PackingByte.ItemValue2) >> PackingByte.ItemShift2,
+                        2 => (packed & PackingByte.ItemValue3) >> PackingByte.ItemShift3,
+                        3 => (packed & PackingByte.ItemValue4) >> PackingByte.ItemShift4,
                         _ => throw new SwitchExpressionException(order & 0b11),
                     });
 
@@ -1289,14 +1290,14 @@ namespace NetCore.Common
                     return false;
 
                 case PackingMode.SizeUShort:
-                    if ((order >> 1) >= this.flags.Length)
+                    if ((order >> 1) >= flags.Length)
                     {
                         item = default;
                         return false; // Handles out-of-bounds.
                     }
 
-                    flags = this.flags[order >> 1];
-                    if ((flags & (order & 0b1) switch
+                    packed = flags[order >> 1];
+                    if ((packed & (order & 0b1) switch
                     {
                         0 => PackingUShort.ItemFlag1,
                         1 => PackingUShort.ItemFlag2,
@@ -1309,8 +1310,8 @@ namespace NetCore.Common
 
                     index = (int)((order & 0b1) switch
                     {
-                        0 => (flags & PackingUShort.ItemValue1) >> PackingUShort.ItemShift1,
-                        1 => (flags & PackingUShort.ItemValue2) >> PackingUShort.ItemShift2,
+                        0 => (packed & PackingUShort.ItemValue1) >> PackingUShort.ItemShift1,
+                        1 => (packed & PackingUShort.ItemValue2) >> PackingUShort.ItemShift2,
                         _ => throw new SwitchExpressionException(order & 0b1),
                     });
 
@@ -1326,20 +1327,20 @@ namespace NetCore.Common
                     return false;
 
                 case PackingMode.SizeUInt:
-                    if (order >= this.flags.Length)
+                    if (order >= flags.Length)
                     {
                         item = default;
                         return false; // Handles out-of-bounds.
                     }
 
-                    flags = this.flags[order];
-                    if ((flags & PackingUInt.ItemFlag) == 0)
+                    packed = flags[order];
+                    if ((packed & PackingUInt.ItemFlag) == 0)
                     {
                         item = default;
                         return false; // Item is not defined.
                     }
 
-                    index = (int)((flags & PackingUInt.ItemValue) >> PackingUInt.ItemShift);
+                    index = (int)((packed & PackingUInt.ItemValue) >> PackingUInt.ItemShift);
                     if (items[index] is TItem result3 && (criteria is null || EqualityComparer<TItem>.Default.Equals(result3, criteria)))
                     {
                         item = result3;
@@ -1444,16 +1445,16 @@ namespace NetCore.Common
                     Array.Copy(items, index + 1, items, index, items.Length - index - 1);
                     items[stored - 1] = default!;
                     Span<byte> bytes = MemoryMarshal.AsBytes(flags.AsSpan());
-                    foreach (ref byte flags in bytes)
+                    foreach (ref byte packed in bytes)
                     {
-                        uint position = (uint)(flags & PackingByte.ByteValue);
+                        uint position = (uint)(packed & PackingByte.ByteValue);
                         if (position == index)
                         {
-                            flags = 0;
+                            packed = 0;
                         }
                         else if (position > index)
                         {
-                            flags = (byte)(PackingByte.ByteFlag | (position - 1));
+                            packed = (byte)(PackingByte.ByteFlag | (position - 1));
                         }
                     }
                     stored--;
@@ -1464,16 +1465,16 @@ namespace NetCore.Common
                     Array.Copy(items, index + 1, items, index, items.Length - index - 1);
                     items[stored - 1] = default!;
                     Span<ushort> ushorts = MemoryMarshal.Cast<uint, ushort>(flags.AsSpan());
-                    foreach (ref ushort flags in ushorts)
+                    foreach (ref ushort packed in ushorts)
                     {
-                        uint position = (uint)(flags & PackingUShort.UShortValue);
+                        uint position = (uint)(packed & PackingUShort.UShortValue);
                         if (position == index)
                         {
-                            flags = 0;
+                            packed = 0;
                         }
                         else if (position > index)
                         {
-                            flags = (ushort)(PackingUShort.UShortFlag | (position - 1));
+                            packed = (ushort)(PackingUShort.UShortFlag | (position - 1));
                         }
                     }
                     stored--;
@@ -1483,16 +1484,16 @@ namespace NetCore.Common
                     item = items[index];
                     Array.Copy(items, index + 1, items, index, items.Length - index - 1);
                     items[stored - 1] = default!;
-                    foreach (ref uint flags in flags.AsSpan())
+                    foreach (ref uint packed in flags.AsSpan())
                     {
-                        uint position = flags & PackingUInt.ItemValue;
+                        uint position = packed & PackingUInt.ItemValue;
                         if (position == index)
                         {
-                            flags = 0;
+                            packed = 0;
                         }
                         else if (position > index)
                         {
-                            flags = PackingUInt.ItemFlag | (position - 1);
+                            packed = PackingUInt.ItemFlag | (position - 1);
                         }
                     }
                     stored--;
@@ -1537,7 +1538,43 @@ namespace NetCore.Common
         /// </summary>
         /// <param name="array">Buffer for storing items.</param>
         /// <param name="length">Amount of items copied to the buffer array.</param>
-        public void CopyTo(TBase[] array, out int length) => Array.Copy(items, array, length = stored);
+        public void CopyTo(TBase[] array, out int length)
+        {
+            length = stored;
+            Array.Copy(items, array, length);
+        }
+        /// <summary>
+        /// Retrieves ref struct-based <see cref="Enumerator"/> for iterating over all items this <see cref="CRTPList{TBase}"/> holds.
+        /// </summary>
+        /// <remarks>
+        /// Does not allocate a buffer for iteration, thus should only be used within a lock or a single thread.
+        /// </remarks>
+        /// <returns><see cref="Enumerator"/> to iterate over.</returns>
+        public Enumerator GetEnumerator() => new(items, stored);
+        /// <summary>
+        /// Enumerates over <see cref="CRTPList{TBase}"/>.
+        /// </summary>
+        /// <param name="items"></param>
+        /// <param name="stored"></param>
+        public ref struct Enumerator(TBase[] items, int stored)
+        {
+            private readonly TBase[] items = items;
+            private readonly int stored = stored;
+            int iterator = -1;
+            /// <summary>
+            /// Item under current iterator. Throws if used before or after using <see cref="MoveNext"/>.
+            /// </summary>
+            /// <exception cref="ArgumentOutOfRangeException">When used on uninitialized or already used-up <see cref="Enumerator"/>.</exception>
+            public readonly TBase Current => items[iterator];
+            /// <summary>
+            /// Moves enumerator forward by an item.
+            /// </summary>
+            /// <returns>
+            /// <see langword="true"/> if there are still more items to iterate over.
+            /// <see langword="false"/> when there are no more items. Using <see cref="Current"/> at this point will throw.
+            /// </returns>
+            public bool MoveNext() => ++iterator < stored;
+        }
 
 
 

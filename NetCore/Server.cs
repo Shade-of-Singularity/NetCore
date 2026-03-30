@@ -1,7 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using NetCore.Transports;
 using System;
-using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace NetCore
@@ -11,7 +10,9 @@ namespace NetCore
     /// </summary>
     /// <inheritdoc cref="NetworkMember"/>
     /// TODO: Consider adding a check for 0 transports being present.
-    public class Server(int transports) : NetworkMember<Server>(transports)
+    public partial class Server(int transports) : NetworkMember<Server>(transports),
+        ISendNetworkMessaging, ISendToNetworkMessaging, ISendExcludingNetworkMessaging,
+        ITransportBasedSendNetworkMessaging, ITransportBasedSendToNetworkMessaging, ITransportBasedSendExcludingNetworkMessaging
     {
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
@@ -61,9 +62,170 @@ namespace NetCore
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .
         /// .                                                Send Methods
-        /// .                                A.K.A.: Good luck translating documentation.
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        
+        /// <inheritdoc/>
+        public virtual void SendUnreliable(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        {
+            lock (_lock)
+            {
+                header.Lock();
+                flags.Lock();
+                try
+                {
+                    foreach (var transport in UnreliableTransports)
+                    {
+                        transport.SendUnreliable(datagram, in header, in flags);
+                    }
+                }
+                finally
+                {
+                    header.Dispose();
+                    flags.Dispose();
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public void SendReliable(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        {
+            lock (_lock)
+            {
+                header.Lock();
+                flags.Lock();
+                try
+                {
+                    foreach (var transport in ReliableTransports)
+                    {
+                        transport.SendReliable(datagram, in header, in flags);
+                    }
+                }
+                finally
+                {
+                    header.Dispose();
+                    flags.Dispose();
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public void SendSequential(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        {
+            lock (_lock)
+            {
+                header.Lock();
+                flags.Lock();
+                try
+                {
+                    foreach (var transport in SequentialTransports)
+                    {
+                        transport.SendSequential(datagram, in header, in flags);
+                    }
+                }
+                finally
+                {
+                    header.Dispose();
+                    flags.Dispose();
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public void SendResilient(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        {
+            lock (_lock)
+            {
+                header.Lock();
+                flags.Lock();
+                try
+                {
+                    foreach (var transport in ResilientTransports)
+                    {
+                        transport.SendResilient(datagram, in header, in flags);
+                    }
+                }
+                finally
+                {
+                    header.Dispose();
+                    flags.Dispose();
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public void SendUnreliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, IUnreliableTransport
+        {
+            lock (_lock)
+            {
+                header.Lock();
+                flags.Lock();
+                try
+                {
+                    GetUnreliableTransport<TTransport>().SendUnreliable(datagram, in header, in flags);
+                }
+                finally
+                {
+                    header.Dispose();
+                    flags.Dispose();
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public void SendReliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, IReliableTransport
+        {
+            lock (_lock)
+            {
+                header.Lock();
+                flags.Lock();
+                try
+                {
+                    GetReliableTransport<TTransport>().SendReliable(datagram, in header, in flags);
+                }
+                finally
+                {
+                    header.Dispose();
+                    flags.Dispose();
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public void SendSequential<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, ISequentialTransport
+        {
+            lock (_lock)
+            {
+                header.Lock();
+                flags.Lock();
+                try
+                {
+                    GetSequentialTransport<TTransport>().SendSequential(datagram, in header, in flags);
+                }
+                finally
+                {
+                    header.Dispose();
+                    flags.Dispose();
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public void SendResilient<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, IResilientTransport
+        {
+            lock (_lock)
+            {
+                header.Lock();
+                flags.Lock();
+                try
+                {
+                    GetResilientTransport<TTransport>().SendResilient(datagram, in header, in flags);
+                }
+                finally
+                {
+                    header.Dispose();
+                    flags.Dispose();
+                }
+            }
+        }
     }
 }

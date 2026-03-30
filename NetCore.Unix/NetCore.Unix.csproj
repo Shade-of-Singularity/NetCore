@@ -5,16 +5,13 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <Title>NetCore</Title>
+    <Title>NetCore Unix</Title>
     <Authors>SoG, DarkJune</Authors>
     <Company>Shade of Singularity</Company>
     <Description>
-      Very optimized networking system, introduced to support simultaneous usage of multiple
-      network transports (RawTCP, RawUDP, SteamNet(UDP), C# Pipes, etc.).
-      Standardized for easy expansion and plugin development.
+      Small extension over NetCore to support UnixDomain sockets.
     </Description>
     <LangVersion>12</LangVersion>
-    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,14 +27,6 @@
     </PackageReference>
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <PackageReference Include="UniTask" Version="2.5.10" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="AutoGen\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\NetCore.InternalAutoGen\NetCore.InternalAutoGen.csproj" OutputItemType="Analyzer" />
   </ItemGroup>
 
 </Project>

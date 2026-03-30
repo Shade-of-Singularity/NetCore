@@ -6,6 +6,7 @@ using System.Threading;
 namespace NetCore
 {
     // TODO: Implement dispatcher at some point.
+    // TODO! Fix a bug where due to chaining, disconnect is being called on a Start call, throwing an exception.
     public partial class NetworkMember // TODO: Provide non-provider-based methods for args handling.
     {
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[

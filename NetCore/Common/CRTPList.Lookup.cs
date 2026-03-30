@@ -503,7 +503,7 @@ namespace NetCore.Common
             /// Retrieves special struct-based enumerator for iterating over items, filtered with <typeparamref name="TFilter"/> type.
             /// </summary>
             /// <returns>Special struct-based enumerator for very fast type-safe iterations.</returns>
-            public Enumerator GetEnumerator()
+            public LookupEnumerator GetEnumerator()
             {
                 PackingMode mode = list.mode;
                 return new(list.items, mode,
@@ -516,7 +516,7 @@ namespace NetCore.Common
             /// <summary>
             /// Struct-based enumerator for fast iterations over filtered items.
             /// </summary>
-            public ref struct Enumerator
+            public ref struct LookupEnumerator
             {
                 // CRTP List data:
                 readonly TBase[] items;
@@ -538,7 +538,7 @@ namespace NetCore.Common
                 /// <param name="total">Total amount of items, stored in the <paramref name="items"/> array.</param>
                 /// <param name="flags">Flags, describing which <typeparamref name="TFilter"/> items are stored in <paramref name="items"/> array.</param>
                 /// <param name="stored">Amount of filtered items. When all will be found - iteration will stop earlier.</param>
-                internal Enumerator(
+                internal LookupEnumerator(
                     TBase[] items, PackingMode mode, Span<byte> bytes, Span<ushort> ushorts, Span<uint> uints, int total, // CRTP List data.
                     uint[] flags, int stored) // Lookup data.
                 {
