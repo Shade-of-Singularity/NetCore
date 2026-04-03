@@ -1,6 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-
-namespace NetCore
+﻿namespace NetCore
 {
     /// <summary>
     /// Helper class for working with state machines.
@@ -10,6 +8,6 @@ namespace NetCore
         /// <summary>
         /// Completed task returning <see cref="OperationResult.CancelledOrInvalid"/> value.
         /// </summary>
-        public static readonly UniTask<OperationResult> CompletedTask = UniTask.FromResult(OperationResult.CancelledOrInvalid);
+        public static readonly OperationResultTask CompletedTask = AsyncTask.FromResult(OperationResult.CancelledOrInvalid);
     }
 }

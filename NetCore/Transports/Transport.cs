@@ -1,7 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-using System.Threading;
-
-namespace NetCore.Transports
+﻿namespace NetCore.Transports
 {
     /// <summary>
     /// Base class which implements required functionality from <see cref="ITransport"/>s.
@@ -83,7 +80,7 @@ namespace NetCore.Transports
             get => m_StartTokenSource;
             set => m_StartTokenSource = value;
         }
-        UniTask<OperationResult> ITransport.StartOperation
+        OperationResultTask ITransport.StartOperation
         {
             get => m_StartOperation;
             set => m_StartOperation = value;
@@ -98,7 +95,7 @@ namespace NetCore.Transports
             get => m_ConnectionTokenSource;
             set => m_ConnectionTokenSource = value;
         }
-        UniTask<OperationResult> ITransport.ConnectionOperation
+        OperationResultTask ITransport.ConnectionOperation
         {
             get => m_ConnectionTask;
             set => m_ConnectionTask = value;
@@ -131,10 +128,10 @@ namespace NetCore.Transports
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         private CancellationTokenSource? m_StartTokenSource;
-        private UniTask<OperationResult> m_StartOperation = StateMachineHelpers.CompletedTask;
+        private OperationResultTask m_StartOperation = StateMachineHelpers.CompletedTask;
         private CancellationTokenSource? m_StopTokenSource;
         private CancellationTokenSource? m_ConnectionTokenSource;
-        private UniTask<OperationResult> m_ConnectionTask = StateMachineHelpers.CompletedTask;
+        private OperationResultTask m_ConnectionTask = StateMachineHelpers.CompletedTask;
         private CancellationTokenSource? m_DisconnectionTokenSource;
         private volatile MemberState m_State;
 
@@ -177,42 +174,42 @@ namespace NetCore.Transports
         /// <remarks>
         /// Managed by a <c>try</c> wrapper. Feel free to return <see cref="System.Exception"/>s if you need to.
         /// </remarks>
-        public virtual UniTask Start(IReadOnlyStartupArgs args, CancellationToken token)
+        public virtual AsyncTask Start(IReadOnlyStartupArgs args, CancellationToken token)
         {
             // Nothing here right now, but might be something in the future.
-            return UniTask.CompletedTask;
+            return AsyncTask.CompletedTask;
         }
 
         /// <inheritdoc cref="ITransport.Stop"/>
         /// <remarks>
         /// Managed by a <c>try</c> wrapper. Feel free to return <see cref="System.Exception"/>s if you need to.
         /// </remarks>
-        public virtual UniTask Stop()
+        public virtual AsyncTask Stop()
         {
             // Nothing here right now, but might be something in the future.
-            return UniTask.CompletedTask;
+            return AsyncTask.CompletedTask;
         }
 
         /// <inheritdoc cref="ITransport.Connect"/>
         /// <remarks>
         /// Managed by a <c>try</c> wrapper. Feel free to return <see cref="System.Exception"/>s if you need to.
         /// </remarks>
-        public virtual UniTask Connect(IReadOnlyConnectionArgs args, CancellationToken token)
+        public virtual AsyncTask Connect(IReadOnlyConnectionArgs args, CancellationToken token)
         {
             // Nothing here right now, but might be something in the future.
             IsConnected = true;
-            return UniTask.CompletedTask;
+            return AsyncTask.CompletedTask;
         }
 
         /// <inheritdoc cref="ITransport.Disconnect"/>
         /// <remarks>
         /// Managed by a <c>try</c> wrapper. Feel free to return <see cref="System.Exception"/>s if you need to.
         /// </remarks>
-        public virtual UniTask Disconnect()
+        public virtual AsyncTask Disconnect()
         {
             // Nothing here right now, but might be something in the future.
             IsConnected = false;
-            return UniTask.CompletedTask;
+            return AsyncTask.CompletedTask;
         }
     }
 }

@@ -1,8 +1,5 @@
-﻿using Cysharp.Threading.Tasks;
-using System;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Threading;
 
 namespace NetCore.Transports
 {
@@ -30,7 +27,7 @@ namespace NetCore.Transports
         /// <remarks>
         /// Managed completely by <see cref="ITransport"/>'s state machine!
         /// </remarks>
-        protected UniTask<OperationResult> StartOperation { get; set; }
+        protected OperationResultTask StartOperation { get; set; }
         /// <summary>
         /// Token source for cancelling an internal <see cref="InvokeStop"/> operation.
         /// </summary>
@@ -51,7 +48,7 @@ namespace NetCore.Transports
         /// <remarks>
         /// Managed completely by <see cref="ITransport"/>'s state machine!
         /// </remarks>
-        protected UniTask<OperationResult> ConnectionOperation { get; set; }
+        protected OperationResultTask ConnectionOperation { get; set; }
         /// <summary>
         /// Token source for cancelling an internal <see cref="InvokeDisconnect"/> operation.
         /// </summary>
@@ -78,7 +75,7 @@ namespace NetCore.Transports
         /// <see langword="true"/> if it was possible to start this <see cref="ITransport"/> and <paramref name="task"/> was provided for awaiting.
         /// <see langword="false"/> if <see cref="ITransport"/> was already started.
         /// </returns>
-        public bool TryInvokeStart(out UniTask<OperationResult> task, IReadOnlyStartupArgs args)
+        public bool TryInvokeStart(out OperationResultTask task, IReadOnlyStartupArgs args)
         {
             lock (Lock)
             {
@@ -98,21 +95,28 @@ namespace NetCore.Transports
         /// </summary>
         /// <param name="args"><see cref="StartupArgs"/> to use for starting this <see cref="ITransport"/></param>
         /// <returns>Startup task to await.</returns>
-        public UniTask<OperationResult> InvokeStart(IReadOnlyStartupArgs args)
+        public OperationResultTask InvokeStart(IReadOnlyStartupArgs args)
         {
             lock (Lock) return StartCoreUnlockedPreserved(args);
         }
 
         /// <inheritdoc cref="Start"/>
         /// Note: Returned task IS preserved, as it is cached in <see cref="StartOperation"/>.
-        private UniTask<OperationResult> StartCoreUnlockedPreserved(IReadOnlyStartupArgs args)
+        private OperationResultTask StartCoreUnlockedPreserved(IReadOnlyStartupArgs args)
         {
-            return StartOperation = InvokeStartInternal(StopCoreUnlockedUnpreserved(), args, StartTokenSource = new()).Preserve();
+            var task = StopCoreUnlockedUnpreserved();
+            // Creates token after calling a stop operation, because it will immediately cancel a startup token.
+            StartTokenSource = new();
+#if PRESERVE
+            return StartOperation = InvokeStartInternal(task, args, StartTokenSource).Preserve();
+#else
+            return StartOperation = InvokeStartInternal(task, args, StartTokenSource);
+#endif
         }
 
-        private async UniTask<OperationResult> InvokeStartInternal(UniTask<OperationResult> stopping, IReadOnlyStartupArgs args, CancellationTokenSource source)
+        private async OperationResultTask InvokeStartInternal(OperationResultTask stopping, IReadOnlyStartupArgs args, CancellationTokenSource source)
         {
-            try { await stopping; } catch { }
+            try { await stopping; } catch { /* Stop operation, of there is any, has to complete (finish, cancel) first. */ }
 
             lock (Lock)
             {
@@ -180,16 +184,20 @@ namespace NetCore.Transports
         /// Stops <see cref="ITransport"/> if it is currently running.
         /// </summary>
         /// <returns>Stop task to await a completion of.</returns>
-        public UniTask<OperationResult> InvokeStop()
+        public OperationResultTask InvokeStop()
         {
+#if PRESERVE
             lock (Lock) return StopCoreUnlockedUnpreserved().Preserve();
+#else
+            lock (Lock) return StopCoreUnlockedUnpreserved();
+#endif
         }
 
         /// <inheritdoc cref="InvokeStop"/>
         /// Note: Returned task is NOT preserved, as it is not cached anywhere.
-        private UniTask<OperationResult> StopCoreUnlockedUnpreserved()
+        private OperationResultTask StopCoreUnlockedUnpreserved()
         {
-            UniTask<OperationResult> cancelledStarting;
+            OperationResultTask cancelledStarting;
             if (StartTokenSource is null) cancelledStarting = StateMachineHelpers.CompletedTask;
             else
             {
@@ -204,10 +212,10 @@ namespace NetCore.Transports
             return InvokeStopInternal(DisconnectCoreUnlockedUnpreserved(), cancelledStarting, source);
         }
 
-        private async UniTask<OperationResult> InvokeStopInternal(UniTask<OperationResult> disconnecting, UniTask<OperationResult> cancelledStarting, CancellationTokenSource source)
+        private async OperationResultTask InvokeStopInternal(OperationResultTask disconnecting, OperationResultTask cancelledStarting, CancellationTokenSource source)
         {
-            try { await disconnecting; } catch { }
-            try { await cancelledStarting; } catch { }
+            try { await disconnecting; } catch { /* Disconnect operation, of there is any, has to complete (finish, cancel) first. */ }
+            try { await cancelledStarting; } catch { /* Any cancelled operations must wait as well. */ }
             lock (Lock)
             {
                 if (source.IsCancellationRequested)
@@ -269,7 +277,7 @@ namespace NetCore.Transports
         /// <see langword="true"/> if it was possible to start connecting this <see cref="ITransport"/> and <paramref name="task"/> was provided for awaiting.
         /// <see langword="false"/> if <see cref="ITransport"/> is already disconnected.
         /// </returns>
-        public bool TryInvokeConnect(out UniTask<OperationResult> task, IReadOnlyConnectionArgs args)
+        public bool TryInvokeConnect(out OperationResultTask task, IReadOnlyConnectionArgs args)
         {
             lock (Lock)
             {
@@ -290,14 +298,14 @@ namespace NetCore.Transports
         /// <param name="args"><see cref="ConnectionArgs"/> to use for connecting this <see cref="ITransport"/> to a remote host.</param>
         /// <returns>Connection operation to await.</returns>
         /// <exception cref="MemberIsNotStartedException">Member was not started before attempting a connection.</exception>
-        public UniTask<OperationResult> InvokeConnect(IReadOnlyConnectionArgs args)
+        public OperationResultTask InvokeConnect(IReadOnlyConnectionArgs args)
         {
             lock (Lock) return ConnectCoreUnlockedPreserved(args);
         }
 
         /// <inheritdoc cref="InvokeConnect"/>
         /// Note: Returned task IS preserved, as it is cached in <see cref="ConnectionOperation"/>.
-        private UniTask<OperationResult> ConnectCoreUnlockedPreserved(IReadOnlyConnectionArgs args)
+        private OperationResultTask ConnectCoreUnlockedPreserved(IReadOnlyConnectionArgs args)
         {
             switch (State)
             {
@@ -315,12 +323,16 @@ namespace NetCore.Transports
 
             CancellationTokenSource source = new();
             ConnectionTokenSource = source;
+#if PRESERVE
             return ConnectionOperation = InvokeConnectInternal(DisconnectCoreUnlockedUnpreserved(), args, source).Preserve();
+#else
+            return ConnectionOperation = InvokeConnectInternal(DisconnectCoreUnlockedUnpreserved(), args, source);
+#endif
         }
 
-        private async UniTask<OperationResult> InvokeConnectInternal(UniTask<OperationResult> disconnection, IReadOnlyConnectionArgs args, CancellationTokenSource source)
+        private async OperationResultTask InvokeConnectInternal(OperationResultTask disconnection, IReadOnlyConnectionArgs args, CancellationTokenSource source)
         {
-            try { await disconnection; } catch { }
+            try { await disconnection; } catch { /* Disconnection operation, of there is any, has to complete (finish, cancel) first. */ }
 
             lock (Lock)
             {
@@ -396,7 +408,7 @@ namespace NetCore.Transports
         /// <see langword="true"/> if <see cref="ITransport"/> was connected, disconnection operation started and <paramref name="task"/> was provided for awaiting.
         /// <see langword="false"/> if <see cref="ITransport"/> was not connected nor connecting, and no operation was started.
         /// </returns>
-        public bool TryInvokeDisconnect(out UniTask<OperationResult> task)
+        public bool TryInvokeDisconnect(out OperationResultTask task)
         {
             lock (Lock)
             {
@@ -409,7 +421,14 @@ namespace NetCore.Transports
                     case MemberState.Started_Disconnecting: task = StateMachineHelpers.CompletedTask; return false;
 
                     case MemberState.Started_Connecting:
-                    case MemberState.Started_Connected: task = DisconnectCoreUnlockedUnpreserved().Preserve(); return true;
+                    case MemberState.Started_Connected:
+
+#if PRESERVE
+                        task = DisconnectCoreUnlockedUnpreserved().Preserve();
+#else
+                        task = DisconnectCoreUnlockedUnpreserved();
+#endif
+                        return true;
 
                     default: throw new SwitchExpressionException(State);
                 }
@@ -421,20 +440,24 @@ namespace NetCore.Transports
         /// </summary>
         /// <returns>Disconnect operation to await.</returns>
         /// <exception cref="MemberIsNotStartedException">Member was not started before attempting a disconnection.</exception>
-        public UniTask<OperationResult> InvokeDisconnect()
+        public OperationResultTask InvokeDisconnect()
         {
+#if PRESERVE
             lock (Lock) return DisconnectCoreUnlockedUnpreserved().Preserve();
+#else
+            lock (Lock) return DisconnectCoreUnlockedUnpreserved();
+#endif
         }
 
         /// <inheritdoc cref="Disconnect"/>
         /// Note: Returned task is NOT preserved, as it is not cached anywhere.
-        private UniTask<OperationResult> DisconnectCoreUnlockedUnpreserved()
+        private OperationResultTask DisconnectCoreUnlockedUnpreserved()
         {
             switch (State)
             {
                 case MemberState.Stopped:
                 case MemberState.Starting:
-                case MemberState.Stopping: throw new MemberIsNotStartedException($"({GetType().Name}) is not started. Disconnection attempt is aborted.");
+                case MemberState.Stopping: // throw new MemberIsNotStartedException($"({GetType().Name}) is not started. Disconnection attempt is aborted.");
 
                 case MemberState.Started_Idle: return StateMachineHelpers.CompletedTask;
                 case MemberState.Started_Connecting:
@@ -444,7 +467,7 @@ namespace NetCore.Transports
                 default: throw new SwitchExpressionException(State);
             }
 
-            UniTask<OperationResult> cancelledConnection;
+            OperationResultTask cancelledConnection;
             if (ConnectionTokenSource is null) cancelledConnection = StateMachineHelpers.CompletedTask;
             else
             {
@@ -459,7 +482,7 @@ namespace NetCore.Transports
             return InvokeDisconnectInternal(cancelledConnection, source);
         }
 
-        private async UniTask<OperationResult> InvokeDisconnectInternal(UniTask<OperationResult> cancelledConnection, CancellationTokenSource source)
+        private async OperationResultTask InvokeDisconnectInternal(OperationResultTask cancelledConnection, CancellationTokenSource source)
         {
             try { await cancelledConnection; } catch { }
 

@@ -1,8 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-using NetCore.Transports;
-using System;
-using System.Net;
-using System.Runtime.CompilerServices;
+﻿using System.Net;
 
 namespace NetCore
 {
@@ -12,13 +8,22 @@ namespace NetCore
     public static class ClientExtensions
     {
         /// <summary>
+        /// Starts <paramref name="client"/> on a <see cref="IPAddress.Any"/> with local port assigned automatically.
+        /// </summary>
+        /// <param name="client"><see cref="Client"/> to provide an <see cref="IPEndPoint"/> to.</param>
+        public static OperationResultTask Start(this Client client)
+        {
+            return client.Start(args => args.LocalIPEndPoint = new IPEndPoint(IPAddress.Any, 0));
+        }
+
+        /// <summary>
         /// Starts <paramref name="client"/> on a <see cref="IPAddress.Any"/> with provided <paramref name="localPort"/>.
         /// </summary>
         /// <param name="client"><see cref="Client"/> to provide an <see cref="IPEndPoint"/> to.</param>
         /// <param name="localPort">
         /// Port to bind all transports to. Transports that rely on UID (such as SteamNetworking) might use another port instead.
         /// </param>
-        public static UniTask<OperationResult> Start(this Client client, ushort localPort)
+        public static OperationResultTask Start(this Client client, ushort localPort)
         {
             return client.Start(args => args.LocalIPEndPoint = new IPEndPoint(IPAddress.Any, localPort));
         }
@@ -31,7 +36,7 @@ namespace NetCore
         /// <param name="localPort">
         /// Port to bind all transports to. Transports that rely on UID (such as SteamNetworking) might use another port instead.
         /// </param>
-        public static UniTask<OperationResult> Start(this Client client, IPAddress localAddress, ushort localPort)
+        public static OperationResultTask Start(this Client client, IPAddress localAddress, ushort localPort)
         {
             return client.Start(args => args.LocalIPEndPoint = new(localAddress, localPort));
         }
@@ -41,7 +46,7 @@ namespace NetCore
         /// </summary>
         /// <param name="client"><see cref="Client"/> to provide an <see cref="IPEndPoint"/> to.</param>
         /// <param name="localEndPoint">Local end-point to bind all transports to.</param>
-        public static UniTask<OperationResult> Start(this Client client, IPEndPoint localEndPoint)
+        public static OperationResultTask Start(this Client client, IPEndPoint localEndPoint)
         {
             return client.Start(args => args.LocalIPEndPoint = localEndPoint);
         }
@@ -52,7 +57,7 @@ namespace NetCore
         /// <param name="client"><see cref="Client"/> to connect to remote end-point.</param>
         /// <param name="remoteAddress">Remote address to connect a <paramref name="client"/> to.</param>
         /// <param name="remotePort">Remote port to connect to.</param>
-        public static UniTask<OperationResult> Connect(this Client client, IPAddress remoteAddress, ushort remotePort)
+        public static OperationResultTask Connect(this Client client, IPAddress remoteAddress, ushort remotePort)
         {
             return client.Connect(args => args.RemoteIPEndPoint = new(remoteAddress, remotePort));
         }
@@ -62,7 +67,7 @@ namespace NetCore
         /// </summary>
         /// <param name="client"><see cref="Client"/> to connect to remote end-point.</param>
         /// <param name="remoteEndPoint">Remote end-point to bind all transports to.</param>
-        public static UniTask<OperationResult> Connect(this Client client, IPEndPoint remoteEndPoint)
+        public static OperationResultTask Connect(this Client client, IPEndPoint remoteEndPoint)
         {
             return client.Connect(args => args.RemoteIPEndPoint = remoteEndPoint);
         }

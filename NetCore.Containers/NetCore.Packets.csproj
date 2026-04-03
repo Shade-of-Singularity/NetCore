@@ -12,11 +12,20 @@
       
     </Description>
     <LangVersion>12</LangVersion>
+    <Configurations>Debug;Release;Godot Debug;Godot Release;Unity Debug;Unity Release</Configurations>
   </PropertyGroup>
 
-  <ItemGroup>
+  <!--Avoids referencing main project while Godot is not supported-->
+  <ItemGroup Condition="'$(GodotTarget)'!='true'">
     <ProjectReference Include="..\NetCore\NetCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="UniTask" Version="2.5.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\NetCore\AsyncTasks\*.cs" Link="AsyncTasks\%(Filename)%(Extension)"/>
   </ItemGroup>
 
 </Project>

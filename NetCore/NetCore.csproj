@@ -2,7 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <ImplicitUsings>disable</ImplicitUsings>
+    <TargetFramework Condition="'$(GodotTarget)'=='true'">net8.0</TargetFramework>
+    <TargetFramework Condition="'$(UnityTarget)'=='true'">netstandard2.1</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings> <!--Enabled for implicitly referencing all threading libraries, e.g. AsyncTask, GDTask, etc.-->
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <Title>NetCore</Title>
@@ -15,7 +17,8 @@
     </Description>
     <LangVersion>12</LangVersion>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-  </PropertyGroup>
+    <Configurations>Debug;Release;Godot Debug;Godot Release;Unity Debug;Unity Release</Configurations>
+  </PropertyGroup> 
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.3.0">
@@ -29,15 +32,22 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
-    <PackageReference Include="UniTask" Version="2.5.10" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="AutoGen\" />
+  <ItemGroup Condition="'$(GodotTarget)'=='true'">
+    <PackageReference Include="GDTask" Version="2.0.2" />
+    <Using Include="GodotTask" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UnityTarget)'=='true'">
+    <PackageReference Include="UniTask" Version="2.5.10" />
+    <Using Include="Cysharp.Threading.Tasks" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NetCore.InternalAutoGen\NetCore.InternalAutoGen.csproj" OutputItemType="Analyzer" />
   </ItemGroup>
+  
+  <!--The rest-->
 
 </Project>

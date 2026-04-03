@@ -1,8 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Threading;
+﻿using System.Runtime.InteropServices;
 
 namespace NetCore.Transports.Loopback
 {
@@ -36,16 +32,16 @@ namespace NetCore.Transports.Loopback
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <inheritdoc/>
-        public override UniTask Connect(IReadOnlyConnectionArgs args, CancellationToken token)
+        public override AsyncTask Connect(IReadOnlyConnectionArgs args, CancellationToken token)
         {
             base.Connect(args, token);
             if (IsServerSide)
             {
-                return UniTask.CompletedTask;
+                return AsyncTask.CompletedTask;
             }
 
             var ep = args.RemoteIPEndPoint;
-            if (ep is null) return UniTask.CompletedTask;
+            if (ep is null) return AsyncTask.CompletedTask;
             if (!Servers.TryGet(ep, out var server))
             {
                 throw new KeyNotFoundException($"ClientData-side {nameof(LoopbackTransport)} cannot find an active server under a port ({ep.Port}).");
@@ -53,7 +49,7 @@ namespace NetCore.Transports.Loopback
 
             if (!server.TryGetReliableTransport(out LoopbackTransport? remote))
             {
-                return UniTask.CompletedTask;
+                return AsyncTask.CompletedTask;
             }
 
             lock (m_Loopbacks)
@@ -67,11 +63,11 @@ namespace NetCore.Transports.Loopback
                 }
             }
 
-            return UniTask.CompletedTask;
+            return AsyncTask.CompletedTask;
         }
 
         /// <inheritdoc/>
-        public override UniTask Disconnect()
+        public override AsyncTask Disconnect()
         {
             lock (m_Loopbacks)
             {

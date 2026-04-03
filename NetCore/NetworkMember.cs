@@ -1,10 +1,7 @@
-using Cysharp.Threading.Tasks;
 using NetCore.Common;
 using NetCore.Transports;
-using System;
 using System.Buffers;
 using System.Runtime.CompilerServices;
-using System.Threading;
 
 namespace NetCore
 {
@@ -324,7 +321,7 @@ namespace NetCore
         /// This will reset their state back to uninitialized state.
         /// Note: Remove the note unless transactional system is implemented in <see cref="ITransport.InvokeStart"/>.
         /// </remarks>
-        protected virtual async UniTask<OperationResult> StartOperation(StartupArgs args, CancellationToken token)
+        protected virtual async OperationResultTask StartOperation(StartupArgs args, CancellationToken token)
         {
             // TODO: Support multi-threaded startup.
             ITransport[] transports = RentTransports(out int total);
@@ -371,7 +368,7 @@ namespace NetCore
         /// <para>This operation cannot be cancelled.</para>
         /// Instead - all other "activation" operations (e.g. <see cref="StartOperation"/>) will wait for this one to complete.
         /// </remarks>
-        protected virtual async UniTask<OperationResult> StopOperation()
+        protected virtual async OperationResultTask StopOperation()
         {
             // TODO: transports can change between start and stop calls.
             //  In case this happens - on removal, Disconnect and Stop operations should run on a transport.
@@ -408,7 +405,7 @@ namespace NetCore
         /// Additionally - it will physically wait for this operation to stop.
         /// This was bade for better reliability with async operations.
         /// </remarks>
-        protected virtual async UniTask<OperationResult> ConnectOperation(ConnectionArgs args, CancellationToken token)
+        protected virtual async OperationResultTask ConnectOperation(ConnectionArgs args, CancellationToken token)
         {
             ITransport[] transports = RentTransports(out int total);
 
@@ -452,7 +449,7 @@ namespace NetCore
         /// This operation cannot be cancelled.
         /// Instead - all other "activation" operations (e.g. <see cref="StartOperation"/>) will wait for this one to complete.
         /// </remarks>
-        protected virtual async UniTask<OperationResult> DisconnectOperation()
+        protected virtual async OperationResultTask DisconnectOperation()
         {
             // TODO: transports can change between start and stop calls.
             //  In case this happens - on removal, Disconnect and Stop operations should run on a transport.
@@ -474,6 +471,7 @@ namespace NetCore
                 ReturnTransports(transports);
             }
         }
+
 
 
 

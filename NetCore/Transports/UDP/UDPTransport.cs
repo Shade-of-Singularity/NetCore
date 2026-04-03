@@ -1,11 +1,6 @@
-﻿using Cysharp.Threading.Tasks;
-using System;
-using System.Collections.Generic;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace NetCore.Transports.UDP
 {
@@ -118,7 +113,7 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public override UniTask Start(IReadOnlyStartupArgs args, CancellationToken token)
+        public override AsyncTask Start(IReadOnlyStartupArgs args, CancellationToken token)
         {
             // Socket.Bind to either ANY address or ANY port changes local end-point.
             // To handle this, we update registered end-point as well.
@@ -135,7 +130,7 @@ namespace NetCore.Transports.UDP
             base.Start(args, token);
             if (!args.TryGet(StartupArgs.LocalIPEndPointKey, out IPEndPoint? endPoint))
             {
-                return UniTask.CompletedTask;
+                return AsyncTask.CompletedTask;
             }
 
             lock (_lock)
@@ -145,11 +140,11 @@ namespace NetCore.Transports.UDP
                 _ = ListenForMessages(Socket, Source.Token); // TODO: Activate only if transport is used for messages (?)
             }
 
-            return UniTask.CompletedTask;
+            return AsyncTask.CompletedTask;
         }
 
         /// <inheritdoc/>
-        public override UniTask Stop()
+        public override AsyncTask Stop()
         {
             lock (_lock)
             {
@@ -206,7 +201,7 @@ namespace NetCore.Transports.UDP
         }
 
         /// <inheritdoc/>
-        public override UniTask Connect(IReadOnlyConnectionArgs args, CancellationToken token)
+        public override AsyncTask Connect(IReadOnlyConnectionArgs args, CancellationToken token)
         {
             lock (_lock)
             {
@@ -217,11 +212,11 @@ namespace NetCore.Transports.UDP
                 }
             }
 
-            return UniTask.CompletedTask;
+            return AsyncTask.CompletedTask;
         }
 
         /// <inheritdoc/>
-        public override UniTask Disconnect()
+        public override AsyncTask Disconnect()
         {
             lock (_lock)
             {

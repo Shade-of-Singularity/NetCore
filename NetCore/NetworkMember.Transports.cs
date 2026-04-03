@@ -60,12 +60,6 @@ namespace NetCore
             lock (_lock) return Transports.Has<TTransport>();
         }
 
-        /// <inheritdoc cref="HasTransport{TTransport}()"/>
-        protected bool HasTransportCore<TTransport>() where TTransport : ITransport
-        {
-            return Transports.Has<TTransport>();
-        }
-
         /// <summary>
         /// Checks whether transport of a specified type is registered and belongs to a specific sending mode group.
         /// </summary>
@@ -80,16 +74,6 @@ namespace NetCore
                 _ => throw new SwitchExpressionException(mode),
             };
         }
-
-        /// <inheritdoc cref="HasTransport{TTransport}(SendingMode)"/>
-        //protected bool HasTransportCore<TTransport>(SendingMode mode) where TTransport : ITransport => mode switch
-        //{
-        //    SendingMode.Unreliable => UnreliableTransports.Has<TTransport>(),
-        //    SendingMode.Reliable => ReliableTransports.Has<TTransport>(),
-        //    SendingMode.Sequential => SequentialTransports.Has<TTransport>(),
-        //    SendingMode.Resilient => ResilientTransports.Has<TTransport>(),
-        //    _ => throw new SwitchExpressionException(mode),
-        //};
 
         /// <summary>
         /// Checks if there is any transport, at all, than will be able to handle a given <see cref="SendingMode"/>.
@@ -106,16 +90,6 @@ namespace NetCore
                 _ => throw new SwitchExpressionException(mode),
             };
         }
-
-        /// <inheritdoc cref="HasAnyTransport(SendingMode)"/>
-        //public bool HasAnyTransportCore(SendingMode mode) => mode switch
-        //{
-        //    SendingMode.Unreliable => UnreliableTransports.Count > 0,
-        //    SendingMode.Reliable => ReliableTransports.Count > 0,
-        //    SendingMode.Sequential => SequentialTransports.Count > 0,
-        //    SendingMode.Resilient => ResilientTransports.Count > 0,
-        //    _ => throw new SwitchExpressionException(mode),
-        //};
         #endregion
     }
 }

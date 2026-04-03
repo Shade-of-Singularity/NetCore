@@ -22,7 +22,7 @@ namespace NetCore.Common
             set
             {
                 if (value < 0)
-                    throw new ArgumentOutOfRangeException($"{nameof(MaxCapacity)} is less than zero.");
+                    throw new ArgumentOutOfRangeException(nameof(value), $"{nameof(MaxCapacity)} is less than zero.");
 
                 lock (_lock)
                 {
@@ -73,7 +73,7 @@ namespace NetCore.Common
         public static void SetCapacity(int capacity)
         {
             if (capacity < 0)
-                throw new ArgumentOutOfRangeException($"{nameof(Capacity)} is less than zero.");
+                throw new ArgumentOutOfRangeException(nameof(capacity), $"{nameof(Capacity)} is less than zero.");
 
             lock (m_Pool)
             {

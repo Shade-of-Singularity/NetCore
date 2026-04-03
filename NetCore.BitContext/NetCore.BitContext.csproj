@@ -13,10 +13,16 @@
       Ensures 0 heap allocations on the read and write, when used correctly.
     </Description>
     <LangVersion>12</LangVersion>
+    <Configurations>Debug;Release;Godot Debug;Godot Release;Unity Debug;Unity Release</Configurations>
+    <NoWarn>$(NoWarn);NU1201;NU1701</NoWarn>
   </PropertyGroup>
+  
+  <!--Avoids referencing main project while Godot is not supported-->
+  <ItemGroup Condition="'$(GodotTarget)'!='true'">
+    <ProjectReference Include="..\NetCore\NetCore.csproj" />
+  </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NetCore\NetCore.csproj" />
     <PackageReference Include="UniTask" Version="2.5.10" />
   </ItemGroup>
 
@@ -24,6 +30,10 @@
     <Reference Include="ComputerysBitStream">
       <HintPath>..\..\..\..\CSharp\ComputerysBitStream\ComputerysBitStream\bin\Release\netstandard2.1\ComputerysBitStream.dll</HintPath>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\NetCore\AsyncTasks\*.cs" Link="AsyncTasks\%(Filename)%(Extension)"/>
   </ItemGroup>
 
 </Project>

@@ -50,7 +50,6 @@ namespace NetCore
         /// .                                          SendingMode - Variations
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-
         /// <inheritdoc cref="Send{TTransport}(ITransportBasedSendNetworkMessaging, SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         public static void Send<TTransport>(ITransportBasedSendNetworkMessaging target, SendingMode mode, in ReadOnlySpan<byte> datagram)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport

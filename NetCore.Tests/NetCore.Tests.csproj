@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -11,20 +11,26 @@
       Tests for NetCore.
     </Description>
     <LangVersion>12</LangVersion>
+    <Configurations>Debug;Release;Godot Debug;Godot Release;Unity Debug;Unity Release</Configurations>
   </PropertyGroup>
+
+  <!--Avoids referencing main project while Godot is not supported-->
+  <ItemGroup Condition="'$(GodotTarget)'!='true'">
+    <ProjectReference Include="..\NetCore\NetCore.csproj" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="MSTest" Version="3.6.4" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\NetCore\NetCore.csproj" />
     <PackageReference Include="UniTask" Version="2.5.10" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\NetCore\AsyncTasks\*.cs" Link="AsyncTasks\%(Filename)%(Extension)"/>
   </ItemGroup>
 
 </Project>

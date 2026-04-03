@@ -4,4 +4,39 @@
     <AssemblyVersion>0.1.0.0</AssemblyVersion>
     <Version>$(AssemblyVersion)</Version>
   </PropertyGroup>
+
+  <!--Unity uses GDTask for tasks-->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Godot Debug|AnyCPU'">
+    <DefineConstants>$(DefineConstants);DEBUG;GODOT;PRESERVE;VOIDTASK</DefineConstants>
+    <TargetFramework>net8.0</TargetFramework>
+	<GodotTarget>true</GodotTarget>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Godot Release|AnyCPU'">
+    <DefineConstants>$(DefineConstants);GODOT;PRESERVE;VOIDTASK</DefineConstants>
+    <TargetFramework>net8.0</TargetFramework>
+	<GodotTarget>true</GodotTarget>
+  </PropertyGroup>
+
+  <!--Unity uses AsyncTask for tasks-->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Unity Debug|AnyCPU'">
+    <DefineConstants>$(DefineConstants);DEBUG;UNITY;PRESERVE;VOIDTASK</DefineConstants>
+    <TargetFramework>netstandard2.1</TargetFramework>
+	<UnityTarget>true</UnityTarget>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Unity Release|AnyCPU'">
+    <DefineConstants>$(DefineConstants);UNITY;PRESERVE;VOIDTASK</DefineConstants>
+    <TargetFramework>netstandard2.1</TargetFramework>
+	<UnityTarget>true</UnityTarget>
+  </PropertyGroup>
+  
+  <!--System falls back to C# Task otherwise-->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DefineConstants>$(DefineConstants)</DefineConstants>
+  </PropertyGroup>
 </Project>

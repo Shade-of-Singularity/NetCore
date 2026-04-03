@@ -4,7 +4,13 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <OutputType>Exe</OutputType>
+    <Configurations>Debug;Release;Godot Debug;Godot Release;Unity Debug;Unity Release</Configurations>
   </PropertyGroup>
+
+  <!--Avoids referencing main project while Godot is not supported-->
+  <ItemGroup Condition="'$(GodotTarget)'!='true'">
+    <ProjectReference Include="..\NetCore\NetCore.csproj" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
@@ -12,8 +18,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NetCore\NetCore.csproj" />
     <PackageReference Include="UniTask" Version="2.5.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\NetCore\AsyncTasks\*.cs" Link="AsyncTasks\%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

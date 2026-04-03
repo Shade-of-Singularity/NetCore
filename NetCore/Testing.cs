@@ -53,6 +53,7 @@ namespace NetCore
             Console.WriteLine($"UID (server): {header.GetULong<UIDHeader>()}");
             Console.WriteLine($"Alignment (server): {header.GetEnum<AlignmentHeader, Alignment>()}");
             server.SendReliable(default, ref header);
+            
 
             client.SendReliable(stackalloc byte[8], Construct);
             static void Construct(ref Header header)

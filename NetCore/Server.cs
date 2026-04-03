@@ -1,7 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-using NetCore.Transports;
-using System;
-using System.Threading;
+﻿using NetCore.Transports;
 
 namespace NetCore
 {
@@ -37,7 +34,7 @@ namespace NetCore
         /// Starts a server and binds all registered transports to a provided <see cref="StartupArgs.LocalIPEndPoint"/>.
         /// </summary>
         /// <inheritdoc/>
-        protected override async UniTask<OperationResult> StartOperation(StartupArgs args, CancellationToken token)
+        protected override async OperationResultTask StartOperation(StartupArgs args, CancellationToken token)
         {
             OperationResult result = await base.StartOperation(args, token);
             if (result == OperationResult.Success)
@@ -50,7 +47,7 @@ namespace NetCore
         /// Disconnects all the players, stops the server, and unbinds all transports.
         /// </summary>
         /// <inheritdoc/>
-        protected override UniTask<OperationResult> StopOperation()
+        protected override OperationResultTask StopOperation()
         {
             Servers.Remove(this);
             return base.StopOperation();

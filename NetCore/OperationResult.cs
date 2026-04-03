@@ -1,6 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
-
-namespace NetCore
+﻿namespace NetCore
 {
     /// <summary>
     /// Result of the operation execution.
@@ -9,7 +7,7 @@ namespace NetCore
     {
         /// <summary>
         /// This state should be ignored.
-        /// Operation was either cancelled by another operation, or operation is a completed <see cref="UniTask.FromResult{T}(T)"/> task.
+        /// Operation was either cancelled by another operation, or operation is a completed task.
         /// </summary>
         CancelledOrInvalid,
         /// <summary>

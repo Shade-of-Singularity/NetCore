@@ -44,6 +44,17 @@ dotnet_diagnostic.S101.severity = none
 # Justification: Sometimes separation helps with clarity.
 dotnet_diagnostic.S1066.severity = none
 
+# S3267: Loops should be simplified with "LINQ" expressions
+# Justification: A lot of the systems are optimized for a usage with foreach.
+#  Decision to continue using foreach loops instead of .Select(...) can be reviewed
+#  After additional benchmarking and tests on a library itself.
+#  As of right now we opt for using foreach loops instead to not rewrite it back for optimization later.
+dotnet_diagnostic.S3267.severity = none
+
+# S2292: Trivial properties should be auto-implemented
+# Justification: Such usage is needed by ITranport.StateMachine.cs and similar.
+dotnet_diagnostic.S2292.severity = none
+
 [*.{cs,vb}]
 #### Naming styles ####
 

@@ -11,6 +11,7 @@
     <Description>
       AutoGen methods for internal infrastructure.
     </Description>
+    <Configurations>Debug;Release;Godot Debug;Godot Release;Unity Debug;Unity Release</Configurations>
   </PropertyGroup>
   
   <ItemGroup>

@@ -12,7 +12,13 @@
       Small extension over NetCore to support UnixDomain sockets.
     </Description>
     <LangVersion>12</LangVersion>
+    <Configurations>Debug;Release;Godot Debug;Godot Release;Unity Debug;Unity Release</Configurations>
   </PropertyGroup>
+
+  <!--Avoids referencing main project while Godot is not supported-->
+  <ItemGroup Condition="'$(GodotTarget)'!='true'">
+    <ProjectReference Include="..\NetCore\NetCore.csproj" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.3.0">
@@ -27,6 +33,10 @@
     </PackageReference>
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <PackageReference Include="UniTask" Version="2.5.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\NetCore\AsyncTasks\*.cs" Link="AsyncTasks\%(Filename)%(Extension)"/>
   </ItemGroup>
 
 </Project>

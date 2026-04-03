@@ -1,8 +1,5 @@
-﻿using Cysharp.Threading.Tasks;
-using System;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Threading;
 
 namespace NetCore.Transports
 {
@@ -206,7 +203,8 @@ namespace NetCore.Transports
                 {
                     if (Holder is null)
                     {
-                        throw new NullReferenceException($"Reference to a parent {nameof(NetworkMember)} in an attached {nameof(ITransport)} is missing!");
+                        IsAttached = false;
+                        return true;
                     }
 
                     try
@@ -238,16 +236,16 @@ namespace NetCore.Transports
         protected void Detach(NetworkMember member);
 
         /// <inheritdoc cref="InvokeStart"/>
-        protected UniTask Start(IReadOnlyStartupArgs args, CancellationToken token);
+        protected AsyncTask Start(IReadOnlyStartupArgs args, CancellationToken token);
 
         /// <inheritdoc cref="InvokeStop"/>
-        protected UniTask Stop();
+        protected AsyncTask Stop();
 
         /// <inheritdoc cref="InvokeConnect"/>
-        protected UniTask Connect(IReadOnlyConnectionArgs args, CancellationToken token);
+        protected AsyncTask Connect(IReadOnlyConnectionArgs args, CancellationToken token);
 
         /// <inheritdoc cref="InvokeDisconnect"/>
-        protected UniTask Disconnect();
+        protected AsyncTask Disconnect();
 
         /// <summary>
         /// Checks if <see cref="ITransport"/> manages a specific <paramref name="connection"/> at the moment.

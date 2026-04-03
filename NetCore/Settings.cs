@@ -94,7 +94,7 @@ namespace NetCore
         /// are accessed very frequently from multiple threads or from within one thread.
         /// </summary>
         /// <remarks>
-        /// When protections are enabled - system will use <see cref="Cysharp.Threading.Tasks.UniTask.Yield"/>
+        /// When protections are enabled - system will use <see cref="Cysharp.Threading.Tasks.AsyncTask.Yield"/>
         /// on some calls which return tasks to await (e.g. <see cref="NetworkMember.Start(StartupArgsProvider?, bool)"/>).
         /// If another thread accesses the same <see cref="NetworkMember"/>
         /// - small delay the yield produces make system register only the latter method.
