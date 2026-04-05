@@ -196,7 +196,7 @@
         /// </remarks>
         public virtual AsyncTask Connect(IReadOnlyConnectionArgs args, CancellationToken token)
         {
-            // Nothing here right now, but might be something in the future.
+            // TODO: Move state change elsewhere if needed.
             IsConnected = true;
             return AsyncTask.CompletedTask;
         }
@@ -207,7 +207,6 @@
         /// </remarks>
         public virtual AsyncTask Disconnect()
         {
-            // Nothing here right now, but might be something in the future.
             IsConnected = false;
             return AsyncTask.CompletedTask;
         }

@@ -23,7 +23,7 @@ namespace NetCore.Transports
         /// <param name="toExclude">Connection to avoid sending a <paramref name="datagram"/> to.</param>
         public void SendResilientExcluding(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude);
         /// <summary>
-        /// Resiliently sends <paramref name="datagram"/> to a target connection.
+        /// Resiliently sends <paramref name="datagram"/> to a <paramref name="target"/> connection.
         /// </summary>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="header">Header of the message.</param>

@@ -132,7 +132,7 @@ namespace NetCore
         public void Dispose()
         {
             if (disposed)
-                throw new ObjectDisposedException(nameof(Flags));
+                return;
 
             switch (locks)
             {

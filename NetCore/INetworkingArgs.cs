@@ -1,12 +1,11 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 
 namespace NetCore
 {
     /// <summary>
     /// Base interface for both <see cref="IReadOnlyStartupArgs"/> and <see cref="IReadOnlyConnectionArgs"/>
     /// </summary>
-    public interface IReadOnlyNetworkingArgs : IDictionary<object, object?> { }
+    public interface IReadOnlyNetworkingArgs : IReadOnlyDictionary<object, object?> { }
 
     /// <summary>
     /// Extensions for simpler <see cref="IReadOnlyNetworkingArgs"/> usage.

@@ -1,5 +1,4 @@
 ﻿using NetCore.Transports;
-using System;
 using System.Runtime.CompilerServices;
 
 namespace NetCore

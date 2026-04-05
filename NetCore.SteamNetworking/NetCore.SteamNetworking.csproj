@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework Condition="'$(GodotTarget)'=='true'">net8.0</TargetFramework>
+    <TargetFramework Condition="'$(UnityTarget)'=='true'">netstandard2.1</TargetFramework>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <Title>NetCore Steam Networking</Title>
+    <Authors>SoG, DarkJune</Authors>
+    <Company>Shade of Singularity</Company>
+    <Description>
+      Provides built-in ways for using SteamNetworking in your project.
+    </Description>
+    <LangVersion>12</LangVersion>
+    <Configurations>Debug;Release;Godot Debug;Godot Release;Unity Debug;Unity Release</Configurations>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(GodotTarget)'=='true'">
+    <PackageReference Include="GDTask" Version="2.0.2" />
+    <Using Include="GodotTask" />
+    <Using Include="Godot" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UnityTarget)'=='true'">
+    <PackageReference Include="UniTask" Version="2.5.10" />
+    <Using Include="Cysharp.Threading.Tasks" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Steamworks.NET" Version="2024.8.0" />
+    <PackageReference Include="UniTask" Version="2.5.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\NetCore\AsyncTasks\*.cs" Link="AsyncTasks\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetCore\NetCore.csproj" />
+  </ItemGroup>
+
+</Project>
