@@ -1,7 +1,8 @@
-﻿using System;
-
-namespace NetCore.Transports.Unix
+﻿namespace NetCore.Transports.Unix
 {
+    /// <summary>
+    /// Transport for fast local connections, using <see cref="System.Net.Sockets.UnixDomainSocketEndPoint"/>s.
+    /// </summary>
     public sealed class UnixTransport : Transport, IReliableTransport, IUnreliableTransport
     {
         /// <inheritdoc/>
@@ -54,30 +55,6 @@ namespace NetCore.Transports.Unix
 
         /// <inheritdoc/>
         public void SendUnreliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public void SendReliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public void HandleReliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public void HandleUnreliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
         {
             throw new NotImplementedException();
         }

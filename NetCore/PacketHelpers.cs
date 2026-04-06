@@ -23,7 +23,7 @@ namespace NetCore
         /// <returns>
         /// Amount of bytes, encoded into a <paramref name="buffer"/>.
         /// </returns>
-        public static int Encode(Span<byte> buffer, HeaderFlags flags, in Header header, ReadOnlySpan<byte> datagram)
+        public static int Encode(Span<byte> buffer, scoped ReadOnlySpan<byte> datagram, in Header header, HeaderFlags flags)
         {
             int bytes = 0;
 
@@ -56,7 +56,7 @@ namespace NetCore
         /// </returns>
         /// <exception cref="NotImplementedException">This method is pending an implementation, as it is under review.</exception>
         /// <inheritdoc cref="Encode"/>
-        public static bool TryEncode(Span<byte> buffer, HeaderFlags flags, in Header header, ReadOnlySpan<byte> datagram, out int bytes)
+        public static bool TryEncode(Span<byte> buffer, ReadOnlySpan<byte> datagram, in Header header, HeaderFlags flags, out int bytes)
         {
             throw new NotImplementedException();
         }
@@ -65,10 +65,10 @@ namespace NetCore
         /// Decodes a message, previously encoded using <see cref="Encode"/> method.
         /// </summary>
         /// <param name="buffer">Buffer to read.</param>
-        /// <param name="flags">Flags, decoded from <paramref name="buffer"/>.</param>
-        /// <param name="header">Header, decoded from <paramref name="buffer"/>.</param>
         /// <param name="datagram">Byte content, decoded from <paramref name="buffer"/>.</param>
-        public static void Decode(ReadOnlySpan<byte> buffer, out HeaderFlags flags, out Header header, out ReadOnlySpan<byte> datagram)
+        /// <param name="header">Header, decoded from <paramref name="buffer"/>.</param>
+        /// <param name="flags">Flags, decoded from <paramref name="buffer"/>.</param>
+        public static void Decode(ReadOnlySpan<byte> buffer, out ReadOnlySpan<byte> datagram, out Header header, out HeaderFlags flags)
         {
             flags = (HeaderFlags)buffer[0];
 

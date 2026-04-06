@@ -1,6 +1,5 @@
 ﻿using NetCore.Transports.TCP;
 using NetCore.Transports.UDP;
-using System;
 
 namespace NetCore.Transports.Special
 {

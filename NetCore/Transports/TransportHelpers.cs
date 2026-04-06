@@ -32,7 +32,7 @@ namespace NetCore.Transports
                 return false;
             }
 
-            throw new Exception($"Cannot resolve {nameof(initializer)} type - it's not a {nameof(Server)} nor a {nameof(Client)}.");
+            throw new InvalidOperationException($"Cannot resolve {nameof(initializer)} type - it's not a {nameof(Server)} nor a {nameof(Client)}.");
         }
     }
 }

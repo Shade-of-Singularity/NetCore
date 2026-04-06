@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 
@@ -34,9 +34,10 @@ namespace NetCore
         /// <c>true</c> - if <see cref="RemoteIPEndPoint"/> was found and it is not <c>null</c>.
         /// <c>false</c> - otherwise.
         /// </returns>
-        public bool TryGetRemoteIPEndPoint(out IPEndPoint? endPoint)
+        public bool TryGetRemoteIPEndPoint([NotNullWhen(true)] out IPEndPoint? endPoint)
         {
-            return (endPoint = RemoteIPEndPoint) is not null;
+            endPoint = RemoteIPEndPoint;
+            return endPoint is not null;
         }
         /// <summary>
         /// Attempts to retrieve <see cref="RemoteUnixEndPoint"/> from <see cref="IReadOnlyStartupArgs"/>.
@@ -48,7 +49,8 @@ namespace NetCore
         /// </returns>
         public bool TryGetRemoteUnixEndPoint(out UnixDomainSocketEndPoint? endPoint)
         {
-            return (endPoint = RemoteUnixEndPoint) is not null;
+            endPoint = RemoteUnixEndPoint;
+            return endPoint is not null;
         }
         /// <summary>
         /// Attempts to retrieve <see cref="TemporaryIdentifier"/> from <see cref="IReadOnlyStartupArgs"/>.
@@ -60,7 +62,8 @@ namespace NetCore
         /// </returns>
         public bool TryGetTemporaryIdentifier(out Guid identifier)
         {
-            return (identifier = TemporaryIdentifier) != Guid.Empty;
+            identifier = TemporaryIdentifier;
+            return identifier != Guid.Empty;
         }
     }
 }

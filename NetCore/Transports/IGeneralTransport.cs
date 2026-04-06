@@ -86,27 +86,5 @@ namespace NetCore.Transports
                 default: throw new SwitchExpressionException(mode);
             }
         }
-
-        /// <summary>
-        /// Sends <paramref name="datagram"/> to a remote host, specified with <paramref name="args"/>, using given <paramref name="mode"/>.
-        /// </summary>
-        /// <param name="transport">Transport to use for sending.</param>
-        /// <param name="mode">Sending mode to use.</param>
-        /// <param name="datagram">Datagram to send.</param>
-        /// <param name="header">Header of the message.</param>
-        /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        /// <param name="args">Temporary connection args used for this connection in particular.</param>
-        public static void SendTo(
-            this IGeneralTransport transport, SendingMode mode, scoped ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
-        {
-            switch (mode)
-            {
-                case SendingMode.Unreliable: transport.SendUnreliableTo(datagram, in header, in flags, args); return;
-                case SendingMode.Reliable: transport.SendReliableTo(datagram, in header, in flags, args); return;
-                case SendingMode.Sequential: transport.SendSequentialTo(datagram, in header, in flags, args); return;
-                case SendingMode.Resilient: transport.SendResilientTo(datagram, in header, in flags, args); return;
-                default: throw new SwitchExpressionException(mode);
-            }
-        }
     }
 }

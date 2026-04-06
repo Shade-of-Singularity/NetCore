@@ -1,6 +1,4 @@
 ﻿using NetCore.Transports.UDP;
-using System;
-using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
 namespace NetCore.Transports.TCP

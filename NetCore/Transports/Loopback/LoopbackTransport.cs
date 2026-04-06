@@ -7,7 +7,7 @@ namespace NetCore.Transports.Loopback
     /// Useful if you rely on client sending messages to itself at development time.
     /// </summary>
     /// TODO: Replace with native routing if needed. Or continue support for testing of encoding/decoding methods.
-    public class LoopbackTransport : Transport, IReliableTransport, IUnreliableTransport
+    public class LoopbackTransport : Transport, IUnreliableTransport, IReliableTransport //, IGeneralTransport
     {
         private readonly record struct LoopbackEntry(LoopbackTransport Transport, ConnectionID RemoteCID)
         {
@@ -95,6 +95,14 @@ namespace NetCore.Transports.Loopback
             }
         }
 
+
+
+
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                                  Sending
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <inheritdoc/>
         public void SendReliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
         {
@@ -205,30 +213,6 @@ namespace NetCore.Transports.Loopback
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleUnreliable)}(sourceID: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
             Console.ForegroundColor = ConsoleColor.White;
-        }
-
-        /// <inheritdoc/>
-        public void SendReliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public void HandleUnreliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc/>
-        public void HandleReliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
-        {
-            throw new NotImplementedException();
         }
     }
 }

@@ -1,4 +1,7 @@
-﻿namespace NetCore
+﻿#pragma warning disable IDE0079 // Remove unnecessary suppression
+#pragma warning disable S2326 // Unused type parameters should be removed
+// Justification: TValue is used for CRTP ordering.
+namespace NetCore
 {
     /// <summary>
     /// Container for storing a flag-only container value.
@@ -12,3 +15,5 @@
         public override int InitOrder => Order;
     }
 }
+#pragma warning restore S2326 // Unused type parameters should be removed
+#pragma warning restore IDE0079 // Remove unnecessary suppression

@@ -37,7 +37,7 @@
   <ItemGroup Condition="'$(GodotTarget)'=='true'">
     <PackageReference Include="GDTask" Version="2.0.2" />
     <Using Include="GodotTask" />
-    <Using Include="Godot"/>
+    <Using Include="Godot" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(UnityTarget)'=='true'">

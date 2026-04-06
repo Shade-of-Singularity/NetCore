@@ -176,7 +176,7 @@ namespace NetCore.Transports.UDP
                         continue;
                     //throw new NotSupportedException($"Non-IP end-points are not supported. Provided type: {result.RemoteEndPoint}");
 
-                    if (!Clients.TryGetValue(new ClientID(ip), out ClientData client))
+                    if (!Clients.TryGetValue(new ClientID(ip), out ClientData? client))
 #if !DEBUG
                         continue;
 #else
@@ -203,8 +203,8 @@ namespace NetCore.Transports.UDP
 #endif
                 }
             }
-            catch (OperationCanceledException) { } // Graceful shutdown.
-            catch (SocketException) { } // Socket closed.
+            catch (OperationCanceledException) { /* Graceful shutdown. */ }
+            catch (SocketException) { /* Socket closed. */ }
         }
 
         /// <inheritdoc/>
@@ -231,7 +231,7 @@ namespace NetCore.Transports.UDP
                 {
                     Socket!.Disconnect(reuseSocket: true);
                 }
-                catch (SocketException ex) when (ex.ErrorCode == 10057) { } // Attempted to disconnect a non-connected socket.
+                catch (SocketException ex) when (ex.ErrorCode == 10057) { /* Attempted to disconnect a non-connected socket. */ }
             }
 
             return base.Disconnect();
@@ -256,7 +256,7 @@ namespace NetCore.Transports.UDP
                     return;
                 }
 
-                int size = DatagramHelpers.Encode(Buffer.AsSpan(), HeaderFlags.None, in header, datagram);
+                int size = DatagramHelpers.Encode(Buffer.AsSpan(), datagram, in header, HeaderFlags.None);
 #if DEBUG
                 Socket.SendTo(Buffer, size, SocketFlags.None, new IPEndPoint(IPAddress.Loopback, 27001));
 #endif

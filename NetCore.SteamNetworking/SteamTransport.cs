@@ -103,27 +103,15 @@ namespace NetCore.SteamNetworking
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <inheritdoc/>
-        public void HandleReliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
+        public void HandleReliable(scoped ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
         {
-            throw new NotImplementedException();
+            GD.Print($"Handled Reliable (from {source}): {datagram.ToString()}");
         }
 
         /// <inheritdoc/>
-        public void HandleReliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
+        public void HandleUnreliable(scoped ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
         {
-            throw new NotSupportedException("Steam transport does not support direct message handling.");
-        }
-
-        /// <inheritdoc/>
-        public void HandleUnreliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
-        {
-            GD.Print($"Handled (from {source}): {datagram.ToString()}");
-        }
-
-        /// <inheritdoc/>
-        public void HandleUnreliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
-        {
-            throw new NotSupportedException("Steam transport does not support direct message handling.");
+            GD.Print($"Handled Unreliable (from {source}): {datagram.ToString()}");
         }
 
 
@@ -135,20 +123,18 @@ namespace NetCore.SteamNetworking
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <inheritdoc/>
-        public void SendReliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
+        public void SendReliable(scoped ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
         {
             int mode = Constants.k_nSteamNetworkingSend_Reliable | GetModeModifiers(in flags);
             lock (_lock)
             {
                 foreach (var client in m_Connections.Values)
-                {
-                    SendToCore(client.connection, Bytes, in datagram, in header, mode);
-                }
+                    SendToCore(client.connection, Bytes, datagram, SendingMode.Reliable, in header, mode);
             }
         }
 
         /// <inheritdoc/>
-        public void SendReliableExcluding(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
+        public void SendReliableExcluding(scoped ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
         {
             int mode = Constants.k_nSteamNetworkingSend_Reliable | GetModeModifiers(in flags);
             lock (_lock)
@@ -158,45 +144,37 @@ namespace NetCore.SteamNetworking
                     if (client.id == toExclude)
                         continue;
 
-                    SendToCore(client.connection, Bytes, in datagram, in header, mode);
+                    SendToCore(client.connection, Bytes, datagram, SendingMode.Reliable, in header, mode);
                 }
             }
         }
 
         /// <inheritdoc/>
-        public void SendReliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
+        public void SendReliableTo(scoped ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
         {
             int mode = Constants.k_nSteamNetworkingSend_Reliable | GetModeModifiers(in flags);
             lock (_lock)
             {
                 if (m_Connections.TryGetValue(target, out SteamConnection client))
-                {
-                    SendToCore(client.connection, Bytes, in datagram, in header, mode);
-                }
+                    SendToCore(client.connection, Bytes, datagram, SendingMode.Reliable, in header, mode);
             }
         }
 
-        /// <inheritdoc/>
-        public void SendReliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
-        {
-            throw new NotSupportedException("Steam transport does not support direct message handling.");
-        }
+
 
         /// <inheritdoc/>
-        public void SendUnreliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
+        public void SendUnreliable(scoped ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
         {
             int mode = Constants.k_nSteamNetworkingSend_Unreliable | GetModeModifiers(in flags);
             lock (_lock)
             {
                 foreach (var client in m_Connections.Values)
-                {
-                    SendToCore(client.connection, Bytes, in datagram, in header, mode);
-                }
+                    SendToCore(client.connection, Bytes, datagram, SendingMode.Reliable, in header, mode);
             }
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableExcluding(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
+        public void SendUnreliableExcluding(scoped ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
         {
             int mode = Constants.k_nSteamNetworkingSend_Unreliable | GetModeModifiers(in flags);
             lock (_lock)
@@ -206,28 +184,20 @@ namespace NetCore.SteamNetworking
                     if (client.id == toExclude)
                         continue;
 
-                    SendToCore(client.connection, Bytes, in datagram, in header, mode);
+                    SendToCore(client.connection, Bytes, datagram, SendingMode.Reliable, in header, mode);
                 }
             }
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
+        public void SendUnreliableTo(scoped ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
         {
             int mode = Constants.k_nSteamNetworkingSend_Unreliable | GetModeModifiers(in flags);
             lock (_lock)
             {
                 if (m_Connections.TryGetValue(target, out SteamConnection client))
-                {
-                    SendToCore(client.connection, Bytes, in datagram, in header, mode);
-                }
+                    SendToCore(client.connection, Bytes, datagram, SendingMode.Reliable, in header, mode);
             }
-        }
-
-        /// <inheritdoc/>
-        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
-        {
-            throw new NotSupportedException("Steam transport does not support direct message handling.");
         }
 
 
@@ -244,8 +214,10 @@ namespace NetCore.SteamNetworking
         | (flags.HasFlag<NoNagle>() ? Constants.k_nSteamNetworkingSend_NoNagle : 0)
         | (flags.HasFlag<UseCurrentThread>() ? Constants.k_nSteamNetworkingSend_UseCurrentThread : 0);
 
-        private static void SendToCore(HSteamNetConnection to, byte[] buffer, ReadOnlySpan<byte> datagram, in Header header, int mode)
+        private static void SendToCore(HSteamNetConnection to, byte[] buffer, scoped ReadOnlySpan<byte> datagram, SendingMode sending, in Header header, int mode)
         {
+            DatagramHelpers.Encode(buffer.AsSpan(), datagram, header, header.flags.SetSendingMode(sending));
+
             datagram.CopyTo(buffer);
             var array = GCHandle.Alloc(buffer);
             var pointer = array.AddrOfPinnedObject();

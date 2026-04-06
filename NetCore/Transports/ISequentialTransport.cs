@@ -1,61 +1,10 @@
-﻿using System;
+﻿using NetCore.Messaging;
 
 namespace NetCore.Transports
 {
     /// <summary>
     /// (Unreliable, Ordered) Transport for sending messages.
     /// </summary>
-    public interface ISequentialTransport : ITransport
-    {
-        /// <summary>
-        /// Sequentially sends <paramref name="datagram"/> to all connections this <see cref="ITransport"/> manages.
-        /// </summary>
-        /// <param name="datagram">Datagram to send.</param>
-        /// <param name="header">Header of the message.</param>
-        /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        public void SendSequential(ReadOnlySpan<byte> datagram, in Header header, in Flags flags);
-        /// <summary>
-        /// Sequentially sends <paramref name="datagram"/> to all connections this <see cref="ITransport"/> manages, excluding <paramref name="toExclude"/>.
-        /// </summary>
-        /// <param name="datagram">Datagram to send.</param>
-        /// <param name="header">Header of the message.</param>
-        /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        /// <param name="toExclude">Connection to avoid sending a <paramref name="datagram"/> to.</param>
-        public void SendSequentialExcluding(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude);
-        /// <summary>
-        /// Sequentially sends <paramref name="datagram"/> to the <paramref name="target"/> connection.
-        /// </summary>
-        /// <param name="datagram">Datagram to send.</param>
-        /// <param name="header">Header of the message.</param>
-        /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        /// <param name="target">Connection to send a <paramref name="datagram"/> to. Nothing should be sent if transport doesn't manage this connection.</param>
-        public void SendSequentialTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target);
-        /// <summary>
-        /// Handles raw <paramref name="datagram"/> of a sequential message.
-        /// </summary>
-        /// <param name="datagram">Datagram from a remote connection.</param>
-        /// <param name="header">Header of the message.</param>
-        /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        /// <param name="source">Connection ID from which <paramref name="datagram"/> has arrived.</param>
-        public void HandleSequential(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source);
-
-
-
-        /// <summary>
-        /// Sequentially sends <paramref name="datagram"/> to a remote host, specified with <paramref name="args"/>.
-        /// </summary>
-        /// <param name="datagram">Datagram to send.</param>
-        /// <param name="header">Header of the message.</param>
-        /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        /// <param name="args">Temporary connection args used for this connection in particular.</param>
-        public void SendSequentialTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args);
-        /// <summary>
-        /// Handles raw <paramref name="datagram"/> of a sequential message.
-        /// </summary>
-        /// <param name="datagram">Datagram from a remote connection.</param>
-        /// <param name="header">Header of the message.</param>
-        /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        /// <param name="source">Temporary connection args from which <paramref name="datagram"/> has arrived.</param>
-        public void HandleSequential(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source);
-    }
+    /// <seealso cref="SendingMode.Sequential"/>
+    public interface ISequentialTransport : ITransport, ISendSequential, IHandleSequential { }
 }

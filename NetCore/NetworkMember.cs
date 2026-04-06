@@ -1,4 +1,5 @@
 using NetCore.Common;
+using NetCore.Messaging;
 using NetCore.Transports;
 using System.Buffers;
 using System.Runtime.CompilerServices;
@@ -110,6 +111,8 @@ namespace NetCore
     }
 
 
+
+
     /// <summary>
     /// Base class for <see cref="Server"/> and <see cref="Client"/>.
     /// </summary>
@@ -128,6 +131,8 @@ namespace NetCore
     ///  = 240 bytes.
     ///  It's nothing compared to other things.
     /// TODO: Make sure transports can only be added/removed if member is not started already.
+    /// TODO: Optimize memory usage for when instancing a lot of members (on servers, for example).
+    ///  Optimize for very scarce transport usage.
     public abstract partial class NetworkMember : INetworkMemberStatistics,
         ISendToConnectionNetworkMessaging, ITransportBasedSendToConnectionNetworkMessaging
     {

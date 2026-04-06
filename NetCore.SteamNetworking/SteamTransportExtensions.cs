@@ -13,7 +13,7 @@ namespace NetCore.SteamNetworking
         /// </summary>
         /// <param name="member"><see cref="NetworkMember"/> to work with.</param>
         /// <param name="transport"><see cref="SteamTransport"/> to register.</param>
-        public static void RegisterSteamTransport(this NetworkMember member, SteamTransport transport)
+        public static void RegisterTransport(this NetworkMember member, SteamTransport transport)
         {
             member.RegisterUnreliableTransport(transport);
             member.RegisterReliableTransport(transport);
@@ -24,7 +24,7 @@ namespace NetCore.SteamNetworking
         /// </summary>
         /// <param name="member"><see cref="NetworkMember"/> to work with.</param>
         /// <param name="transport"><see cref="SteamTransport"/> to remove.</param>
-        public static bool RemoveSteamTransport(this NetworkMember member, SteamTransport transport)
+        public static bool RemoveTransport(this NetworkMember member, SteamTransport transport)
         {
             bool result = false;
             result |= member.RemoveUnreliableTransport(transport);
@@ -37,7 +37,7 @@ namespace NetCore.SteamNetworking
         /// </summary>
         /// <param name="member"><see cref="NetworkMember"/> to work with.</param>
         /// <param name="transport"><see cref="SteamTransport"/> to remove.</param>
-        public static bool RemoveSteamTransport(this NetworkMember member, [NotNullWhen(true)] out SteamTransport? transport)
+        public static bool RemoveTransport(this NetworkMember member, [NotNullWhen(true)] out SteamTransport? transport)
         {
             transport = default;
             if (member.RemoveUnreliableTransport(out SteamTransport? t)) { transport = t; }
