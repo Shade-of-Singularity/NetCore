@@ -38,10 +38,10 @@ namespace NetCore
         /// <remarks>
         /// As a bonus: allocate less if target transport doesn't exist.
         /// </remarks>
-        /// <seealso cref="SendUnreliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        /// <seealso cref="SendReliable(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        /// <seealso cref="SendSequential(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        /// <seealso cref="SendResilient(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendUnreliable(ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendReliable(ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendSequential(ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendResilient(ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="mode"><see cref="SendingMode"/>, specifying which transport type to use.</param>
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="header">Header to encode with the message.</param>
@@ -50,14 +50,14 @@ namespace NetCore
         /// <c>true</c> if transport was found and <paramref name="datagram"/> was sent.
         /// <c>false</c> otherwise.
         /// </returns>
-        public bool TrySend(SendingMode mode, in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        public bool TrySend(SendingMode mode, ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             switch (mode)
             {
                 case SendingMode.Unreliable:
                     if (HasAnyUnreliableTransport())
                     {
-                        SendUnreliable(in datagram, ref header, ref flags);
+                        SendUnreliable(datagram, ref header, ref flags);
                         return true;
                     }
                     return false;
@@ -65,7 +65,7 @@ namespace NetCore
                 case SendingMode.Reliable:
                     if (HasAnyReliableTransport())
                     {
-                        SendReliable(in datagram, ref header, ref flags);
+                        SendReliable(datagram, ref header, ref flags);
                         return true;
                     }
                     return false;
@@ -73,7 +73,7 @@ namespace NetCore
                 case SendingMode.Sequential:
                     if (HasAnySequentialTransport())
                     {
-                        SendSequential(in datagram, ref header, ref flags);
+                        SendSequential(datagram, ref header, ref flags);
                         return true;
                     }
                     return false;
@@ -81,7 +81,7 @@ namespace NetCore
                 case SendingMode.Resilient:
                     if (HasAnyResilientTransport())
                     {
-                        SendReliable(in datagram, ref header, ref flags);
+                        SendReliable(datagram, ref header, ref flags);
                         return true;
                     }
                     return false;
@@ -90,8 +90,8 @@ namespace NetCore
             }
         }
 
-        /// <inheritdoc cref="TrySend(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        public bool TrySend(SendingMode mode, in ReadOnlySpan<byte> datagram)
+        /// <inheritdoc cref="TrySend(SendingMode, ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public bool TrySend(SendingMode mode, ReadOnlySpan<byte> datagram)
         {
             if (!HasAnyTransport(mode))
                 return false;
@@ -102,8 +102,8 @@ namespace NetCore
             return true;
         }
 
-        /// <inheritdoc cref="TrySend(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        public bool TrySend(SendingMode mode, in ReadOnlySpan<byte> datagram, ref Header header)
+        /// <inheritdoc cref="TrySend(SendingMode, ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public bool TrySend(SendingMode mode, ReadOnlySpan<byte> datagram, ref Header header)
         {
             if (!HasAnyTransport(mode))
             {
@@ -116,8 +116,8 @@ namespace NetCore
             return true;
         }
 
-        /// <inheritdoc cref="TrySend(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        public bool TrySend(SendingMode mode, in ReadOnlySpan<byte> datagram, ref Flags flags)
+        /// <inheritdoc cref="TrySend(SendingMode, ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public bool TrySend(SendingMode mode, ReadOnlySpan<byte> datagram, ref Flags flags)
         {
             if (!HasAnyTransport(mode))
             {
@@ -130,12 +130,12 @@ namespace NetCore
             return true;
         }
 
-        /// <inheritdoc cref="TrySend(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <inheritdoc cref="TrySend(SendingMode, ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="mode"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
-        public bool TrySend(SendingMode mode, in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup, FlagsConstructor? flagsSetup = null)
+        public bool TrySend(SendingMode mode, ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup, FlagsConstructor? flagsSetup = null)
         {
             if (!HasAnyTransport(mode))
                 return false;
@@ -157,10 +157,10 @@ namespace NetCore
         /// <remarks>
         /// As a bonus: allocate less if target transport doesn't exist.
         /// </remarks>
-        /// <seealso cref="SendUnreliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        /// <seealso cref="SendReliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        /// <seealso cref="SendSequential{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        /// <seealso cref="SendResilient{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendUnreliable{TTransport}(ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendReliable{TTransport}(ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendSequential{TTransport}(ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="SendResilient{TTransport}(ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <typeparam name="TTransport"><see cref="ITransport"/> to use for sending of a message.</typeparam>
         /// <param name="header">Header to encode with the message.</param>
         /// <param name="datagram">Datagram to send.</param>
@@ -170,7 +170,7 @@ namespace NetCore
         /// <c>true</c> if transport was found and <paramref name="datagram"/> was sent.
         /// <c>false</c> if there was no <typeparamref name="TTransport"/> registered and nothing was sent.
         /// </returns>
-        public bool TrySend<TTransport>(SendingMode mode, in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        public bool TrySend<TTransport>(SendingMode mode, ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             return mode switch
@@ -183,8 +183,8 @@ namespace NetCore
             };
         }
 
-        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        public bool TrySend<TTransport>(SendingMode mode, in ReadOnlySpan<byte> datagram)
+        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public bool TrySend<TTransport>(SendingMode mode, ReadOnlySpan<byte> datagram)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             if (!HasTransport<TTransport>(mode))
@@ -196,8 +196,8 @@ namespace NetCore
             return true;
         }
 
-        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        public bool TrySend<TTransport>(SendingMode mode, in ReadOnlySpan<byte> datagram, ref Header header)
+        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public bool TrySend<TTransport>(SendingMode mode, ReadOnlySpan<byte> datagram, ref Header header)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             if (!HasTransport<TTransport>(mode))
@@ -208,8 +208,8 @@ namespace NetCore
             return true;
         }
 
-        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        public bool TrySend<TTransport>(SendingMode mode, in ReadOnlySpan<byte> datagram, ref Flags flags)
+        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public bool TrySend<TTransport>(SendingMode mode, ReadOnlySpan<byte> datagram, ref Flags flags)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             if (!HasTransport<TTransport>(mode))
@@ -220,12 +220,12 @@ namespace NetCore
             return true;
         }
 
-        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <inheritdoc cref="TrySend{TTransport}(SendingMode, ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="mode"/>
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
-        public bool TrySend<TTransport>(SendingMode mode, in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup, FlagsConstructor? flagsSetup = null)
+        public bool TrySend<TTransport>(SendingMode mode, ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup, FlagsConstructor? flagsSetup = null)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             if (!HasTransport<TTransport>(mode))
@@ -241,7 +241,7 @@ namespace NetCore
         #endregion
 
         /// <inheritdoc/>
-        public virtual void SendUnreliable(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        public virtual void SendUnreliable(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             lock (_lock)
             {
@@ -263,7 +263,7 @@ namespace NetCore
         }
 
         /// <inheritdoc/>
-        public void SendReliable(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        public virtual void SendReliable(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             lock (_lock)
             {
@@ -285,7 +285,7 @@ namespace NetCore
         }
 
         /// <inheritdoc/>
-        public void SendSequential(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        public virtual void SendSequential(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             lock (_lock)
             {
@@ -307,7 +307,7 @@ namespace NetCore
         }
 
         /// <inheritdoc/>
-        public void SendResilient(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        public virtual void SendResilient(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             lock (_lock)
             {
@@ -329,7 +329,7 @@ namespace NetCore
         }
 
         /// <inheritdoc/>
-        public void SendUnreliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, IUnreliableTransport
+        public virtual void SendUnreliable<TTransport>(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, IUnreliableTransport
         {
             lock (_lock)
             {
@@ -348,7 +348,7 @@ namespace NetCore
         }
 
         /// <inheritdoc/>
-        public void SendReliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, IReliableTransport
+        public virtual void SendReliable<TTransport>(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, IReliableTransport
         {
             lock (_lock)
             {
@@ -367,7 +367,7 @@ namespace NetCore
         }
 
         /// <inheritdoc/>
-        public void SendSequential<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, ISequentialTransport
+        public virtual void SendSequential<TTransport>(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, ISequentialTransport
         {
             lock (_lock)
             {
@@ -386,7 +386,7 @@ namespace NetCore
         }
 
         /// <inheritdoc/>
-        public void SendResilient<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, IResilientTransport
+        public virtual void SendResilient<TTransport>(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, IResilientTransport
         {
             lock (_lock)
             {

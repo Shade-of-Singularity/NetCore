@@ -55,6 +55,13 @@ dotnet_diagnostic.S3267.severity = none
 # Justification: Such usage is needed by ITranport.StateMachine.cs and similar.
 dotnet_diagnostic.S2292.severity = none
 
+# CA1711: Identifiers should not have incorrect suffix
+dotnet_diagnostic.CA1711.severity = none
+# S2344: Enumeration type names should not have "Flags" or "Enum" suffixes
+dotnet_diagnostic.S2344.severity = none
+# Justification: HeaderFlags is an empty enum, but carries other data via extension methods.
+
+
 [*.{cs,vb}]
 #### Naming styles ####
 

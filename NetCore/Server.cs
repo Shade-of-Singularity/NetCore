@@ -62,7 +62,7 @@ namespace NetCore
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
         /// <inheritdoc/>
-        public virtual void SendUnreliable(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        public virtual void SendUnreliable(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             lock (_lock)
             {
@@ -84,7 +84,7 @@ namespace NetCore
         }
 
         /// <inheritdoc/>
-        public void SendReliable(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        public virtual void SendReliable(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             lock (_lock)
             {
@@ -106,7 +106,7 @@ namespace NetCore
         }
 
         /// <inheritdoc/>
-        public void SendSequential(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        public virtual void SendSequential(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             lock (_lock)
             {
@@ -128,7 +128,7 @@ namespace NetCore
         }
 
         /// <inheritdoc/>
-        public void SendResilient(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        public virtual void SendResilient(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
         {
             lock (_lock)
             {
@@ -150,7 +150,7 @@ namespace NetCore
         }
 
         /// <inheritdoc/>
-        public void SendUnreliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, IUnreliableTransport
+        public void SendUnreliable<TTransport>(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, IUnreliableTransport
         {
             lock (_lock)
             {
@@ -169,7 +169,7 @@ namespace NetCore
         }
 
         /// <inheritdoc/>
-        public void SendReliable<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, IReliableTransport
+        public void SendReliable<TTransport>(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, IReliableTransport
         {
             lock (_lock)
             {
@@ -188,7 +188,7 @@ namespace NetCore
         }
 
         /// <inheritdoc/>
-        public void SendSequential<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, ISequentialTransport
+        public void SendSequential<TTransport>(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, ISequentialTransport
         {
             lock (_lock)
             {
@@ -207,7 +207,7 @@ namespace NetCore
         }
 
         /// <inheritdoc/>
-        public void SendResilient<TTransport>(in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, IResilientTransport
+        public void SendResilient<TTransport>(scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where TTransport : class, IResilientTransport
         {
             lock (_lock)
             {

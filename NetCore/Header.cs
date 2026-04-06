@@ -123,11 +123,11 @@ namespace NetCore
         {
             if (CustomHeader<T>.IsSensitive && CustomHeader<T>.SizeInBytes != 0)
             {
-                content.AsSpan(CustomHeader<T>.ContentPosition, CustomHeader<T>.SizeInBytes).Fill(default);
+                content.AsSpan(CustomHeader<T>.ContentPosition, CustomHeader<T>.SizeInBytes).Clear();
             }
 
-            ref byte flags = ref headers[CustomHeader<T>.Region];
-            flags &= (byte)~CustomHeader<T>.RegionFlag;
+            ref byte packed = ref headers[CustomHeader<T>.Region];
+            packed &= (byte)~CustomHeader<T>.RegionFlag;
         }
 
         /// <summary>
@@ -183,8 +183,8 @@ namespace NetCore
         /// </remarks>
         public readonly void Set<T>() where T : CustomHeader<T>, new()
         {
-            ref byte flags = ref headers[CustomHeader<T>.Region];
-            if ((flags & CustomHeader<T>.RegionFlag) != 0)
+            ref byte packed = ref headers[CustomHeader<T>.Region];
+            if ((packed & CustomHeader<T>.RegionFlag) != 0)
             {
                 return;
             }
@@ -192,10 +192,10 @@ namespace NetCore
             if (CustomHeader<T>.SizeInBytes != 0)
             {
                 // Wipes any previous data.
-                content.AsSpan(CustomHeader<T>.ContentPosition, CustomHeader<T>.SizeInBytes).Fill(default);
+                content.AsSpan(CustomHeader<T>.ContentPosition, CustomHeader<T>.SizeInBytes).Clear();
             }
 
-            flags |= CustomHeader<T>.RegionFlag;
+            packed |= CustomHeader<T>.RegionFlag;
         }
 
         /// <summary>
@@ -218,11 +218,11 @@ namespace NetCore
 
                 // If there are any unset bytes beyond what input span provides - they are set to 0.
                 if (bytes.Length != CustomHeader<T>.SizeInBytes)
-                    span[bytes.Length..].Fill(default);
+                    span[bytes.Length..].Clear();
             }
 
-            ref byte flags = ref headers[CustomHeader<T>.Region];
-            flags |= CustomHeader<T>.RegionFlag;
+            ref byte packed = ref headers[CustomHeader<T>.Region];
+            packed |= CustomHeader<T>.RegionFlag;
         }
 
         /// <summary>
@@ -258,7 +258,7 @@ namespace NetCore
         public void Dispose()
         {
             if (disposed)
-                throw new ObjectDisposedException(nameof(Header));
+                return;
 
             switch (locks)
             {

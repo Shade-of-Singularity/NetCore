@@ -1,7 +1,5 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 
 namespace NetCore.Identity
 {
@@ -34,11 +32,11 @@ namespace NetCore.Identity
         /// <summary>
         /// Creates new temporary identifier.
         /// </summary>
-        public TemporaryIdentifier Get()
+        public static TemporaryIdentifier Get()
         {
             Span<byte> bytes = stackalloc byte[8];
-            RandomNumberGenerator.Fill(bytes);
-            return new (Unsafe.As<byte, ulong>(ref bytes[0]));
+            System.Security.Cryptography.RandomNumberGenerator.Fill(bytes);
+            return new(Unsafe.As<byte, ulong>(ref bytes[0]));
         }
         /// <summary>
         /// Encodes this <see cref="TemporaryIdentifier"/> as Base64.
@@ -58,18 +56,25 @@ namespace NetCore.Identity
         /// <param name="span">Span to fill-in with identifier data. Must have a size of at least <see cref="SizeInBase256"/></param>
         public void EncodeBase256(Span<byte> span)
         {
-            Span<ulong> storage = stackalloc ulong[1];
-            storage[0] = raw;
+            Span<ulong> storage = [raw];
             Span<byte> bytes = MemoryMarshal.AsBytes(storage);
             bytes.CopyTo(span);
         }
         /// <inheritdoc/>
         public bool Equals(TemporaryIdentifier other) => other.raw == raw;
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is TemporaryIdentifier identifier && Equals(identifier);
+        public override bool Equals(object? obj) => obj is TemporaryIdentifier identifier && identifier.raw == raw;
         /// <inheritdoc/>
         public override int GetHashCode() => raw.GetHashCode();
         /// <inheritdoc/>
         public override string ToString() => raw.ToString(); // TODO: Return as Base64.
+        /// <summary>
+        /// Checks if underlying raw values are equal.
+        /// </summary>
+        public static bool operator ==(TemporaryIdentifier left, TemporaryIdentifier right) => left.raw == right.raw;
+        /// <summary>
+        /// Checks if underlying raw values are different.
+        /// </summary>
+        public static bool operator !=(TemporaryIdentifier left, TemporaryIdentifier right) => left.raw != right.raw;
     }
 }

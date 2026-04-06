@@ -96,7 +96,7 @@ namespace NetCore.Transports.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendReliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
+        public void SendReliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -111,7 +111,7 @@ namespace NetCore.Transports.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendReliableExcluding(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
+        public void SendReliableExcluding(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -129,7 +129,7 @@ namespace NetCore.Transports.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendReliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
+        public void SendReliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendReliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -144,7 +144,7 @@ namespace NetCore.Transports.Loopback
         }
 
         /// <inheritdoc/>
-        public void HandleReliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
+        public void HandleReliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleReliable)}(sourceID: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -152,7 +152,7 @@ namespace NetCore.Transports.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendUnreliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
+        public void SendUnreliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliable)}(datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -167,7 +167,7 @@ namespace NetCore.Transports.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableExcluding(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
+        public void SendUnreliableExcluding(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliableExcluding)}(exclude: ({toExclude}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -185,7 +185,7 @@ namespace NetCore.Transports.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
+        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
         {
 #if DEBUG
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(SendUnreliableTo)}(target: ({target}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -200,7 +200,7 @@ namespace NetCore.Transports.Loopback
         }
 
         /// <inheritdoc/>
-        public void HandleUnreliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
+        public void HandleUnreliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"{nameof(LoopbackTransport)}.{nameof(HandleUnreliable)}(sourceID: ({source}) datagram: {MemoryMarshal.Cast<byte, char>(datagram).ToString()})");
@@ -208,25 +208,25 @@ namespace NetCore.Transports.Loopback
         }
 
         /// <inheritdoc/>
-        public void SendReliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
+        public void SendReliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
         {
             throw new NotImplementedException();
         }
 
         /// <inheritdoc/>
-        public void SendUnreliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
+        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
         {
             throw new NotImplementedException();
         }
 
         /// <inheritdoc/>
-        public void HandleUnreliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
+        public void HandleUnreliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
         {
             throw new NotImplementedException();
         }
 
         /// <inheritdoc/>
-        public void HandleReliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
+        public void HandleReliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
         {
             throw new NotImplementedException();
         }

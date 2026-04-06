@@ -13,7 +13,11 @@ namespace NetCore.InternalAutoGen
         const string DirectTargetInterface = "ISendNetworkMessaging";
         const string TransportTargetInterface = "ITransportBasedSendNetworkMessaging";
         const string GenericArgumentStyle = "TTransport";
-        public void Initialize(IncrementalGeneratorInitializationContext context) => context.RegisterSourceOutput(context.CompilationProvider, static (s, _) => Execute(s));
+        public void Initialize(IncrementalGeneratorInitializationContext context)
+        {
+            context.RegisterSourceOutput(context.CompilationProvider, static (s, _) => Execute(s));
+        }
+
         static void Execute(SourceProductionContext source)
         {
             using (var storage1 = new StringWriter())
@@ -101,39 +105,39 @@ namespace NetCore.InternalAutoGen
         static void GenerateDirectSendingMethods(IndentedTextWriter w, string directTarget, string method)
         {
             w.SplitAndWriteLine($$"""
-            /// <inheritdoc cref="{{directTarget}}.Send{{method}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-            public static void Send{{method}}(this {{directTarget}} target, in ReadOnlySpan<byte> datagram)
+            /// <inheritdoc cref="{{directTarget}}.Send{{method}}(scoped ReadOnlySpan<byte> datagram, ref Header, ref Flags)"/>
+            public static void Send{{method}}(this {{directTarget}} target, scoped ReadOnlySpan<byte> datagram)
             {
                 Header header = Header.Get();
                 Flags flags = Flags.Get();
-                target.Send{{method}}(in datagram, ref header, ref flags);
+                target.Send{{method}}(datagram, ref header, ref flags);
             }
 
-            /// <inheritdoc cref="{{directTarget}}.Send{{method}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-            public static void Send{{method}}(this {{directTarget}} target, in ReadOnlySpan<byte> datagram, ref Header header)
+            /// <inheritdoc cref="{{directTarget}}.Send{{method}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+            public static void Send{{method}}(this {{directTarget}} target, scoped ReadOnlySpan<byte> datagram, ref Header header)
             {
                 Flags flags = Flags.Get();
-                target.Send{{method}}(in datagram, ref header, ref flags);
+                target.Send{{method}}(datagram, ref header, ref flags);
             }
 
-            /// <inheritdoc cref="{{directTarget}}.Send{{method}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-            public static void Send{{method}}(this {{directTarget}} target, in ReadOnlySpan<byte> datagram, ref Flags flags)
+            /// <inheritdoc cref="{{directTarget}}.Send{{method}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+            public static void Send{{method}}(this {{directTarget}} target, scoped ReadOnlySpan<byte> datagram, ref Flags flags)
             {
                 Header header = Header.Get();
-                target.Send{{method}}(in datagram, ref header, ref flags);
+                target.Send{{method}}(datagram, ref header, ref flags);
             }
 
-            /// <inheritdoc cref="{{directTarget}}.Send{{method}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+            /// <inheritdoc cref="{{directTarget}}.Send{{method}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
             /// <param name="datagram"/>
             /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
             /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
-            public static void Send{{method}}(this {{directTarget}} target, in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup, FlagsConstructor? flagsSetup = null)
+            public static void Send{{method}}(this {{directTarget}} target, scoped ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup, FlagsConstructor? flagsSetup = null)
             {
                 Header header = Header.Get();
                 headerSetup?.Invoke(ref header);
                 Flags flags = Flags.Get();
                 flagsSetup?.Invoke(ref flags);
-                target.Send{{method}}(in datagram, ref header, ref flags);
+                target.Send{{method}}(datagram, ref header, ref flags);
             }
             """);
         }
@@ -141,80 +145,80 @@ namespace NetCore.InternalAutoGen
         static void GenerateTransportBasedSendingMethods(IndentedTextWriter w, string transportTarget, string method, string genericArgs)
         {
             w.SplitAndWriteLine($$"""
-            /// <inheritdoc cref="{{transportTarget}}.Send{{method}}{{{GenericArgumentStyle}}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-            public static void Send{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, in ReadOnlySpan<byte> datagram) where {{GenericArgumentStyle}} : class, {{genericArgs}}
+            /// <inheritdoc cref="{{transportTarget}}.Send{{method}}{{{GenericArgumentStyle}}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+            public static void Send{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, scoped ReadOnlySpan<byte> datagram) where {{GenericArgumentStyle}} : class, {{genericArgs}}
             {
                 Header header = Header.Get();
                 Flags flags = Flags.Get();
-                target.Send{{method}}<{{GenericArgumentStyle}}>(in datagram, ref header, ref flags);
+                target.Send{{method}}<{{GenericArgumentStyle}}>(datagram, ref header, ref flags);
             }
 
-            /// <inheritdoc cref="{{transportTarget}}.Send{{method}}{{{GenericArgumentStyle}}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-            public static void Send{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, in ReadOnlySpan<byte> datagram, ref Header header) where {{GenericArgumentStyle}} : class, {{genericArgs}}
+            /// <inheritdoc cref="{{transportTarget}}.Send{{method}}{{{GenericArgumentStyle}}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+            public static void Send{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, scoped ReadOnlySpan<byte> datagram, ref Header header) where {{GenericArgumentStyle}} : class, {{genericArgs}}
             {
                 Flags flags = Flags.Get();
-                target.Send{{method}}<{{GenericArgumentStyle}}>(in datagram, ref header, ref flags);
+                target.Send{{method}}<{{GenericArgumentStyle}}>(datagram, ref header, ref flags);
             }
 
-            /// <inheritdoc cref="{{transportTarget}}.Send{{method}}{{{GenericArgumentStyle}}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-            public static void Send{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, in ReadOnlySpan<byte> datagram, ref Flags flags) where {{GenericArgumentStyle}} : class, {{genericArgs}}
+            /// <inheritdoc cref="{{transportTarget}}.Send{{method}}{{{GenericArgumentStyle}}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+            public static void Send{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, scoped ReadOnlySpan<byte> datagram, ref Flags flags) where {{GenericArgumentStyle}} : class, {{genericArgs}}
             {
                 Header header = Header.Get();
-                target.Send{{method}}<{{GenericArgumentStyle}}>(in datagram, ref header, ref flags);
+                target.Send{{method}}<{{GenericArgumentStyle}}>(datagram, ref header, ref flags);
             }
 
-            /// <inheritdoc cref="{{transportTarget}}.Send{{method}}{{{GenericArgumentStyle}}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+            /// <inheritdoc cref="{{transportTarget}}.Send{{method}}{{{GenericArgumentStyle}}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
             /// <param name="datagram"/>
             /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
             /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
-            public static void Send{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup, FlagsConstructor? flagsSetup = null) where {{GenericArgumentStyle}} : class, {{genericArgs}}
+            public static void Send{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, scoped ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup, FlagsConstructor? flagsSetup = null) where {{GenericArgumentStyle}} : class, {{genericArgs}}
             {
                 Header header = Header.Get();
                 headerSetup?.Invoke(ref header);
                 Flags flags = Flags.Get();
                 flagsSetup?.Invoke(ref flags);
-                target.Send{{method}}<{{GenericArgumentStyle}}>(in datagram, ref header, ref flags);
+                target.Send{{method}}<{{GenericArgumentStyle}}>(datagram, ref header, ref flags);
             }
 
 
 
             
-            /// <inheritdoc cref="TrySend{{method}}{{{GenericArgumentStyle}}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-            public static bool TrySend{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, in ReadOnlySpan<byte> datagram) where {{GenericArgumentStyle}} : class, {{genericArgs}}
+            /// <inheritdoc cref="TrySend{{method}}{{{GenericArgumentStyle}}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+            public static bool TrySend{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, scoped ReadOnlySpan<byte> datagram) where {{GenericArgumentStyle}} : class, {{genericArgs}}
             {
                 if (!target.Has{{method}}Transport<{{GenericArgumentStyle}}>())
                     return false;
             
                 Header header = Header.Get();
                 Flags flags = Flags.Get();
-                target.Send{{method}}<{{GenericArgumentStyle}}>(in datagram, ref header, ref flags);
+                target.Send{{method}}<{{GenericArgumentStyle}}>(datagram, ref header, ref flags);
                 return true;
             }
 
-            /// <inheritdoc cref="TrySend{{method}}{{{GenericArgumentStyle}}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-            public static bool TrySend{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, in ReadOnlySpan<byte> datagram, ref Header header) where {{GenericArgumentStyle}} : class, {{genericArgs}}
+            /// <inheritdoc cref="TrySend{{method}}{{{GenericArgumentStyle}}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+            public static bool TrySend{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, scoped ReadOnlySpan<byte> datagram, ref Header header) where {{GenericArgumentStyle}} : class, {{genericArgs}}
             {
                 if (!target.Has{{method}}Transport<{{GenericArgumentStyle}}>())
                     return false;
 
                 Flags flags = Flags.Get();
-                target.Send{{method}}<{{GenericArgumentStyle}}>(in datagram, ref header, ref flags);
+                target.Send{{method}}<{{GenericArgumentStyle}}>(datagram, ref header, ref flags);
                 return true;
             }
 
-            /// <inheritdoc cref="TrySend{{method}}{{{GenericArgumentStyle}}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-            public static bool TrySend{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, in ReadOnlySpan<byte> datagram, ref Flags flags) where {{GenericArgumentStyle}} : class, {{genericArgs}}
+            /// <inheritdoc cref="TrySend{{method}}{{{GenericArgumentStyle}}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+            public static bool TrySend{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, scoped ReadOnlySpan<byte> datagram, ref Flags flags) where {{GenericArgumentStyle}} : class, {{genericArgs}}
             {
                 if (!target.Has{{method}}Transport<{{GenericArgumentStyle}}>())
                     return false;
 
                 Header header = Header.Get();
-                target.Send{{method}}<{{GenericArgumentStyle}}>(in datagram, ref header, ref flags);
+                target.Send{{method}}<{{GenericArgumentStyle}}>(datagram, ref header, ref flags);
                 return true;
             }
 
-            /// <inheritdoc cref="TrySend{{method}}{{{GenericArgumentStyle}}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-            public static bool TrySend{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where {{GenericArgumentStyle}} : class, {{genericArgs}}
+            /// <inheritdoc cref="TrySend{{method}}{{{GenericArgumentStyle}}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+            public static bool TrySend{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags) where {{GenericArgumentStyle}} : class, {{genericArgs}}
             {
                 if (!target.Has{{method}}Transport<{{GenericArgumentStyle}}>())
                 {
@@ -223,15 +227,15 @@ namespace NetCore.InternalAutoGen
                     return false;
                 }
 
-                target.Send{{method}}<{{GenericArgumentStyle}}>(in datagram, ref header, ref flags);
+                target.Send{{method}}<{{GenericArgumentStyle}}>(datagram, ref header, ref flags);
                 return true;
             }
 
-            /// <inheritdoc cref="TrySend{{method}}{{{GenericArgumentStyle}}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+            /// <inheritdoc cref="TrySend{{method}}{{{GenericArgumentStyle}}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
             /// <param name="datagram"/>
             /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
             /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
-            public static bool TrySend{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup, FlagsConstructor? flagsSetup = null) where {{GenericArgumentStyle}} : class, {{genericArgs}}
+            public static bool TrySend{{method}}<{{GenericArgumentStyle}}>(this {{transportTarget}} target, scoped ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup, FlagsConstructor? flagsSetup = null) where {{GenericArgumentStyle}} : class, {{genericArgs}}
             {
                 if (!target.Has{{method}}Transport<{{GenericArgumentStyle}}>())
                     return false;
@@ -240,7 +244,7 @@ namespace NetCore.InternalAutoGen
                 headerSetup?.Invoke(ref header);
                 Flags flags = Flags.Get();
                 flagsSetup?.Invoke(ref flags);
-                target.Send{{method}}<{{GenericArgumentStyle}}>(in datagram, ref header, ref flags);
+                target.Send{{method}}<{{GenericArgumentStyle}}>(datagram, ref header, ref flags);
                 return true;
             }
             """);
@@ -248,20 +252,20 @@ namespace NetCore.InternalAutoGen
     }
 }
 
-///// <inheritdoc cref="TrySend{{method}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-//public static bool TrySend{{method}}(this {{transportTarget}} target, in ReadOnlySpan<byte> datagram)
+///// <inheritdoc cref="TrySend{{method}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+//public static bool TrySend{{method}}(this {{transportTarget}} target, scoped ReadOnlySpan<byte> datagram)
 //{
 //    if (!target.HasAny{{method}}Transport())
 //        return false;
 
 //    Header header = Header.Get();
 //    Flags flags = Flags.Get();
-//    target.Send{{method}}(in datagram, ref header, ref flags);
+//    target.Send{{method}}(datagram, ref header, ref flags);
 //    return true;
 //}
 
-///// <inheritdoc cref="TrySend{{method}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-//public static bool TrySend{{method}}(this {{transportTarget}} target, in ReadOnlySpan<byte> datagram, ref Header header)
+///// <inheritdoc cref="TrySend{{method}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+//public static bool TrySend{{method}}(this {{transportTarget}} target, scoped ReadOnlySpan<byte> datagram, ref Header header)
 //{
 //    if (!target.HasAny{{method}}Transport())
 //    {
@@ -270,12 +274,12 @@ namespace NetCore.InternalAutoGen
 //    }
 
 //    Flags flags = Flags.Get();
-//    target.Send{{method}}(in datagram, ref header, ref flags);
+//    target.Send{{method}}(datagram, ref header, ref flags);
 //    return true;
 //}
 
-///// <inheritdoc cref="TrySend{{method}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-//public static bool TrySend{{method}}(this {{transportTarget}} target, in ReadOnlySpan<byte> datagram, ref Flags flags)
+///// <inheritdoc cref="TrySend{{method}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+//public static bool TrySend{{method}}(this {{transportTarget}} target, scoped ReadOnlySpan<byte> datagram, ref Flags flags)
 //{
 //    if (!target.HasAny{{method}}Transport())
 //    {
@@ -284,12 +288,12 @@ namespace NetCore.InternalAutoGen
 //    }
 
 //    Header header = Header.Get();
-//    target.Send{{method}}(in datagram, ref header, ref flags);
+//    target.Send{{method}}(datagram, ref header, ref flags);
 //    return true;
 //}
 
-///// <inheritdoc cref="TrySend{{method}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-//public static bool TrySend{{method}}(this {{transportTarget}} target, in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+///// <inheritdoc cref="TrySend{{method}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+//public static bool TrySend{{method}}(this {{transportTarget}} target, scoped ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
 //{
 //    if (!target.HasAny{{method}}Transport())
 //    {
@@ -298,15 +302,18 @@ namespace NetCore.InternalAutoGen
 //        return false;
 //    }
 
-//    target.Send{{method}}(in datagram, ref header, ref flags);
+//    target.Send{{method}}(datagram, ref header, ref flags);
 //    return true;
 //}
 
-///// <inheritdoc cref="TrySend{{method}}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+///// <inheritdoc cref="TrySend{{method}}(scoped ReadOnlySpan{byte}, ref Header, ref Flags)"/>
 ///// <param name="datagram"/>
 ///// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
 ///// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
-//public static bool TrySend{{method}}(this {{transportTarget}} target, in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup, FlagsConstructor? flagsSetup = null)
+//public static bool TrySend{{method}}(this {{transportTarget}} target,
+//
+//
+//, HeaderConstructor? headerSetup, FlagsConstructor? flagsSetup = null)
 //{
 //    if (!target.HasAny{{method}}Transport())
 //        return false;
@@ -315,6 +322,6 @@ namespace NetCore.InternalAutoGen
 //    headerSetup?.Invoke(ref header);
 //    Flags flags = Flags.Get();
 //    flagsSetup?.Invoke(ref flags);
-//    target.Send{{method}}(in datagram, ref header, ref flags);
+//    target.Send{{method}}(datagram, ref header, ref flags);
 //    return true;
 //}

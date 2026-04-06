@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework Condition="'$(GodotTarget)'=='true'">net8.0</TargetFramework>
+    <TargetFramework Condition="'$(UnityTarget)'=='true'">netstandard2.1</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -15,17 +17,30 @@
     <Configurations>Debug;Release;Godot Debug;Godot Release;Unity Debug;Unity Release</Configurations>
   </PropertyGroup>
 
-  <!--Avoids referencing main project while Godot is not supported-->
-  <ItemGroup Condition="'$(GodotTarget)'!='true'">
+  <ItemGroup Condition="'$(GodotTarget)'=='true'">
+    <PackageReference Include="GDTask" Version="2.0.2" />
+    <Using Include="GodotTask" />
+    <Using Include="Godot"/>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UnityTarget)'=='true'">
+    <PackageReference Include="UniTask" Version="2.5.10" />
+    <Using Include="Cysharp.Threading.Tasks" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\NetCore\AsyncTasks\*.cs" Link="AsyncTasks\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetCore.BitContext\NetCore.BitContext.csproj" />
     <ProjectReference Include="..\NetCore\NetCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="UniTask" Version="2.5.10" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="..\NetCore\AsyncTasks\*.cs" Link="AsyncTasks\%(Filename)%(Extension)"/>
+    <Reference Include="ComputerysBitStream">
+      <HintPath>..\..\..\..\CSharp\ComputerysBitStream\ComputerysBitStream\bin\Release\netstandard2.1\ComputerysBitStream.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

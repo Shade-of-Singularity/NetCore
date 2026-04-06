@@ -2,6 +2,7 @@
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -10,7 +11,7 @@ namespace NetCore.SteamNetworking
     /// <summary>
     /// Transport over <see cref="SteamNetworkingSockets"/>.
     /// </summary>
-    public class SteamTransport : Transport, IGeneralTransport
+    public class SteamTransport : Transport, IUnreliableTransport, IReliableTransport
     {
         readonly struct SteamConnection
         {
@@ -101,44 +102,28 @@ namespace NetCore.SteamNetworking
         /// .                                                  Handling
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        public void HandleReliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
+        /// <inheritdoc/>
+        public void HandleReliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
         {
             throw new NotImplementedException();
         }
 
-        public void HandleReliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
+        /// <inheritdoc/>
+        public void HandleReliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException("Steam transport does not support direct message handling.");
         }
 
-        public void HandleResilient(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
+        /// <inheritdoc/>
+        public void HandleUnreliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
         {
-            throw new NotImplementedException();
+            GD.Print($"Handled (from {source}): {datagram.ToString()}");
         }
 
-        public void HandleResilient(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
+        /// <inheritdoc/>
+        public void HandleUnreliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
         {
-            throw new NotImplementedException();
-        }
-
-        public void HandleSequential(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void HandleSequential(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void HandleUnreliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void HandleUnreliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source)
-        {
-            throw new NotImplementedException();
+            throw new NotSupportedException("Steam transport does not support direct message handling.");
         }
 
 
@@ -149,108 +134,133 @@ namespace NetCore.SteamNetworking
         /// .                                                  Sending
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-
-        public void SendReliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
+        /// <inheritdoc/>
+        public void SendReliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
         {
-            throw new NotImplementedException();
-        }
-
-        public void SendReliableExcluding(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SendReliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
-        {
+            int mode = Constants.k_nSteamNetworkingSend_Reliable | GetModeModifiers(in flags);
             lock (_lock)
             {
-                if (m_Connections.TryGetValue(target, out SteamConnection client))
+                foreach (var client in m_Connections.Values)
                 {
-                    datagram.CopyTo(Bytes);
-                    var array = GCHandle.Alloc(Bytes);
-                    var pointer = array.AddrOfPinnedObject();
-
-                    try
-                    {
-                        int mode = flags.HasFlag<NoDelay>()
-                            ? Constants.k_nSteamNetworkingSend_ReliableNoNagle
-                            : Constants.k_nSteamNetworkingSend_Reliable;
-
-                        var result = SteamNetworkingSockets.SendMessageToConnection(
-                            client.connection, pointer, (uint)datagram.Length, mode, out long messageNumber);
-                        GD.Print($"Message ({messageNumber}), Result: {result}");
-                    }
-                    finally
-                    {
-                        array.Free();
-                    }
+                    SendToCore(client.connection, Bytes, in datagram, in header, mode);
                 }
             }
         }
 
-        public void SendReliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
+        /// <inheritdoc/>
+        public void SendReliableExcluding(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
         {
-            throw new NotImplementedException();
+            int mode = Constants.k_nSteamNetworkingSend_Reliable | GetModeModifiers(in flags);
+            lock (_lock)
+            {
+                foreach (var client in m_Connections.Values)
+                {
+                    if (client.id == toExclude)
+                        continue;
+
+                    SendToCore(client.connection, Bytes, in datagram, in header, mode);
+                }
+            }
         }
 
-        public void SendResilient(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
+        /// <inheritdoc/>
+        public void SendReliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
         {
-            throw new NotImplementedException();
+            int mode = Constants.k_nSteamNetworkingSend_Reliable | GetModeModifiers(in flags);
+            lock (_lock)
+            {
+                if (m_Connections.TryGetValue(target, out SteamConnection client))
+                {
+                    SendToCore(client.connection, Bytes, in datagram, in header, mode);
+                }
+            }
         }
 
-        public void SendResilientExcluding(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
+        /// <inheritdoc/>
+        public void SendReliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException("Steam transport does not support direct message handling.");
         }
 
-        public void SendResilientTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
+        /// <inheritdoc/>
+        public void SendUnreliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
         {
-            throw new NotImplementedException();
+            int mode = Constants.k_nSteamNetworkingSend_Unreliable | GetModeModifiers(in flags);
+            lock (_lock)
+            {
+                foreach (var client in m_Connections.Values)
+                {
+                    SendToCore(client.connection, Bytes, in datagram, in header, mode);
+                }
+            }
         }
 
-        public void SendResilientTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
+        /// <inheritdoc/>
+        public void SendUnreliableExcluding(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
         {
-            throw new NotImplementedException();
+            int mode = Constants.k_nSteamNetworkingSend_Unreliable | GetModeModifiers(in flags);
+            lock (_lock)
+            {
+                foreach (var client in m_Connections.Values)
+                {
+                    if (client.id == toExclude)
+                        continue;
+
+                    SendToCore(client.connection, Bytes, in datagram, in header, mode);
+                }
+            }
         }
 
-        public void SendSequential(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
+        /// <inheritdoc/>
+        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
         {
-            throw new NotImplementedException();
+            int mode = Constants.k_nSteamNetworkingSend_Unreliable | GetModeModifiers(in flags);
+            lock (_lock)
+            {
+                if (m_Connections.TryGetValue(target, out SteamConnection client))
+                {
+                    SendToCore(client.connection, Bytes, in datagram, in header, mode);
+                }
+            }
         }
 
-        public void SendSequentialExcluding(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
+        /// <inheritdoc/>
+        public void SendUnreliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException("Steam transport does not support direct message handling.");
         }
 
-        public void SendSequentialTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
-        {
-            throw new NotImplementedException();
-        }
 
-        public void SendSequentialTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
-        {
-            throw new NotImplementedException();
-        }
 
-        public void SendUnreliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
-        {
-            throw new NotImplementedException();
-        }
 
-        public void SendUnreliableExcluding(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
-        {
-            throw new NotImplementedException();
-        }
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
+        /// .
+        /// .                                               Private Methods
+        /// .
+        /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int GetModeModifiers(in Flags flags) => 0
+        | (flags.HasFlag<NoDelay>() ? Constants.k_nSteamNetworkingSend_NoDelay : 0)
+        | (flags.HasFlag<NoNagle>() ? Constants.k_nSteamNetworkingSend_NoNagle : 0)
+        | (flags.HasFlag<UseCurrentThread>() ? Constants.k_nSteamNetworkingSend_UseCurrentThread : 0);
 
-        public void SendUnreliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
+        private static void SendToCore(HSteamNetConnection to, byte[] buffer, ReadOnlySpan<byte> datagram, in Header header, int mode)
         {
-            throw new NotImplementedException();
-        }
+            datagram.CopyTo(buffer);
+            var array = GCHandle.Alloc(buffer);
+            var pointer = array.AddrOfPinnedObject();
 
-        public void SendUnreliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
-        {
-            throw new NotImplementedException();
+            try
+            {
+                var result = SteamNetworkingSockets.SendMessageToConnection(to, pointer, (uint)datagram.Length, mode, out long messageNumber);
+#if GODOT
+                GD.Print($"Message ({messageNumber}), Result: {result}");
+#endif
+            }
+            finally
+            {
+                array.Free();
+            }
         }
     }
 }

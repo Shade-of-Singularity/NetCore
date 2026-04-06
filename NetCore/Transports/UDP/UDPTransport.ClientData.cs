@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 
 namespace NetCore.Transports.UDP
 {
@@ -13,7 +12,11 @@ namespace NetCore.Transports.UDP
             /// <summary>
             /// Amount of ticks which passed since the last time this <see cref="ClientData"/> was used.
             /// </summary>
-            public int InactiveTickDelta => Environment.TickCount - LastActiveTick;
+            public int InactiveTickDelta => System.Environment.TickCount - m_LastActiveTick;
+            /// <summary>
+            /// Last tick on which this client was active.
+            /// </summary>
+            public int LastActiveTick => m_LastActiveTick;
 
             /// <summary>
             /// Connection ID of our client.
@@ -23,15 +26,13 @@ namespace NetCore.Transports.UDP
             /// Remote end-point
             /// </summary>
             public readonly IPEndPoint RemoteEndPoint = remoteEndPoint;
-            /// <summary>
-            /// Last tick on which client was active.
-            /// </summary>
-            public int LastActiveTick = Environment.TickCount;
+            /// <inheritdoc cref="LastActiveTick"/>
+            private int m_LastActiveTick = System.Environment.TickCount;
 
             /// <summary>
             /// Updates <see cref="LastActiveTick"/> to avoid timeouts.
             /// </summary>
-            public void NoSleep() => LastActiveTick = Environment.TickCount;
+            public void NoSleep() => m_LastActiveTick = System.Environment.TickCount;
         }
     }
 }

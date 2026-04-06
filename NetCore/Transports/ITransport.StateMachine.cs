@@ -484,7 +484,7 @@ namespace NetCore.Transports
 
         private async OperationResultTask InvokeDisconnectInternal(OperationResultTask cancelledConnection, CancellationTokenSource source)
         {
-            try { await cancelledConnection; } catch { }
+            try { await cancelledConnection; } catch { /* We await cancellation, if needed. */ }
 
             lock (Lock)
             {

@@ -480,7 +480,7 @@ namespace NetCore
 
         async OperationResultTask InvokeDisconnectInternal(OperationResultTask cancelledConnection, CancellationTokenSource source)
         {
-            try { await cancelledConnection; } catch { }
+            try { await cancelledConnection; } catch { /* We await cancellation, if needed. */ }
 
             lock (_lock)
             {

@@ -3,6 +3,7 @@
     /// <summary>
     /// Describes target message sending mode.
     /// </summary>
+    /// Note (for maintainers): Packs to 2 bits, and is used in <see cref="HeaderFlagsHelpers"/> extension class.
     public enum SendingMode : byte
     {
         /// <summary>

@@ -18,10 +18,10 @@ namespace NetCore
         /// <para>Sends <paramref name="datagram"/> to the server, using specified <see cref="SendingMode"/>.</para>
         /// <para>Locks <paramref name="header"/> and <paramref name="flags"/> on usage.</para>
         /// </summary>
-        /// <seealso cref="ITransportBasedSendNetworkMessaging.SendUnreliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        /// <seealso cref="ITransportBasedSendNetworkMessaging.SendReliable{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        /// <seealso cref="ITransportBasedSendNetworkMessaging.SendSequential{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        /// <seealso cref="ITransportBasedSendNetworkMessaging.SendResilient{TTransport}(in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="ITransportBasedSendNetworkMessaging.SendUnreliable{TTransport}(ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="ITransportBasedSendNetworkMessaging.SendReliable{TTransport}(ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="ITransportBasedSendNetworkMessaging.SendSequential{TTransport}(ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        /// <seealso cref="ITransportBasedSendNetworkMessaging.SendResilient{TTransport}(ReadOnlySpan{byte}, ref Header, ref Flags)"/>
         /// <param name="target">Instance of <see cref="ISendNetworkMessaging"/> to work with.</param>
         /// <param name="mode"><see cref="SendingMode"/>, specifying which transport type to use.</param>
         /// <param name="datagram">Datagram to send.</param>
@@ -29,7 +29,7 @@ namespace NetCore
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         /// TODO: Remove a constraint for <typeparam name="TTransport"/> of using all transport types.
         ///  It should be now possible after <see cref="Common.CRTPList{TBase}.Lookup{TFilter}"/> rework.
-        public static void Send<TTransport>(this ITransportBasedSendNetworkMessaging target, SendingMode mode, in ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
+        public static void Send<TTransport>(this ITransportBasedSendNetworkMessaging target, SendingMode mode, ReadOnlySpan<byte> datagram, ref Header header, ref Flags flags)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             switch (mode)
@@ -50,8 +50,8 @@ namespace NetCore
         /// .                                          SendingMode - Variations
         /// .
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===]]>
-        /// <inheritdoc cref="Send{TTransport}(ITransportBasedSendNetworkMessaging, SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        public static void Send<TTransport>(ITransportBasedSendNetworkMessaging target, SendingMode mode, in ReadOnlySpan<byte> datagram)
+        /// <inheritdoc cref="Send{TTransport}(ITransportBasedSendNetworkMessaging, SendingMode, ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public static void Send<TTransport>(ITransportBasedSendNetworkMessaging target, SendingMode mode, ReadOnlySpan<byte> datagram)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             Header header = Header.Get();
@@ -59,16 +59,16 @@ namespace NetCore
             target.Send<TTransport>(mode, datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="Send{TTransport}(ITransportBasedSendNetworkMessaging, SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        public static void Send<TTransport>(ITransportBasedSendNetworkMessaging target, SendingMode mode, in ReadOnlySpan<byte> datagram, ref Header header)
+        /// <inheritdoc cref="Send{TTransport}(ITransportBasedSendNetworkMessaging, SendingMode, ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public static void Send<TTransport>(ITransportBasedSendNetworkMessaging target, SendingMode mode, ReadOnlySpan<byte> datagram, ref Header header)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             Flags flags = Flags.Get();
             target.Send<TTransport>(mode, datagram, ref header, ref flags);
         }
 
-        /// <inheritdoc cref="Send{TTransport}(ITransportBasedSendNetworkMessaging, SendingMode, in ReadOnlySpan{byte}, ref Header, ref Flags)"/>
-        public static void Send<TTransport>(ITransportBasedSendNetworkMessaging target, SendingMode mode, in ReadOnlySpan<byte> datagram, ref Flags flags)
+        /// <inheritdoc cref="Send{TTransport}(ITransportBasedSendNetworkMessaging, SendingMode, ReadOnlySpan{byte}, ref Header, ref Flags)"/>
+        public static void Send<TTransport>(ITransportBasedSendNetworkMessaging target, SendingMode mode, ReadOnlySpan<byte> datagram, ref Flags flags)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             Header header = Header.Get();
@@ -81,7 +81,7 @@ namespace NetCore
         /// <param name="datagram"/>
         /// <param name="headerSetup">Constructor for setting up provided <see cref="Header"/> reference.</param>
         /// <param name="flagsSetup">Constructor for setting up provided <see cref="Flags"/> reference.</param>
-        public static void Send<TTransport>(ITransportBasedSendNetworkMessaging target, SendingMode mode, in ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup, FlagsConstructor? flagsSetup = null)
+        public static void Send<TTransport>(ITransportBasedSendNetworkMessaging target, SendingMode mode, ReadOnlySpan<byte> datagram, HeaderConstructor? headerSetup, FlagsConstructor? flagsSetup = null)
             where TTransport : class, IReliableTransport, IUnreliableTransport, ISequentialTransport, IResilientTransport
         {
             Header header = Header.Get();

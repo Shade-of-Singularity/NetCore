@@ -13,7 +13,7 @@ namespace NetCore.Transports
         /// <param name="datagram">Datagram to send.</param>
         /// <param name="header">Header of the message.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
-        public void SendReliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags);
+        public void SendReliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags);
         /// <summary>
         /// Reliably sends <paramref name="datagram"/> to all connections this <see cref="ITransport"/> manages, excluding <paramref name="toExclude"/>.
         /// </summary>
@@ -21,7 +21,7 @@ namespace NetCore.Transports
         /// <param name="header">Header of the message.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         /// <param name="toExclude">Connection to avoid sending a <paramref name="datagram"/> to.</param>
-        public void SendReliableExcluding(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude);
+        public void SendReliableExcluding(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude);
         /// <summary>
         /// Reliably sends <paramref name="datagram"/> to a <paramref name="target"/> connection.
         /// </summary>
@@ -29,7 +29,7 @@ namespace NetCore.Transports
         /// <param name="header">Header of the message.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         /// <param name="target">Connection to send a <paramref name="datagram"/> to. Nothing should be sent if transport doesn't manage this connection.</param>
-        public void SendReliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target);
+        public void SendReliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target);
         /// <summary>
         /// Handles raw <paramref name="datagram"/> of a reliable message.
         /// </summary>
@@ -37,7 +37,7 @@ namespace NetCore.Transports
         /// <param name="header">Header of the message.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         /// <param name="source">Connection ID from which <paramref name="datagram"/> has arrived.</param>
-        public void HandleReliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source);
+        public void HandleReliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID source);
 
 
 
@@ -48,7 +48,7 @@ namespace NetCore.Transports
         /// <param name="header">Header of the message.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         /// <param name="args">Temporary connection args used for this connection in particular.</param>
-        public void SendReliableTo(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args);
+        public void SendReliableTo(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args);
         /// <summary>
         /// Handles raw <paramref name="datagram"/> of a reliable message.
         /// </summary>
@@ -56,6 +56,6 @@ namespace NetCore.Transports
         /// <param name="header">Header of the message.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         /// <param name="source">Temporary connection args from which <paramref name="datagram"/> has arrived.</param>
-        public void HandleReliable(in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source);
+        public void HandleReliable(ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs source);
     }
 }

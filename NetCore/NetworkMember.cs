@@ -114,8 +114,8 @@ namespace NetCore
     /// Base class for <see cref="Server"/> and <see cref="Client"/>.
     /// </summary>
     /// <remarks>
-    /// If you need something other than <see cref="IReliableTransport"/> or <see cref="IUnreliableTransport"/>
-    /// - fork the project and modify this base class, or define the same logic in a custom <see cref="Client"/> and <see cref="Server"/> class.
+    /// If you need more transport types - fork the project and modify this base class,
+    /// or define the same logic in a custom <see cref="Client"/>, <see cref="Server"/> or custom child class.
     /// </remarks>
     /// TODO: Add a way to map connections, arrived from different transports
     ///  to either one connection (TCP+UDP to one)
@@ -128,7 +128,8 @@ namespace NetCore
     ///  = 240 bytes.
     ///  It's nothing compared to other things.
     /// TODO: Make sure transports can only be added/removed if member is not started already.
-    public abstract partial class NetworkMember : INetworkMemberStatistics, ISendToConnectionNetworkMessaging, ITransportBasedSendToConnectionNetworkMessaging
+    public abstract partial class NetworkMember : INetworkMemberStatistics,
+        ISendToConnectionNetworkMessaging, ITransportBasedSendToConnectionNetworkMessaging
     {
         /// ===     ===     ===     ===    ===  == =  -                        -  = ==  ===    ===     ===     ===     ===<![CDATA[
         /// .

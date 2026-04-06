@@ -30,15 +30,14 @@ namespace NetCore.Transports
         /// <param name="header">Header of the message.</param>
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         public static void Send(
-            this IGeneralTransport transport, SendingMode mode,
-            in ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
+            this IGeneralTransport transport, SendingMode mode, scoped ReadOnlySpan<byte> datagram, in Header header, in Flags flags)
         {
             switch (mode)
             {
-                case SendingMode.Unreliable: transport.SendUnreliable(in datagram, in header, in flags); return;
-                case SendingMode.Reliable: transport.SendReliable(in datagram, in header, in flags); return;
-                case SendingMode.Sequential: transport.SendSequential(in datagram, in header, in flags); return;
-                case SendingMode.Resilient: transport.SendResilient(in datagram, in header, in flags); return;
+                case SendingMode.Unreliable: transport.SendUnreliable(datagram, in header, in flags); return;
+                case SendingMode.Reliable: transport.SendReliable(datagram, in header, in flags); return;
+                case SendingMode.Sequential: transport.SendSequential(datagram, in header, in flags); return;
+                case SendingMode.Resilient: transport.SendResilient(datagram, in header, in flags); return;
                 default: throw new SwitchExpressionException(mode);
             }
         }
@@ -54,15 +53,14 @@ namespace NetCore.Transports
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         /// <param name="toExclude">Connection to avoid sending a <paramref name="datagram"/> to.</param>
         public static void SendExcluding(
-            this IGeneralTransport transport, SendingMode mode,
-            in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
+            this IGeneralTransport transport, SendingMode mode, scoped ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID toExclude)
         {
             switch (mode)
             {
-                case SendingMode.Unreliable: transport.SendUnreliableExcluding(in datagram, in header, in flags, toExclude); return;
-                case SendingMode.Reliable: transport.SendReliableExcluding(in datagram, in header, in flags, toExclude); return;
-                case SendingMode.Sequential: transport.SendSequentialExcluding(in datagram, in header, in flags, toExclude); return;
-                case SendingMode.Resilient: transport.SendResilientExcluding(in datagram, in header, in flags, toExclude); return;
+                case SendingMode.Unreliable: transport.SendUnreliableExcluding(datagram, in header, in flags, toExclude); return;
+                case SendingMode.Reliable: transport.SendReliableExcluding(datagram, in header, in flags, toExclude); return;
+                case SendingMode.Sequential: transport.SendSequentialExcluding(datagram, in header, in flags, toExclude); return;
+                case SendingMode.Resilient: transport.SendResilientExcluding(datagram, in header, in flags, toExclude); return;
                 default: throw new SwitchExpressionException(mode);
             }
         }
@@ -77,15 +75,14 @@ namespace NetCore.Transports
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         /// <param name="target">Connection to send a <paramref name="datagram"/> to. Nothing should be sent if transport doesn't manage this connection.</param>
         public static void SendTo(
-            this IGeneralTransport transport, SendingMode mode,
-            in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
+            this IGeneralTransport transport, SendingMode mode, scoped ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionID target)
         {
             switch (mode)
             {
-                case SendingMode.Unreliable: transport.SendUnreliableTo(in datagram, in header, in flags, target); return;
-                case SendingMode.Reliable: transport.SendReliableTo(in datagram, in header, in flags, target); return;
-                case SendingMode.Sequential: transport.SendSequentialTo(in datagram, in header, in flags, target); return;
-                case SendingMode.Resilient: transport.SendResilientTo(in datagram, in header, in flags, target); return;
+                case SendingMode.Unreliable: transport.SendUnreliableTo(datagram, in header, in flags, target); return;
+                case SendingMode.Reliable: transport.SendReliableTo(datagram, in header, in flags, target); return;
+                case SendingMode.Sequential: transport.SendSequentialTo(datagram, in header, in flags, target); return;
+                case SendingMode.Resilient: transport.SendResilientTo(datagram, in header, in flags, target); return;
                 default: throw new SwitchExpressionException(mode);
             }
         }
@@ -100,15 +97,14 @@ namespace NetCore.Transports
         /// <param name="flags">Non-encoded in a message. Stores info about how message should be sent.</param>
         /// <param name="args">Temporary connection args used for this connection in particular.</param>
         public static void SendTo(
-            this IGeneralTransport transport, SendingMode mode,
-            in ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
+            this IGeneralTransport transport, SendingMode mode, scoped ReadOnlySpan<byte> datagram, in Header header, in Flags flags, ConnectionArgs args)
         {
             switch (mode)
             {
-                case SendingMode.Unreliable: transport.SendUnreliableTo(in datagram, in header, in flags, args); return;
-                case SendingMode.Reliable: transport.SendReliableTo(in datagram, in header, in flags, args); return;
-                case SendingMode.Sequential: transport.SendSequentialTo(in datagram, in header, in flags, args); return;
-                case SendingMode.Resilient: transport.SendResilientTo(in datagram, in header, in flags, args); return;
+                case SendingMode.Unreliable: transport.SendUnreliableTo(datagram, in header, in flags, args); return;
+                case SendingMode.Reliable: transport.SendReliableTo(datagram, in header, in flags, args); return;
+                case SendingMode.Sequential: transport.SendSequentialTo(datagram, in header, in flags, args); return;
+                case SendingMode.Resilient: transport.SendResilientTo(datagram, in header, in flags, args); return;
                 default: throw new SwitchExpressionException(mode);
             }
         }

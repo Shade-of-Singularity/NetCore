@@ -92,7 +92,7 @@ namespace NetCore
         /// <param name="header"></param>
         /// <param name="datagram"></param>
         /// <param name="fromConnection"></param>
-        public virtual void HandleMessage(in Header header, in ReadOnlySpan<byte> datagram, ConnectionID fromConnection)
+        public virtual void HandleMessage(in Header header, ReadOnlySpan<byte> datagram, ConnectionID fromConnection)
         {
 
         }

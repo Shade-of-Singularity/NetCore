@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace NetCore
+﻿namespace NetCore
 {
     /// <summary>
     /// Encodes special data which <see cref="Header"/> can have.
@@ -13,24 +11,12 @@ namespace NetCore
     /// For encoding, use <see cref="HeaderFlagsHelpers"/> instead of manually writing your own methods.
     /// Side of this enum can be accessed here: <see cref="HeaderFlagsHelpers.HeaderBits"/>.
     /// </remarks>
-    public enum HeaderFlags : byte { } // Merely a carrier for other types.
-
-    /// <summary>
-    /// Type of the header - what it holds, etc.
-    /// </summary>
-    [Obsolete("I feel like we can simply use one type instead of two.")]
-    public enum HeaderType : byte
+    public enum HeaderFlags : byte // Merely a carrier for other types.
     {
         /// <summary>
-        /// Defines headers, which are system-defined.
-        /// Those are used for welcoming messages, internal communication, etc.
-        /// They only include build-in headers, allowing for optimizations due to predictable initialization order.
+        /// No special flags is defined.
         /// </summary>
-        System = 0,
-        /// <summary>
-        /// Defines all headers.
-        /// </summary>
-        Custom = 1,
+        None = 0,
     }
 
     /// <summary>
@@ -91,9 +77,40 @@ namespace NetCore
         /// </summary>
         public const int HeaderBytes = 1;
 
-        /// <see cref="CustomHeaderUsage"/>
+        /// <summary>
+        /// Mask, covering all the bits used for <see cref="SendingMode"/> when encoded into header.
+        /// </summary>
+        internal const uint SendingModeMask = 0b11;
+        /// <summary>
+        /// Shift from 0th bit, where <see cref="SendingMode"/> is located.
+        /// </summary>
+        internal const int SendingModeShift = 0;
+
+        /// <summary>
+        /// Mask, covering all the bits used for <see cref="CustomHeaderUsage"/> when encoded into header.
+        /// </summary>
         internal const uint CustomHeaderUsageMask = 0b11;
-        internal const int CustomHeaderUsageShift = 0;
+        /// <summary>
+        /// Shift from 0th bit, where <see cref="CustomHeaderUsage"/> is located.
+        /// </summary>
+        internal const int CustomHeaderUsageShift = 2;
+
+        /// <summary>
+        /// Decodes <see cref="SendingMode"/> from a given <see cref="HeaderFlags"/> value.
+        /// </summary>
+        public static SendingMode GetSendingMode(this HeaderFlags flags)
+        {
+            return (SendingMode)(((uint)flags >> SendingModeShift) * SendingModeMask);
+        }
+
+        /// <summary>
+        /// Encodes given <see cref="SendingMode"/> in a given <see cref="HeaderFlags"/> value;
+        /// </summary>
+        public static HeaderFlags SetSendingMode(this HeaderFlags flags, SendingMode mode)
+        {
+            return (HeaderFlags)(((uint)flags & ~(SendingModeMask << SendingModeShift))
+                | (((uint)mode & SendingModeMask) << SendingModeShift));
+        }
 
         /// <summary>
         /// Decodes <see cref="CustomHeaderUsage"/> from a given <see cref="HeaderFlags"/> value.
@@ -108,7 +125,8 @@ namespace NetCore
         /// </summary>
         public static HeaderFlags SetCustomHeaderUsage(this HeaderFlags flags, CustomHeaderUsage usage)
         {
-            return (HeaderFlags)(((uint)flags & ~(CustomHeaderUsageMask << CustomHeaderUsageShift)) | ((uint)usage << CustomHeaderUsageShift));
+            return (HeaderFlags)(((uint)flags & ~(CustomHeaderUsageMask << CustomHeaderUsageShift))
+                | (((uint)usage & CustomHeaderUsageMask) << CustomHeaderUsageShift));
         }
     }
 }
